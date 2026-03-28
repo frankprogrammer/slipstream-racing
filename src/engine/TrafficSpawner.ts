@@ -104,36 +104,94 @@ export class TrafficSpawner {
   }
 
   /**
-   * Min |Δcz| between centers for same lane or adjacent lanes: both half-lengths + slipstream depth + buffer.
+   * Longitudinal Z interval [min, max] for vehicle body + slipstream box behind rear bumper.
    */
-  private minSpawnCenterZ(idle: PoolEntry, other: PoolEntry): number {
+  private zFootprint(cz: number, hz: number): { min: number; max: number } {
+    const zd = CONFIG.SLIPSTREAM_ZONE_DEPTH;
+    return { min: cz - hz - zd, max: cz + hz };
+  }
+
+  private longFootprintsOverlap(
+    czA: number,
+    hzA: number,
+    czB: number,
+    hzB: number
+  ): boolean {
+    const buf = CONFIG.TRAFFIC_SPAWN_MIN_Z_BUFFER;
+    const a = this.zFootprint(czA, hzA);
+    const b = this.zFootprint(czB, hzB);
+    const separated = a.max + buf <= b.min || b.max + buf <= a.min;
+    return !separated;
+  }
+
+  /** Min center-Z for new car so its footprint clears **ahead** of another (same / adjacent lane). */
+  private minCenterZAheadOfOther(idle: PoolEntry, other: PoolEntry): number {
+    const hzO = this.hzFor(other.typeIndex);
+    const hzI = this.hzFor(idle.typeIndex);
+    const oz = other.group.position.z;
     return (
-      this.hzFor(idle.typeIndex) +
-      this.hzFor(other.typeIndex) +
+      oz +
+      hzO +
+      hzI +
       CONFIG.SLIPSTREAM_ZONE_DEPTH +
       CONFIG.TRAFFIC_SPAWN_MIN_Z_BUFFER
     );
   }
 
-  /** Push spawn Z forward (+Z) until clear of active traffic in same or adjacent lanes. */
+  /** Push spawn Z forward (+Z) until body+slipstream intervals do not overlap (same lane + adjacent). */
   private resolveSpawnZ(lane: number, idle: PoolEntry, z: number): number {
+    const hzI = this.hzFor(idle.typeIndex);
     let zz = z;
-    for (let iter = 0; iter < 24; iter++) {
+    for (let iter = 0; iter < 40; iter++) {
       let changed = false;
       for (const o of this.pool) {
         if (!o.active || o === idle) continue;
-        const laneDiff = Math.abs(o.laneIndex - lane);
-        if (laneDiff > 1) continue;
-        const minD = this.minSpawnCenterZ(idle, o);
+        if (Math.abs(o.laneIndex - lane) > 1) continue;
+        const hzO = this.hzFor(o.typeIndex);
         const oz = o.group.position.z;
-        if (Math.abs(zz - oz) < minD) {
-          zz = oz + minD;
-          changed = true;
+        if (this.longFootprintsOverlap(zz, hzI, oz, hzO)) {
+          const need = this.minCenterZAheadOfOther(idle, o);
+          if (zz < need) {
+            zz = need;
+            changed = true;
+          }
         }
       }
       if (!changed) break;
     }
     return zz;
+  }
+
+  /**
+   * After movement, separate vehicles in same or adjacent lanes so Z footprints never overlap.
+   */
+  private separateOverlappingTraffic(): void {
+    const buf = CONFIG.TRAFFIC_SPAWN_MIN_Z_BUFFER;
+    const zd = CONFIG.SLIPSTREAM_ZONE_DEPTH;
+    for (let pass = 0; pass < 12; pass++) {
+      let changed = false;
+      const act = this.pool.filter(p => p.active);
+      for (let i = 0; i < act.length; i++) {
+        for (let j = i + 1; j < act.length; j++) {
+          const a = act[i]!;
+          const b = act[j]!;
+          if (Math.abs(a.laneIndex - b.laneIndex) > 1) continue;
+          const hzA = this.hzFor(a.typeIndex);
+          const hzB = this.hzFor(b.typeIndex);
+          const za = a.group.position.z;
+          const zb = b.group.position.z;
+          if (!this.longFootprintsOverlap(za, hzA, zb, hzB)) continue;
+          // Push the ahead car (+Z) so rear footprint clears the other vehicle's front + buffer.
+          if (za >= zb) {
+            a.group.position.z = zb + hzB + hzA + zd + buf;
+          } else {
+            b.group.position.z = za + hzA + hzB + zd + buf;
+          }
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
   }
 
   private trySpawn(elapsedMs: number): void {
@@ -174,6 +232,8 @@ export class TrafficSpawner {
         p.group.visible = false;
       }
     }
+
+    this.separateOverlappingTraffic();
   }
 
   getActiveCollisionBounds(): TrafficCollisionBounds[] {

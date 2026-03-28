@@ -17,6 +17,10 @@ export class LaneSystem {
   private _toLane = 1;
   private _switching = false;
   private _switchStartMs = 0;
+  /** After slide ends: spring roll back to 0 with easeOutBack overshoot. */
+  private _rollSpringing = false;
+  private _springStartMs = 0;
+  private _springDir: -1 | 1 = 1;
   private _pointerDownX = 0;
   private _pointerDownY = 0;
   private _pointerDownTime = 0;
@@ -42,6 +46,7 @@ export class LaneSystem {
     this._fromLane = 1;
     this._toLane = 1;
     this._switching = false;
+    this._rollSpringing = false;
   }
 
   laneIndexToX(index: number): number {
@@ -55,21 +60,63 @@ export class LaneSystem {
     const x0 = this.laneIndexToX(this._fromLane);
     const x1 = this.laneIndexToX(this._toLane);
     if (raw >= 1) {
+      this._springDir = this._toLane > this._fromLane ? 1 : -1;
+      this._rollSpringing = true;
+      this._springStartMs = nowMs;
       this._switching = false;
       this._laneIndex = this._toLane;
     }
     return x0 + (x1 - x0) * e;
   }
 
-  /** Roll angle in radians for taxi body during lane change (approximate). */
+  /**
+   * Roll about Z: lean into the lane change during slide, then spring back with overshoot.
+   */
   getBodyRollRad(nowMs: number): number {
-    if (!this._switching) return 0;
-    const raw = Math.min(1, (nowMs - this._switchStartMs) / CONFIG.LANE_SWITCH_DURATION);
-    const dir = Math.sign(this._toLane - this._fromLane);
     const amp = DEG2RAD * CONFIG.TAXI_BODY_ROLL;
-    if (raw >= 1) return 0;
-    const wobble = Math.sin(raw * Math.PI) * amp * dir;
-    return wobble;
+
+    if (this._switching) {
+      const raw = Math.min(1, (nowMs - this._switchStartMs) / CONFIG.LANE_SWITCH_DURATION);
+      const dir = Math.sign(this._toLane - this._fromLane) || 1;
+      return dir * amp * Math.sin(raw * Math.PI * 0.5);
+    }
+
+    if (this._rollSpringing) {
+      const raw = (nowMs - this._springStartMs) / CONFIG.TAXI_ROLL_DURATION;
+      if (raw >= 1) {
+        this._rollSpringing = false;
+        return 0;
+      }
+      const t = Math.min(1, raw);
+      const e = easeOutBack(t);
+      return this._springDir * amp * (1 - e);
+    }
+
+    return 0;
+  }
+
+  /** Front wheel steer (rad), same envelope as body roll. */
+  getWheelSteerRad(nowMs: number): number {
+    const amp = DEG2RAD * CONFIG.TAXI_WHEEL_TURN;
+
+    if (this._switching) {
+      const raw = Math.min(1, (nowMs - this._switchStartMs) / CONFIG.LANE_SWITCH_DURATION);
+      const dir = Math.sign(this._toLane - this._fromLane) || 1;
+      return dir * amp * Math.sin(raw * Math.PI * 0.5);
+    }
+
+    if (this._rollSpringing) {
+      const raw = (nowMs - this._springStartMs) / CONFIG.TAXI_ROLL_DURATION;
+      if (raw >= 1) {
+        this._rollSpringing = false;
+        return 0;
+      }
+      const t = Math.min(1, raw);
+      const e = easeOutBack(t);
+      return this._springDir * amp * (1 - e);
+    }
+
+    return 0;
   }
 
   private tryBeginSwitch(delta: -1 | 1): void {

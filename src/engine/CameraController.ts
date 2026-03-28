@@ -18,13 +18,37 @@ export class CameraController {
     this.camera = camera;
   }
 
-  update(playerTaxi: PlayerTaxi): void {
+  /**
+   * @param chain — current multiplier; FOV eases from FOV_BASE toward FOV_MAX as chain rises.
+   */
+  update(playerTaxi: PlayerTaxi, chain: number): void {
+    const t = this.fovTFromChain(chain);
+    const targetFov = THREE.MathUtils.lerp(
+      CONFIG.CAMERA_FOV_BASE,
+      CONFIG.CAMERA_FOV_MAX,
+      t
+    );
+    this.camera.fov = THREE.MathUtils.lerp(
+      this.camera.fov,
+      targetFov,
+      CONFIG.CAMERA_FOV_LERP
+    );
+    this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
   }
 
   snap(playerTaxi: PlayerTaxi): void {
     this.followDistance = CONFIG.CAMERA_DISTANCE;
+    this.camera.fov = CONFIG.CAMERA_FOV_BASE;
+    this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
+  }
+
+  private fovTFromChain(chain: number): number {
+    const c = Math.max(1, chain);
+    const full = CONFIG.CAMERA_FOV_CHAIN_FOR_MAX;
+    if (full <= 1) return 1;
+    return THREE.MathUtils.clamp((c - 1) / (full - 1), 0, 1);
   }
 
   private applyCamera(playerTaxi: PlayerTaxi): void {

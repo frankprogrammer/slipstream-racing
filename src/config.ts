@@ -35,7 +35,10 @@ export const CONFIG = {
   CAMERA_ANGLE: -45,
   CAMERA_FOV_BASE: 55,
   CAMERA_FOV_MAX: 65,
+  /** Per-frame lerp factor toward target FOV (higher chain → wider, up to FOV_MAX). */
   CAMERA_FOV_LERP: 0.02,
+  /** Linear ramp: FOV reaches FOV_MAX when chain ≥ this (×1 = FOV_BASE). */
+  CAMERA_FOV_CHAIN_FOR_MAX: 16,
   CAMERA_SHAKE_INTENSITY: 0.03,
   CAMERA_SHAKE_DECAY: 0.9,
 
@@ -131,7 +134,8 @@ export const CONFIG = {
   /**
    * Added to min center-Z spacing vs other traffic (same + adjacent lanes): hz₁ + hz₂ + slipstream depth + this.
    */
-  TRAFFIC_SPAWN_MIN_Z_BUFFER: 4,
+  /** Min gap (world Z) between body+slipstream footprints when spawning / separating. */
+  TRAFFIC_SPAWN_MIN_Z_BUFFER: 6,
 
   // ── Player Taxi ──
   TAXI_BODY_ROLL: 5,
@@ -151,6 +155,9 @@ export const CONFIG = {
 
   // ── Visual Juice ──
   SCREEN_FLASH_DURATION: 100,
+  /** ×10 "PERFECT" moment: full-screen tint hold + milestone copy. */
+  PERFECT_FLASH_DURATION_MS: 280,
+  PERFECT_MILESTONE_HOLD_MS: 1200,
   CHAIN_POP_SCALE: 1.3,
   CHAIN_POP_DURATION: 200,
 

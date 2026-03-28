@@ -14,6 +14,7 @@ export class PlayerTaxi {
   private readonly draftBarGroup: THREE.Group;
   private readonly draftFillParent: THREE.Group;
   private readonly draftFill: THREE.Mesh;
+  private readonly frontWheels: THREE.Mesh[] = [];
   private readonly dims = CONFIG.TAXI_DIMENSIONS;
 
   constructor() {
@@ -218,13 +219,17 @@ export class PlayerTaxi {
     this.group.position.set(0, 0, CONFIG.TAXI_POSITION_Z);
     this.group.rotation.set(0, 0, 0);
     this.chassisGroup.rotation.set(0, 0, 0);
+    for (const w of this.frontWheels) w.rotation.y = 0;
     this.setDrafting(false);
     this.setDraftMeter(0, false);
   }
 
-  applyLaneVisuals(laneX: number, rollRad: number): void {
+  applyLaneVisuals(laneX: number, rollRad: number, wheelSteerRad = 0): void {
     this.group.position.x = laneX;
     this.chassisGroup.rotation.z = rollRad;
+    for (const w of this.frontWheels) {
+      w.rotation.y = wheelSteerRad;
+    }
   }
 
   setDrafting(isDrafting: boolean): void {

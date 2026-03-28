@@ -126,7 +126,8 @@ function resetGame(): void {
   const nowMs = performance.now();
   const x = laneSystem.getLaneX(nowMs);
   const roll = laneSystem.getBodyRollRad(nowMs);
-  playerTaxi.applyLaneVisuals(x, roll);
+  const steer = laneSystem.getWheelSteerRad(nowMs);
+  playerTaxi.applyLaneVisuals(x, roll, steer);
   cameraController.snap(playerTaxi);
   gameOverScreen.hide();
 }
@@ -178,8 +179,8 @@ function animate(): void {
     trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
     const laneX = laneSystem.getLaneX(nowMs);
     const roll = laneSystem.getBodyRollRad(nowMs);
-    playerTaxi.applyLaneVisuals(laneX, roll);
-    cameraController.update(playerTaxi);
+    const steer = laneSystem.getWheelSteerRad(nowMs);
+    playerTaxi.applyLaneVisuals(laneX, roll, steer);
 
     const slip = slipstreamZone.update(
       delta,
@@ -196,10 +197,10 @@ function animate(): void {
       const milestone = chainManager.onSlingshot(nowMs);
       scoreManager.addSlingshotBonus(chainManager.chain);
       if (milestone === 10) {
-        hud.showMilestone('PERFECT');
-        hud.flashScreen();
+        hud.showMilestone('PERFECT', true);
+        hud.flashScreenPerfect();
       } else if (milestone !== null) {
-        hud.showMilestone(`×${milestone}!`);
+        hud.showMilestone(`×${milestone}!`, false);
       }
     }
 
@@ -214,6 +215,8 @@ function animate(): void {
       slip.inZone
     );
 
+    cameraController.update(playerTaxi, chainManager.chain);
+
     if (collisionSystem.check(playerTaxi, trafficSpawner)) {
       gameState.transition('gameover');
     }
@@ -222,6 +225,7 @@ function animate(): void {
   } else {
     trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
     slingshotTrail.update(delta, 0);
+    cameraController.update(playerTaxi, 1);
   }
 
   if (showFps && fpsEl) {
