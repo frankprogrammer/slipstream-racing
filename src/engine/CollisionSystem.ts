@@ -1,3 +1,4 @@
+import { CONFIG } from '../config';
 import type { PlayerTaxi } from './PlayerTaxi';
 import type { TrafficSpawner } from './TrafficSpawner';
 
@@ -23,9 +24,10 @@ function aabbOverlap2D(
 export class CollisionSystem {
   check(player: PlayerTaxi, traffic: TrafficSpawner): boolean {
     const p = player.getCollisionBounds();
+    const phz = p.hz * CONFIG.TAXI_COLLISION_Z_HALF_SCALE;
     const list = traffic.getActiveCollisionBounds();
     for (const t of list) {
-      if (aabbOverlap2D(p.cx, p.cz, p.hx, p.hz, t.cx, t.cz, t.hx, t.hz)) {
+      if (aabbOverlap2D(p.cx, p.cz, p.hx, phz, t.cx, t.cz, t.hx, t.hz)) {
         return true;
       }
     }

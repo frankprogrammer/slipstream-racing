@@ -106,12 +106,15 @@ export const CONFIG = {
   VEHICLE_TRAFFIC_MIN_APPROACH: 0.02,
   VEHICLE_POOL_SIZE: 20,
   /**
-   * World +Z ahead of player where new traffic spawns. Large values delay how long until a car
-   * scrolls into view (was ~85 → ~10–18s at base scroll); keep this modest so the first car is visible soon.
+   * World +Z ahead of player for new spawns. Higher = farther up the road / nearer screen top (horizon).
    */
-  TRAFFIC_SPAWN_AHEAD_Z: 14,
+  TRAFFIC_SPAWN_AHEAD_Z: 48,
   /** Extra random +Z spread (0..this) on each spawn. */
-  TRAFFIC_SPAWN_AHEAD_Z_JITTER: 8,
+  TRAFFIC_SPAWN_AHEAD_Z_JITTER: 12,
+  /**
+   * Added to min center-Z spacing vs other traffic (same + adjacent lanes): hz₁ + hz₂ + slipstream depth + this.
+   */
+  TRAFFIC_SPAWN_MIN_Z_BUFFER: 4,
 
   // ── Player Taxi ──
   TAXI_BODY_ROLL: 5,
@@ -119,6 +122,11 @@ export const CONFIG = {
   TAXI_WHEEL_TURN: 15,
   TAXI_POSITION_Z: 0,
   TAXI_DIMENSIONS: { width: 1.8, height: 0.8, length: 3.5 },
+  /**
+   * Collision AABB half-length (Z) × this vs full taxi length/2 — only traffic collision uses it;
+   * slipstream still uses full bounds. 0.9 ≈ 10% shorter front+back (forgiving).
+   */
+  TAXI_COLLISION_Z_HALF_SCALE: 0.9,
 
   // ── Scoring ──
   DISTANCE_SCORE_RATE: 1,

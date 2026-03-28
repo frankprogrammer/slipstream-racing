@@ -104,6 +104,45 @@ export class TrafficSpawner {
     return lanes[Math.floor(Math.random() * lanes.length)]!;
   }
 
+  /** Half depth (Z) for collision / spacing. */
+  private hzFor(typeIndex: 0 | 1): number {
+    const d = typeIndex === 0 ? COMPACT.d : TRUCK.d;
+    return d / 2;
+  }
+
+  /**
+   * Min |Δcz| between centers for same lane or adjacent lanes: both half-lengths + slipstream depth + buffer.
+   */
+  private minSpawnCenterZ(idle: PoolEntry, other: PoolEntry): number {
+    return (
+      this.hzFor(idle.typeIndex) +
+      this.hzFor(other.typeIndex) +
+      CONFIG.SLIPSTREAM_ZONE_DEPTH +
+      CONFIG.TRAFFIC_SPAWN_MIN_Z_BUFFER
+    );
+  }
+
+  /** Push spawn Z forward (+Z) until clear of active traffic in same or adjacent lanes. */
+  private resolveSpawnZ(lane: number, idle: PoolEntry, z: number): number {
+    let zz = z;
+    for (let iter = 0; iter < 24; iter++) {
+      let changed = false;
+      for (const o of this.pool) {
+        if (!o.active || o === idle) continue;
+        const laneDiff = Math.abs(o.laneIndex - lane);
+        if (laneDiff > 1) continue;
+        const minD = this.minSpawnCenterZ(idle, o);
+        const oz = o.group.position.z;
+        if (Math.abs(zz - oz) < minD) {
+          zz = oz + minD;
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+    return zz;
+  }
+
   private trySpawn(elapsedMs: number): void {
     const idle = this.pool.find(p => !p.active);
     if (!idle) return;
@@ -115,7 +154,8 @@ export class TrafficSpawner {
     idle.active = true;
     idle.group.visible = true;
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
-    const z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
+    let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
+    z = this.resolveSpawnZ(lane, idle, z);
     idle.group.position.set(this.laneIndexToX(lane), 0, z);
   }
 
