@@ -28,7 +28,6 @@ export class TrafficSpawner {
 
   private readonly pool: PoolEntry[] = [];
   private spawnAccMs = 0;
-  private readonly spawnAheadZ = 85;
   private readonly despawnBehindZ = 25;
 
   constructor() {
@@ -79,7 +78,8 @@ export class TrafficSpawner {
   }
 
   reset(): void {
-    this.spawnAccMs = 0;
+    // Pre-warm so the first spawn fires on the first update (otherwise ~spawnRate ms wait).
+    this.spawnAccMs = CONFIG.TRAFFIC_PHASES[0].spawnRate;
     for (const p of this.pool) {
       p.active = false;
       p.group.visible = false;
@@ -114,7 +114,8 @@ export class TrafficSpawner {
     idle.speedMul = Math.max(0.4, variance);
     idle.active = true;
     idle.group.visible = true;
-    const z = CONFIG.TAXI_POSITION_Z + this.spawnAheadZ + Math.random() * 10;
+    const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
+    const z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
     idle.group.position.set(this.laneIndexToX(lane), 0, z);
   }
 

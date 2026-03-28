@@ -63,7 +63,13 @@ export const CONFIG = {
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
   SLIPSTREAM_ZONE_DEPTH: 3.5,
-  DRAFT_FILL_RATE: 0.02,
+  /** Per-frame @ 60Hz base fill; actual fill × (current scrollPerFrame / BASE_SCROLL_SPEED). */
+  DRAFT_FILL_RATE: 0.05,
+  /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
+  DRAFT_BAR_WIDTH: 1.55,
+  DRAFT_BAR_DEPTH: 0.1,
+  DRAFT_BAR_OFFSET_Y: 0.035,
+  DRAFT_BAR_INSET_FROM_FRONT: 0.38,
 
   // ── Chain ──
   CHAIN_TIMEOUT: 3000,
@@ -99,6 +105,13 @@ export const CONFIG = {
   /** Floor for net −Δz so traffic never drifts the wrong way if variance is high. */
   VEHICLE_TRAFFIC_MIN_APPROACH: 0.02,
   VEHICLE_POOL_SIZE: 20,
+  /**
+   * World +Z ahead of player where new traffic spawns. Large values delay how long until a car
+   * scrolls into view (was ~85 → ~10–18s at base scroll); keep this modest so the first car is visible soon.
+   */
+  TRAFFIC_SPAWN_AHEAD_Z: 14,
+  /** Extra random +Z spread (0..this) on each spawn. */
+  TRAFFIC_SPAWN_AHEAD_Z_JITTER: 8,
 
   // ── Player Taxi ──
   TAXI_BODY_ROLL: 5,

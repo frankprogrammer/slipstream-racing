@@ -1,12 +1,105 @@
-import * as THREE from 'three';
 import { CONFIG } from '../config';
+import type { PlayerTaxi } from './PlayerTaxi';
+import type { TrafficCollisionBounds, TrafficSpawner } from './TrafficSpawner';
 
 /**
- * SlipstreamZone — Draft detection via XZ AABB overlap.
- * Zone: SLIPSTREAM_ZONE_WIDTH × SLIPSTREAM_ZONE_DEPTH behind each vehicle.
- * States: idle → drafting → release/cancel.
- * Events: draft-start, draft-tick, draft-complete, draft-cancel.
+ * SlipstreamZone — XZ overlap with a rectangle behind each active vehicle.
+ * Meter fills while overlapping. Slingshot fires only after the meter is full **and** you exit the zone.
  */
 export class SlipstreamZone {
-  // TODO: Implement
+  private meter = 0;
+  private wasInZone = false;
+
+  get draftMeter(): number {
+    return this.meter;
+  }
+
+  reset(): void {
+    this.meter = 0;
+    this.wasInZone = false;
+  }
+
+  /**
+   * @returns slingshotFired — true the frame you leave the zone with a full meter (release).
+   */
+  update(
+    deltaSec: number,
+    scrollPerFrame: number,
+    player: PlayerTaxi,
+    traffic: TrafficSpawner
+  ): { inZone: boolean; meter: number; slingshotFired: boolean; meterDisplay: number } {
+    const pb = player.getCollisionBounds();
+    const vehicles = traffic.getActiveCollisionBounds();
+    const inZone = this.isPlayerInAnySlipstream(pb, vehicles);
+
+    const leftZone = this.wasInZone && !inZone;
+    let slingshotFired = false;
+
+    if (leftZone && this.meter >= 1) {
+      slingshotFired = true;
+    }
+
+    if (inZone) {
+      if (this.meter < 1) {
+        const speedScale = Math.max(
+          0.25,
+          scrollPerFrame / CONFIG.BASE_SCROLL_SPEED
+        );
+        const fill =
+          CONFIG.DRAFT_FILL_RATE * 60 * deltaSec * speedScale;
+        this.meter += fill;
+        if (this.meter > 1) this.meter = 1;
+      }
+    } else {
+      this.meter = 0;
+    }
+
+    this.wasInZone = inZone;
+
+    const meterDisplay = slingshotFired
+      ? 1
+      : inZone
+        ? Math.min(1, this.meter)
+        : 0;
+
+    return { inZone, meter: this.meter, slingshotFired, meterDisplay };
+  }
+
+  private isPlayerInAnySlipstream(
+    pb: { cx: number; cz: number; hx: number; hz: number },
+    vehicles: TrafficCollisionBounds[]
+  ): boolean {
+    const zw = CONFIG.SLIPSTREAM_ZONE_WIDTH;
+    const zd = CONFIG.SLIPSTREAM_ZONE_DEPTH;
+    for (const v of vehicles) {
+      if (this.overlapSlipstream(pb, v, zw, zd)) return true;
+    }
+    return false;
+  }
+
+  /** Zone sits behind vehicle (toward −Z from rear bumper), same lane width span. */
+  private overlapSlipstream(
+    pb: { cx: number; cz: number; hx: number; hz: number },
+    v: TrafficCollisionBounds,
+    zoneW: number,
+    zoneDepth: number
+  ): boolean {
+    const rearZ = v.cz - v.hz;
+    const zMin = rearZ - zoneDepth;
+    const zMax = rearZ;
+    const xMin = v.cx - zoneW / 2;
+    const xMax = v.cx + zoneW / 2;
+
+    const pxMin = pb.cx - pb.hx;
+    const pxMax = pb.cx + pb.hx;
+    const pzMin = pb.cz - pb.hz;
+    const pzMax = pb.cz + pb.hz;
+
+    return (
+      pxMax > xMin &&
+      pxMin < xMax &&
+      pzMax > zMin &&
+      pzMin < zMax
+    );
+  }
 }

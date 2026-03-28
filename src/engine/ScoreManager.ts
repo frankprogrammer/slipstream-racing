@@ -1,10 +1,31 @@
 import { CONFIG } from '../config';
 
 /**
- * ScoreManager — Score calculation and localStorage persistence.
- * Sources: distance (1pt per 5 units), slipstream bonus (50 × chain), milestone bursts.
- * Tracks: currentScore, totalDistance, highScore.
+ * Score: distance ticks (every DISTANCE_SCORE_INTERVAL units) × chain multiplier,
+ * plus slipstream bonus per slingshot.
  */
 export class ScoreManager {
-  // TODO: Implement
+  private score = 0;
+  private distanceAcc = 0;
+
+  get currentScore(): number {
+    return Math.floor(this.score);
+  }
+
+  reset(): void {
+    this.score = 0;
+    this.distanceAcc = 0;
+  }
+
+  addDistance(distanceDelta: number, chainMultiplier: number): void {
+    this.distanceAcc += distanceDelta;
+    while (this.distanceAcc >= CONFIG.DISTANCE_SCORE_INTERVAL) {
+      this.distanceAcc -= CONFIG.DISTANCE_SCORE_INTERVAL;
+      this.score += CONFIG.DISTANCE_SCORE_RATE * chainMultiplier;
+    }
+  }
+
+  addSlingshotBonus(chainAfterIncrement: number): void {
+    this.score += CONFIG.CHAIN_SCORE_BASE * chainAfterIncrement;
+  }
 }

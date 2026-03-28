@@ -29,3 +29,93 @@ the arrow keys movement is currently inverted. Also we need to move the camera b
 the camera should remain centered on the road. Can we move up about 50% height and looking down towards the taxi. the back of the taxi should be framed about 15% of the game height from the bottom of the screen.
 
 ---
+
+### 2026-03-27 9:15 PM PDT
+
+PROPMTS.md should store the time stamp in Pacific Time. update any of the current entries
+
+---
+
+### 2026-03-27 9:25 PM PDT
+
+I cannot see the player taxi at all now. the camera height is good but it need rotate down to bring the player into view.
+
+---
+
+### 2026-03-27 9:35 PM PDT
+
+the camera height and angle look good, but the player taxi is framed at the center of screen. Can you just move the camera deeper (in the current direction the taxi is facing) so that the rear of the taxi is about 15% of sceen hegiht away from the bottom of the screen.
+
+---
+
+### 2026-03-27 9:45 PM PDT
+
+in the current game which direction are the positive Z and positive X axis?
+
+---
+
+### 2026-03-27 10:00 PM PDT
+
+why does the bloom only to the area around the taxi and not the further away road?
+
+---
+
+### 2026-03-27 10:10 PM PDT
+
+can you raise the ambient light intensity by 50%
+
+---
+
+### 2026-03-27 10:15 PM PDT
+
+make the road material color about 25% brighter
+
+---
+
+### 2026-03-27 10:18 PM PDT
+
+bump it another 25%
+
+---
+
+### 2026-03-27 10:22 PM PDT
+
+make the other cars material 50% brighter
+
+---
+
+### 2026-03-27 10:30 PM PDT
+
+currently the other vehicles are actually moving towards the player relative to the road. the idea is that the vehicles are moving in the same direction as the player but just at much slower speed
+
+---
+
+### 2026-03-27 10:45 PM PDT
+
+you stopped updating the prompts.md file. please update any you missed and add any new ones i make
+
+---
+
+### 2026-03-28 4:30 AM PDT
+
+Implement Phase 2 steps 7 through 14
+
+---
+
+### 2026-03-28 4:40 AM PDT
+
+right now the time to fill up the sliptream circle is too long. It should also scale based off the current world speed. so that if the game is going way faster, it will fill up faster
+
+---
+
+### 2026-03-28 4:50 AM PDT
+
+the slipstream speed boost should only happen once you have successfully filled the slipstream meter and left the slipstream zone
+
+---
+
+### 2026-03-28 5:00 AM PDT
+
+the first car appear way too late. it should appear almost as soon as the player starts the run
+
+---

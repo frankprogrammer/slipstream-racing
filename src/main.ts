@@ -11,12 +11,16 @@ import { PlayerTaxi } from './engine/PlayerTaxi';
 import { TrafficSpawner } from './engine/TrafficSpawner';
 import { CollisionSystem } from './engine/CollisionSystem';
 import { CameraController } from './engine/CameraController';
+import { SlipstreamZone } from './engine/SlipstreamZone';
+import { ChainManager } from './engine/ChainManager';
+import { ScoreManager } from './engine/ScoreManager';
 import { GameOverScreen } from './ui/GameOverScreen';
+import { HUD } from './ui/HUD';
 
 /**
  * Slipstream: Tokyo Night — Main Entry Point
  *
- * Phase 1: road, taxi, lanes, traffic pool, collision, camera follow, game over / retry.
+ * Phase 2: slipstream draft, slingshot burst, chain, score, HUD, game over.
  */
 
 const container = document.getElementById('game-container')!;
@@ -104,6 +108,10 @@ const roadManager = new RoadManager(CONFIG.TAXI_POSITION_Z);
 const trafficSpawner = new TrafficSpawner();
 const collisionSystem = new CollisionSystem();
 const cameraController = new CameraController(camera);
+const slipstreamZone = new SlipstreamZone();
+const chainManager = new ChainManager();
+const scoreManager = new ScoreManager();
+const hud = new HUD();
 const gameOverScreen = new GameOverScreen();
 
 scene.add(roadManager.group);
@@ -112,15 +120,21 @@ scene.add(playerTaxi.group);
 
 let runTimeMs = 0;
 let distanceUnits = 0;
+let burstRemainMs = 0;
 
 function resetGame(): void {
   gameState.reset();
   laneSystem.enabled = true;
   runTimeMs = 0;
   distanceUnits = 0;
+  burstRemainMs = 0;
   roadManager.reset();
   trafficSpawner.reset();
   playerTaxi.reset();
+  slipstreamZone.reset();
+  chainManager.reset();
+  scoreManager.reset();
+  hud.reset();
   const nowMs = performance.now();
   const x = laneSystem.getLaneX(nowMs);
   const roll = laneSystem.getBodyRollRad(nowMs);
@@ -136,8 +150,9 @@ gameOverScreen.onRetry(() => {
 gameState.onChange(state => {
   if (state === 'gameover') {
     laneSystem.enabled = false;
-    const score = Math.floor(distanceUnits);
-    gameOverScreen.show(score, 0, distanceUnits);
+    playerTaxi.setDraftMeter(0, false);
+    const score = scoreManager.currentScore;
+    gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits);
   }
 });
 
@@ -163,16 +178,46 @@ function animate(): void {
 
   if (gameState.isPlaying) {
     runTimeMs += delta * 1000;
-    const laneX = laneSystem.getLaneX(nowMs);
-    const roll = laneSystem.getBodyRollRad(nowMs);
-    const scrollDz = CONFIG.BASE_SCROLL_SPEED * 60 * delta;
+    burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
+    const scrollPerFrame =
+      CONFIG.BASE_SCROLL_SPEED +
+      (burstRemainMs > 0 ? CONFIG.SLINGSHOT_SPEED_BURST : 0);
+    const scrollDz = scrollPerFrame * 60 * delta;
 
     roadManager.update(scrollDz);
-    trafficSpawner.update(delta, runTimeMs, CONFIG.BASE_SCROLL_SPEED);
+    trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
+    const laneX = laneSystem.getLaneX(nowMs);
+    const roll = laneSystem.getBodyRollRad(nowMs);
     playerTaxi.applyLaneVisuals(laneX, roll);
     cameraController.update(playerTaxi);
 
+    const slip = slipstreamZone.update(
+      delta,
+      scrollPerFrame,
+      playerTaxi,
+      trafficSpawner
+    );
+    chainManager.tick(nowMs, slip.inZone);
+    playerTaxi.setDrafting(slip.inZone);
+
+    if (slip.slingshotFired) {
+      burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
+      const milestone = chainManager.onSlingshot(nowMs);
+      scoreManager.addSlingshotBonus(chainManager.chain);
+      if (milestone === 10) {
+        hud.showMilestone('PERFECT');
+        hud.flashScreen();
+      } else if (milestone !== null) {
+        hud.showMilestone(`×${milestone}!`);
+      }
+    }
+
+    scoreManager.addDistance(scrollDz, chainManager.chain);
     distanceUnits += scrollDz;
+
+    hud.updateScore(scoreManager.currentScore);
+    hud.updateChain(chainManager.chain);
+    playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
     if (collisionSystem.check(playerTaxi, trafficSpawner)) {
       gameState.transition('gameover');
@@ -195,4 +240,6 @@ function animate(): void {
 
 animate();
 
-console.log('Slipstream: Tokyo Night — Phase 1 running. Append ?fps to URL for FPS overlay (e.g. ?fps=1).');
+console.log(
+  'Slipstream: Tokyo Night — Phase 2 (slipstream / chain / score). ?fps=1 for FPS overlay.'
+);

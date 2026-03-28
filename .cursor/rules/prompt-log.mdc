@@ -1,0 +1,17 @@
+---
+description: Log user prompts to PROMPTS.md
+globs:
+alwaysApply: true
+---
+
+# Project prompt log
+
+When the user sends a **task or question** in this project (especially in Agent mode), **append their exact user message** to `PROMPTS.md` at the repo root.
+
+- **Create** `PROMPTS.md` if it does not exist.
+- Use a **horizontal rule** `---` between entries.
+- Add a heading: **`### YYYY-MM-DD h:mm AM/PM PDT`** using **US Pacific Time** (America/Los_Angeles).
+- Log **only the user’s prompt text**, not assistant replies.
+- If the same prompt would be duplicated in one turn, append once.
+
+Do not skip logging because the message is short or follow-up.
