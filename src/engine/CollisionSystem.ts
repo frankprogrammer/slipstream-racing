@@ -1,12 +1,34 @@
-import * as THREE from 'three';
-import { CONFIG } from '../config';
+import type { PlayerTaxi } from './PlayerTaxi';
+import type { TrafficSpawner } from './TrafficSpawner';
+
+function aabbOverlap2D(
+  ax: number,
+  az: number,
+  ahx: number,
+  ahz: number,
+  bx: number,
+  bz: number,
+  bhx: number,
+  bhz: number
+): boolean {
+  return (
+    Math.abs(ax - bx) < ahx + bhx &&
+    Math.abs(az - bz) < ahz + bhz
+  );
+}
 
 /**
- * CollisionSystem — AABB overlap check in XZ plane.
- * Only death trigger: player taxi overlaps traffic vehicle.
- * On collision: emit event → GameState transitions to gameover.
- * Total time from collision to game over visible: < 500ms.
+ * CollisionSystem — XZ AABB overlap between player taxi and active traffic.
  */
 export class CollisionSystem {
-  // TODO: Implement
+  check(player: PlayerTaxi, traffic: TrafficSpawner): boolean {
+    const p = player.getCollisionBounds();
+    const list = traffic.getActiveCollisionBounds();
+    for (const t of list) {
+      if (aabbOverlap2D(p.cx, p.cz, p.hx, p.hz, t.cx, t.cz, t.hx, t.hz)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

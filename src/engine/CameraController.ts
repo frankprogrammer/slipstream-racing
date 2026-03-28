@@ -1,18 +1,62 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config';
+import type { PlayerTaxi } from './PlayerTaxi';
 
 /**
- * CameraController — Elevated follow camera (Vehicle Masters style, ~20ft up).
- *
- * Position: CAMERA_HEIGHT above road, CAMERA_DISTANCE behind player, angled CAMERA_ANGLE° down.
- * Taxi sits in the lower third of the portrait screen for maximum forward visibility.
- *
- * Features:
- * - Smooth follow (lerp to player X position each frame)
- * - FOV shift: 55° base → 65° at high chain
- * - Shake: small amplitude on slingshot, decays via CAMERA_SHAKE_DECAY
- * - Camera always looks forward — no rotation on lane switch
+ * Road-centered chase camera: fixed on lane center (X=0).
+ * Height + look-at (pitch) come from CONFIG; only **distance behind the taxi** is refined so the
+ * rear bumper lands at CAMERA_FRAMING_BOTTOM_PCT from the screen bottom (NDC).
  */
 export class CameraController {
-  // TODO: Implement
+  private readonly camera: THREE.PerspectiveCamera;
+  private readonly rearWorld = new THREE.Vector3();
+  private readonly rearNdc = new THREE.Vector3();
+  /** Distance along -Z behind player (world); larger = camera further back on the road. */
+  private followDistance: number = CONFIG.CAMERA_DISTANCE;
+
+  constructor(camera: THREE.PerspectiveCamera) {
+    this.camera = camera;
+  }
+
+  update(playerTaxi: PlayerTaxi): void {
+    this.applyCamera(playerTaxi);
+  }
+
+  snap(playerTaxi: PlayerTaxi): void {
+    this.followDistance = CONFIG.CAMERA_DISTANCE;
+    this.applyCamera(playerTaxi);
+  }
+
+  private applyCamera(playerTaxi: PlayerTaxi): void {
+    const playerZ = playerTaxi.group.position.z;
+    const lookZ = playerZ + CONFIG.CAMERA_LOOK_AHEAD;
+    const h = CONFIG.CAMERA_HEIGHT;
+    const lookY = CONFIG.CAMERA_LOOK_AT_Y;
+
+    playerTaxi.getRearWorldPosition(this.rearWorld);
+
+    const targetNdcY = -1 + 2 * CONFIG.CAMERA_FRAMING_BOTTOM_PCT;
+    let dist = this.followDistance;
+
+    const maxIter = 14;
+    for (let i = 0; i < maxIter; i++) {
+      const zCam = playerZ - dist;
+      this.camera.position.set(0, h, zCam);
+      this.camera.up.set(0, 1, 0);
+      this.camera.lookAt(0, lookY, lookZ);
+      this.camera.updateMatrixWorld(true);
+      this.rearNdc.copy(this.rearWorld);
+      this.rearNdc.project(this.camera);
+      const err = targetNdcY - this.rearNdc.y;
+      if (Math.abs(err) < 0.008) break;
+      dist += err * CONFIG.CAMERA_FRAMING_DISTANCE_GAIN;
+      dist = THREE.MathUtils.clamp(dist, 4, 40);
+    }
+
+    this.followDistance = dist;
+    const zCam = playerZ - dist;
+    this.camera.position.set(0, h, zCam);
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(0, lookY, lookZ);
+  }
 }

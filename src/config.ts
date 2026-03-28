@@ -19,9 +19,19 @@ export const CONFIG = {
   GAME_WIDTH: 390,
   GAME_HEIGHT: 844,
 
-  // ── Camera (Vehicle Masters style — elevated third person, ~20ft up) ──
-  CAMERA_HEIGHT: 6.0,
-  CAMERA_DISTANCE: 4.0,
+  // ── Camera (road-centered: fixed X=0, chase down centerline) ──
+  CAMERA_HEIGHT: 22.0,
+  CAMERA_DISTANCE: 10.5,
+  /** Aim at a point this far ahead on the road (small = steeper look-down at the taxi). */
+  CAMERA_LOOK_AHEAD: 7.5,
+  /**
+   * World Y of look-at target. Negative = below horizon, pitches camera down (required to see the taxi).
+   */
+  CAMERA_LOOK_AT_Y: 1,
+  /** Screen Y of taxi rear: 0 = bottom, 1 = top (NDC). Solved by dolly (distance) only. */
+  CAMERA_FRAMING_BOTTOM_PCT: 0.15,
+  /** How fast to converge distance so rear hits CAMERA_FRAMING_BOTTOM_PCT (NDC error → Δdistance). */
+  CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
   CAMERA_FOV_BASE: 55,
   CAMERA_FOV_MAX: 65,
@@ -41,7 +51,7 @@ export const CONFIG = {
   PROP_DENSITY: 0.6,
   FOG_NEAR: 15,
   FOG_FAR: 60,
-  FOG_COLOR: 0x08050E,
+  FOG_COLOR: 0x08050e,
 
   // ── Speed ──
   BASE_SCROLL_SPEED: 0.15,
@@ -62,14 +72,32 @@ export const CONFIG = {
 
   // ── Traffic ──
   TRAFFIC_PHASES: [
-    { startTime: 0,      spawnRate: 2000, lanes: [1],       speedVariance: 0 },
-    { startTime: 20000,  spawnRate: 1200, lanes: [0, 1, 2], speedVariance: 0.2 },
-    { startTime: 60000,  spawnRate: 800,  lanes: [0, 1, 2], speedVariance: 0.4, laneChange: true },
-    { startTime: 120000, spawnRate: 500,  lanes: [0, 1, 2], speedVariance: 0.6, laneChange: true },
+    { startTime: 0, spawnRate: 2000, lanes: [1], speedVariance: 0 },
+    { startTime: 20000, spawnRate: 1200, lanes: [0, 1, 2], speedVariance: 0.2 },
+    {
+      startTime: 60000,
+      spawnRate: 800,
+      lanes: [0, 1, 2],
+      speedVariance: 0.4,
+      laneChange: true,
+    },
+    {
+      startTime: 120000,
+      spawnRate: 500,
+      lanes: [0, 1, 2],
+      speedVariance: 0.6,
+      laneChange: true,
+    },
   ] as readonly TrafficPhase[],
   VEHICLE_TYPES: 2,
   VEHICLE_LANE_CHANGE_TELEGRAPH: 1500,
-  VEHICLE_BASE_SPEED: 0.08,
+  /**
+   * World +Z speed (same units as BASE_SCROLL_SPEED). Traffic moves forward with the road flow
+   * but slower than the player; net approach = BASE_SCROLL_SPEED − this (× speed variance).
+   */
+  VEHICLE_TRAFFIC_FORWARD_SPEED: 0.07,
+  /** Floor for net −Δz so traffic never drifts the wrong way if variance is high. */
+  VEHICLE_TRAFFIC_MIN_APPROACH: 0.02,
   VEHICLE_POOL_SIZE: 20,
 
   // ── Player Taxi ──
@@ -89,8 +117,8 @@ export const CONFIG = {
   CHAIN_POP_DURATION: 200,
 
   // ── Post-Processing ──
-  BLOOM_INTENSITY: 0.6,
-  BLOOM_THRESHOLD: 0.8,
+  BLOOM_INTENSITY: 0.45,
+  BLOOM_THRESHOLD: 0.2,
   BLOOM_RADIUS: 0.4,
   BLOOM_RESOLUTION_SCALE: 0.5,
 
@@ -105,21 +133,33 @@ export const CONFIG = {
 
   // ── Palette (Tokyo Night) ──
   PALETTE: {
-    NEON_PINK: 0xFF2D7B,
-    NEON_BLUE: 0x00E5FF,
-    NEON_PURPLE: 0xB44DFF,
-    NEON_ORANGE: 0xFF6B2D,
-    ROAD_DARK: 0x1A1428,
-    SKY: 0x08050E,
-    TAXI_BODY: 0xE8B84D,
-    TAXI_ROOF_LIGHT: 0x00FF88,
-    TAIL_LIGHT: 0xFF3333,
-    HEADLIGHT: 0xFFEEDD,
-    LANE_MARKING: 0xFFFFFF,
-    UI_TEXT: 0xF0E8FF,
+    NEON_PINK: 0xff2d7b,
+    NEON_BLUE: 0x00e5ff,
+    NEON_PURPLE: 0xb44dff,
+    NEON_ORANGE: 0xff6b2d,
+    ROAD_DARK: 0x291f3f,
+    TRAFFIC_BODY_COMPACT: 0x575766,
+    TRAFFIC_BODY_TRUCK: 0x424254,
+    SKY: 0x08050e,
+    TAXI_BODY: 0xe8b84d,
+    TAXI_ROOF_LIGHT: 0x00ff88,
+    TAIL_LIGHT: 0xff3333,
+    HEADLIGHT: 0xffeedd,
+    LANE_MARKING: 0xffffff,
+    UI_TEXT: 0xf0e8ff,
   },
 
   // ── Swipe Input ──
   SWIPE_THRESHOLD: 30,
   SWIPE_MAX_TIME: 300,
+
+  // ── Scene lighting (MeshStandard vehicles need readable fill) ──
+  AMBIENT_LIGHT_COLOR: 0x8899bb,
+  AMBIENT_LIGHT_INTENSITY: 0.825,
+  DIRECTIONAL_LIGHT_COLOR: 0xffeedd,
+  DIRECTIONAL_LIGHT_INTENSITY: 0.75,
+  DIRECTIONAL_LIGHT_POSITION: [8, 18, 6] as const,
+  HEMISPHERE_LIGHT_SKY: 0x6688cc,
+  HEMISPHERE_LIGHT_GROUND: 0x1a1428,
+  HEMISPHERE_LIGHT_INTENSITY: 0.42,
 } as const;

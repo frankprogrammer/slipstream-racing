@@ -4,17 +4,21 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { CONFIG } from './config';
+import { GameState } from './engine/GameState';
+import { LaneSystem } from './engine/LaneSystem';
+import { RoadManager } from './engine/RoadManager';
+import { PlayerTaxi } from './engine/PlayerTaxi';
+import { TrafficSpawner } from './engine/TrafficSpawner';
+import { CollisionSystem } from './engine/CollisionSystem';
+import { CameraController } from './engine/CameraController';
+import { GameOverScreen } from './ui/GameOverScreen';
 
 /**
  * Slipstream: Tokyo Night — Main Entry Point
  *
- * Sets up the Three.js renderer, scene, camera, post-processing,
- * and kicks off the game loop.
- *
- * See CLAUDE.md for full architecture and implementation order.
+ * Phase 1: road, taxi, lanes, traffic pool, collision, camera follow, game over / retry.
  */
 
-// ── Renderer ──
 const container = document.getElementById('game-container')!;
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -28,29 +32,43 @@ renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.prepend(renderer.domElement);
 
-// ── Scene ──
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(CONFIG.PALETTE.SKY);
 scene.fog = new THREE.Fog(CONFIG.FOG_COLOR, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
 
-// ── Camera (elevated third-person, Vehicle Masters style) ──
 const camera = new THREE.PerspectiveCamera(
   CONFIG.CAMERA_FOV_BASE,
   window.innerWidth / window.innerHeight,
   0.1,
-  100
+  200
 );
-camera.position.set(0, CONFIG.CAMERA_HEIGHT, -CONFIG.CAMERA_DISTANCE);
-camera.lookAt(0, 0, CONFIG.CAMERA_DISTANCE * 2);
 
-// ── Lighting (minimal — emissive + bloom does the heavy lifting) ──
-const ambientLight = new THREE.AmbientLight(0x222244, 0.3);
+const ambientLight = new THREE.AmbientLight(
+  CONFIG.AMBIENT_LIGHT_COLOR,
+  CONFIG.AMBIENT_LIGHT_INTENSITY
+);
 scene.add(ambientLight);
-const dirLight = new THREE.DirectionalLight(0xFFEEDD, 0.2);
-dirLight.position.set(5, 10, -5);
+
+const hemiLight = new THREE.HemisphereLight(
+  CONFIG.HEMISPHERE_LIGHT_SKY,
+  CONFIG.HEMISPHERE_LIGHT_GROUND,
+  CONFIG.HEMISPHERE_LIGHT_INTENSITY
+);
+hemiLight.position.set(0, 40, 0);
+scene.add(hemiLight);
+
+const dirLight = new THREE.DirectionalLight(
+  CONFIG.DIRECTIONAL_LIGHT_COLOR,
+  CONFIG.DIRECTIONAL_LIGHT_INTENSITY
+);
+dirLight.position.set(
+  CONFIG.DIRECTIONAL_LIGHT_POSITION[0],
+  CONFIG.DIRECTIONAL_LIGHT_POSITION[1],
+  CONFIG.DIRECTIONAL_LIGHT_POSITION[2]
+);
+dirLight.castShadow = false;
 scene.add(dirLight);
 
-// ── Post-Processing ──
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
@@ -66,7 +84,6 @@ const bloomPass = new UnrealBloomPass(
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
-// ── Resize Handler ──
 window.addEventListener('resize', () => {
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -80,30 +97,102 @@ window.addEventListener('resize', () => {
   );
 });
 
-// ── Game Loop ──
+const gameState = new GameState();
+const laneSystem = new LaneSystem(container);
+const playerTaxi = new PlayerTaxi();
+const roadManager = new RoadManager(CONFIG.TAXI_POSITION_Z);
+const trafficSpawner = new TrafficSpawner();
+const collisionSystem = new CollisionSystem();
+const cameraController = new CameraController(camera);
+const gameOverScreen = new GameOverScreen();
+
+scene.add(roadManager.group);
+scene.add(trafficSpawner.group);
+scene.add(playerTaxi.group);
+
+let runTimeMs = 0;
+let distanceUnits = 0;
+
+function resetGame(): void {
+  gameState.reset();
+  laneSystem.enabled = true;
+  runTimeMs = 0;
+  distanceUnits = 0;
+  roadManager.reset();
+  trafficSpawner.reset();
+  playerTaxi.reset();
+  const nowMs = performance.now();
+  const x = laneSystem.getLaneX(nowMs);
+  const roll = laneSystem.getBodyRollRad(nowMs);
+  playerTaxi.applyLaneVisuals(x, roll);
+  cameraController.snap(playerTaxi);
+  gameOverScreen.hide();
+}
+
+gameOverScreen.onRetry(() => {
+  resetGame();
+});
+
+gameState.onChange(state => {
+  if (state === 'gameover') {
+    laneSystem.enabled = false;
+    const score = Math.floor(distanceUnits);
+    gameOverScreen.show(score, 0, distanceUnits);
+  }
+});
+
+resetGame();
+
 const clock = new THREE.Clock();
+
+const showFps = new URLSearchParams(window.location.search).has('fps');
+let fpsEl: HTMLElement | null = null;
+let fpsAcc = 0;
+let fpsFrames = 0;
+if (showFps) {
+  fpsEl = document.createElement('div');
+  fpsEl.style.cssText =
+    'position:absolute;left:8px;bottom:8px;z-index:100;font:12px monospace;color:#0f0;background:rgba(0,0,0,.5);padding:4px 8px;pointer-events:none;';
+  container.appendChild(fpsEl);
+}
 
 function animate(): void {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
-  const elapsed = clock.getElapsedTime();
+  const nowMs = performance.now();
 
-  // TODO: Update game systems here:
-  // 1. GameState check
-  // 2. RoadManager.update(delta)
-  // 3. TrafficSpawner.update(delta, elapsed)
-  // 4. PlayerTaxi.update(delta)
-  // 5. SlipstreamZone.update()
-  // 6. ChainManager.update(delta)
-  // 7. ScoreManager.update(delta)
-  // 8. CollisionSystem.check()
-  // 9. CameraController.update(delta)
-  // 10. ParticleSystems.update(delta)
-  // 11. HUD.update()
+  if (gameState.isPlaying) {
+    runTimeMs += delta * 1000;
+    const laneX = laneSystem.getLaneX(nowMs);
+    const roll = laneSystem.getBodyRollRad(nowMs);
+    const scrollDz = CONFIG.BASE_SCROLL_SPEED * 60 * delta;
+
+    roadManager.update(scrollDz);
+    trafficSpawner.update(delta, runTimeMs, CONFIG.BASE_SCROLL_SPEED);
+    playerTaxi.applyLaneVisuals(laneX, roll);
+    cameraController.update(playerTaxi);
+
+    distanceUnits += scrollDz;
+
+    if (collisionSystem.check(playerTaxi, trafficSpawner)) {
+      gameState.transition('gameover');
+    }
+  }
+
+  if (showFps && fpsEl) {
+    fpsAcc += delta;
+    fpsFrames += 1;
+    if (fpsAcc >= 0.5) {
+      const fps = Math.round(fpsFrames / fpsAcc);
+      fpsEl.textContent = `${fps} fps`;
+      fpsAcc = 0;
+      fpsFrames = 0;
+    }
+  }
 
   composer.render();
 }
 
 animate();
 
-console.log('Slipstream: Tokyo Night — initialized. See CLAUDE.md for implementation order.');
+console.log('Slipstream: Tokyo Night — Phase 1 running. Append ?fps to URL for FPS overlay (e.g. ?fps=1).');
