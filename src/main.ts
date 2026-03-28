@@ -9,6 +9,7 @@ import { TrafficSpawner } from './engine/TrafficSpawner';
 import { CollisionSystem } from './engine/CollisionSystem';
 import { CameraController } from './engine/CameraController';
 import { RainSystem } from './engine/RainSystem';
+import { SlingshotTrailSystem } from './engine/SlingshotTrailSystem';
 import { SlipstreamZone } from './engine/SlipstreamZone';
 import { ChainManager } from './engine/ChainManager';
 import { ScoreManager } from './engine/ScoreManager';
@@ -96,11 +97,13 @@ const scoreManager = new ScoreManager();
 const hud = new HUD();
 const gameOverScreen = new GameOverScreen();
 const rainSystem = new RainSystem();
+const slingshotTrail = new SlingshotTrailSystem();
 
 scene.add(roadManager.group);
 scene.add(trafficSpawner.group);
 scene.add(playerTaxi.group);
 scene.add(rainSystem.group);
+scene.add(slingshotTrail.group);
 
 let runTimeMs = 0;
 let distanceUnits = 0;
@@ -115,6 +118,7 @@ function resetGame(): void {
   roadManager.reset();
   trafficSpawner.reset();
   playerTaxi.reset();
+  slingshotTrail.reset();
   slipstreamZone.reset();
   chainManager.reset();
   scoreManager.reset();
@@ -188,6 +192,7 @@ function animate(): void {
 
     if (slip.slingshotFired) {
       burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
+      slingshotTrail.burst(playerTaxi);
       const milestone = chainManager.onSlingshot(nowMs);
       scoreManager.addSlingshotBonus(chainManager.chain);
       if (milestone === 10) {
@@ -212,8 +217,11 @@ function animate(): void {
     if (collisionSystem.check(playerTaxi, trafficSpawner)) {
       gameState.transition('gameover');
     }
+
+    slingshotTrail.update(delta, scrollDz);
   } else {
     trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
+    slingshotTrail.update(delta, 0);
   }
 
   if (showFps && fpsEl) {

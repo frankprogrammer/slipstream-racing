@@ -70,10 +70,10 @@ export const CONFIG = {
 
   // ── Speed ──
   BASE_SCROLL_SPEED: 0.15,
-  MAX_SCROLL_SPEED: 0.4,
-  SPEED_RAMP_RATE: 0.00005,
+  MAX_SCROLL_SPEED: 0.8,
+  SPEED_RAMP_RATE: 0.0001,
   SLINGSHOT_SPEED_BURST: 0.1,
-  SLINGSHOT_BURST_DURATION: 500,
+  SLINGSHOT_BURST_DURATION: 750,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
@@ -180,7 +180,19 @@ export const CONFIG = {
   RAIN_PARTICLE_SIZE: 0.055,
   RAIN_PARTICLE_OPACITY: 0.42,
   RAIN_PARTICLE_COLOR: 0x99aacc,
-  SLINGSHOT_PARTICLE_COUNT: 20,
+  /** Neon streaks behind taxi on slingshot (CLAUDE: 3–4). */
+  SLINGSHOT_TRAIL_STREAK_COUNT: 4,
+  SLINGSHOT_TRAIL_DURATION_MS: 500,
+  /** Thin box: width (X), height (Y), length along −Z behind the taxi. */
+  SLINGSHOT_TRAIL_LENGTH: 2.0,
+  SLINGSHOT_TRAIL_WIDTH: 0.14,
+  SLINGSHOT_TRAIL_BOX_HEIGHT: 0.1,
+  /** World Y of streak center (above asphalt; was too low when forced to 0.06). */
+  SLINGSHOT_TRAIL_SURFACE_Y: 1.12,
+  /** Push streak center behind rear bumper (world Z). */
+  SLINGSHOT_TRAIL_BACK_OFFSET_Z: 0.85,
+  /** World-Z motion vs road scroll (1 = same as traffic). */
+  SLINGSHOT_TRAIL_SCROLL_SCALE: 1.05,
 
   // ── Palette (Tokyo Night) ──
   PALETTE: {
