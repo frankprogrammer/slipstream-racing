@@ -26,8 +26,8 @@ export const SKIN_MANIFEST = {
   // ── 3D Models (null = procedural mesh in engine until swapped) ──
   models: {
     playerTaxi: null,          // null: PlayerTaxi low-poly stack; else e.g. 'models/taxi.glb'
-    vehicleA: null,            // 'models/compact-car.glb'
-    vehicleB: null,            // 'models/delivery-truck.glb'
+    vehicleA: null,            // null: TrafficVehicleVisuals compact; else GLB
+    vehicleB: null,            // null: TrafficVehicleVisuals truck; else GLB
     neonSign: null,            // 'models/neon-sign.glb'
     lampPost: null,            // 'models/lamp-post.glb'
     barrier: null,             // 'models/road-barrier.glb'

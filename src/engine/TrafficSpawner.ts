@@ -1,6 +1,12 @@
 import * as THREE from 'three';
-import { CONFIG } from '../config';
+import { CONFIG, TRAFFIC_PAINT_COLORS } from '../config';
 import type { TrafficPhase } from '../config';
+import {
+  COMPACT,
+  TRUCK,
+  buildCompactTrafficMesh,
+  buildTruckTrafficMesh,
+} from './TrafficVehicleVisuals';
 
 export type TrafficCollisionBounds = {
   cx: number;
@@ -17,11 +23,8 @@ type PoolEntry = {
   typeIndex: 0 | 1;
 };
 
-const COMPACT = { w: 1.6, h: 0.7, d: 3.0 };
-const TRUCK = { w: 2.0, h: 1.2, d: 4.5 };
-
 /**
- * TrafficSpawner — Object-pooled vehicles (gray boxes). Phase 1: no lane-change telegraph.
+ * TrafficSpawner — Object-pooled vehicles (low-poly procedural meshes). Phase 1: no lane-change telegraph.
  */
 export class TrafficSpawner {
   readonly group = new THREE.Group();
@@ -34,37 +37,19 @@ export class TrafficSpawner {
     this.group.name = 'TrafficGroup';
     const n = CONFIG.VEHICLE_POOL_SIZE;
     const half = Math.floor(n / 2);
-    for (let i = 0; i < half; i++) this.pool.push(this.createVehicle(0));
-    for (let i = 0; i < n - half; i++) this.pool.push(this.createVehicle(1));
+    for (let i = 0; i < half; i++) this.pool.push(this.createVehicle(0, i));
+    for (let i = 0; i < n - half; i++) this.pool.push(this.createVehicle(1, i + half));
   }
 
-  private createVehicle(typeIndex: 0 | 1): PoolEntry {
-    const dims = typeIndex === 0 ? COMPACT : TRUCK;
+  private createVehicle(typeIndex: 0 | 1, paintSlotIndex: number): PoolEntry {
     const g = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color:
-        typeIndex === 0
-          ? CONFIG.PALETTE.TRAFFIC_BODY_COMPACT
-          : CONFIG.PALETTE.TRAFFIC_BODY_TRUCK,
-      roughness: 0.85,
-      metalness: 0.05,
-    });
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(dims.w, dims.h, dims.d),
-      bodyMat
-    );
-    body.position.y = dims.h / 2;
-    g.add(body);
-
-    const tailMat = new THREE.MeshBasicMaterial({ color: CONFIG.PALETTE.TAIL_LIGHT });
-    const tailGeo = new THREE.PlaneGeometry(0.25, 0.1);
-    const tl = new THREE.Mesh(tailGeo, tailMat);
-    tl.rotation.y = Math.PI;
-    tl.position.set(-dims.w / 3, dims.h * 0.4, -dims.d / 2 - 0.01);
-    g.add(tl);
-    const tr = tl.clone();
-    tr.position.x = dims.w / 3;
-    g.add(tr);
+    const paint =
+      TRAFFIC_PAINT_COLORS[paintSlotIndex % TRAFFIC_PAINT_COLORS.length]!;
+    const visual =
+      typeIndex === 0
+        ? buildCompactTrafficMesh(COMPACT, paint)
+        : buildTruckTrafficMesh(TRUCK, paint);
+    g.add(visual);
 
     g.visible = false;
     this.group.add(g);

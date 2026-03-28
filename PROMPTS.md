@@ -119,3 +119,69 @@ the slipstream speed boost should only happen once you have successfully filled 
 the first car appear way too late. it should appear almost as soon as the player starts the run
 
 ---
+
+### 2026-03-28 5:10 AM PDT
+
+the first car still does not appear until 10 seconds after starting the run
+
+---
+
+### 2026-03-28 5:25 AM PDT
+
+lnstead of a radial meter, lets make the draft fill meter a horizontal bar that is displayed at the front of the player vehicle
+
+---
+
+### 2026-03-28 5:35 AM PDT
+
+the meter is perfect except it currently fills right to left. it should fill left to right
+
+---
+
+### 2026-03-28 5:45 AM PDT
+
+nope the bar still fills from right to left
+
+---
+
+### 2026-03-28 6:00 AM PDT
+
+Let's make the collision more foregiving, make the players collider about 10% shorter at the front and back
+
+---
+
+### 2026-03-28 6:15 AM PDT
+
+make it so cars in adjancent lanes cannot be any closer along the z axis than the car length + the slipstream zone depth
+
+---
+
+### 2026-03-28 6:30 AM PDT
+
+the cars are still getting too close to eachother. also they are spawning about halfway up the screen. they need be spawning further away
+
+---
+
+### 2026-03-28 6:45 AM PDT
+
+implement step 15
+
+---
+
+### 2026-03-28 7:00 AM PDT
+
+implement step 16
+
+---
+
+### 2026-03-28 7:15 AM PDT
+
+let's make the other car bodies display in colors within our color palette
+
+---
+
+### 2026-03-28 7:25 AM PDT
+
+update prompts.md
+
+---

@@ -48,6 +48,16 @@ export const CONFIG = {
   ROAD_SEGMENT_LENGTH: 20,
   ROAD_VISIBLE_SEGMENTS: 8,
   ROAD_WIDTH: 10,
+  /** World units per asphalt texture tile (repeat on road plane). */
+  ROAD_ASPHALT_TILE_WORLD: 2.75,
+  /** Dashed lane divider along segment +Z. */
+  ROAD_LANE_DASH_LENGTH: 2.5,
+  ROAD_LANE_DASH_GAP: 2.0,
+  ROAD_LANE_MARKING_WIDTH: 0.12,
+  /** Solid white edge lines inset from road width (world units). */
+  ROAD_LANE_EDGE_INSET: 0.38,
+  /** Lane marking emissive intensity (bloom; keep modest). */
+  ROAD_LANE_MARKING_EMISSIVE: 0.18,
   PROP_DENSITY: 0.6,
   FOG_NEAR: 15,
   FOG_FAR: 60,
@@ -158,7 +168,8 @@ export const CONFIG = {
     NEON_BLUE: 0x00e5ff,
     NEON_PURPLE: 0xb44dff,
     NEON_ORANGE: 0xff6b2d,
-    ROAD_DARK: 0x291f3f,
+    /** Asphalt / road surface (mid gray — was dark purple-black). */
+    ROAD_DARK: 0x808080,
     TRAFFIC_BODY_COMPACT: 0x575766,
     TRAFFIC_BODY_TRUCK: 0x424254,
     SKY: 0x08050e,
@@ -184,3 +195,13 @@ export const CONFIG = {
   HEMISPHERE_LIGHT_GROUND: 0x1a1428,
   HEMISPHERE_LIGHT_INTENSITY: 0.42,
 } as const;
+
+/** Traffic body paint — every value is a `PALETTE` color (add/remove to tune variety). */
+export const TRAFFIC_PAINT_COLORS = [
+  CONFIG.PALETTE.TRAFFIC_BODY_COMPACT,
+  CONFIG.PALETTE.TRAFFIC_BODY_TRUCK,
+  CONFIG.PALETTE.NEON_PINK,
+  CONFIG.PALETTE.NEON_BLUE,
+  CONFIG.PALETTE.NEON_PURPLE,
+  CONFIG.PALETTE.NEON_ORANGE,
+] as const;

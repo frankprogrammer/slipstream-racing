@@ -2,8 +2,50 @@ import * as THREE from 'three';
 import { CONFIG } from '../config';
 
 /**
+ * Procedural dark asphalt albedo map (CanvasTexture, tiled on road planes).
+ * Engine uses CONFIG.PALETTE only — no image assets.
+ */
+function createAsphaltTexture(): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('RoadManager: 2D canvas context unavailable');
+
+  const base = new THREE.Color(CONFIG.PALETTE.ROAD_DARK);
+  ctx.fillStyle = `#${base.getHexString()}`;
+  ctx.fillRect(0, 0, size, size);
+
+  const img = ctx.getImageData(0, 0, size, size);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 22;
+    d[i] = Math.max(0, Math.min(255, d[i]! + n));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1]! + n));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2]! + n));
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // Subtle horizontal wear streaks
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#000000';
+  for (let y = 0; y < size; y += 6 + Math.floor(Math.random() * 8)) {
+    ctx.fillRect(0, y, size, 1 + Math.random());
+  }
+  ctx.globalAlpha = 1;
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+/**
  * RoadManager — Infinite road from recycling segments.
- * Each segment: dark asphalt plane + dashed lane markings (gray/white prototype).
+ * Dark asphalt (procedural texture) + dashed lane dividers + solid edge lines.
  */
 export class RoadManager {
   readonly group = new THREE.Group();
@@ -19,18 +61,48 @@ export class RoadManager {
   constructor(playerZ: number) {
     this.playerZ = playerZ;
     this.group.name = 'RoadGroup';
+
+    const asphaltMap = createAsphaltTexture();
+    const L = CONFIG.ROAD_SEGMENT_LENGTH;
+    const halfW = CONFIG.ROAD_WIDTH / 2;
+    asphaltMap.repeat.set(
+      CONFIG.ROAD_WIDTH / CONFIG.ROAD_ASPHALT_TILE_WORLD,
+      L / CONFIG.ROAD_ASPHALT_TILE_WORLD
+    );
+    asphaltMap.needsUpdate = true;
+
     const roadMat = new THREE.MeshStandardMaterial({
       color: CONFIG.PALETTE.ROAD_DARK,
-      roughness: 0.9,
-      metalness: 0.05,
+      map: asphaltMap,
+      roughness: 0.94,
+      metalness: 0.04,
     });
-    const markingMat = new THREE.MeshBasicMaterial({
-      color: CONFIG.PALETTE.LANE_MARKING,
+
+    const markingColor = CONFIG.PALETTE.LANE_MARKING;
+    const markingMat = new THREE.MeshStandardMaterial({
+      color: markingColor,
+      emissive: markingColor,
+      emissiveIntensity: CONFIG.ROAD_LANE_MARKING_EMISSIVE,
+      roughness: 0.45,
+      metalness: 0,
+    });
+
+    const curbColor = new THREE.Color(CONFIG.PALETTE.ROAD_DARK).lerp(
+      new THREE.Color(0x444458),
+      0.35
+    );
+    const edgeMat = new THREE.MeshStandardMaterial({
+      color: curbColor,
+      roughness: 0.92,
+      metalness: 0.08,
     });
 
     const N = CONFIG.ROAD_VISIBLE_SEGMENTS;
-    const L = CONFIG.ROAD_SEGMENT_LENGTH;
-    const halfW = CONFIG.ROAD_WIDTH / 2;
+    const dashLen = CONFIG.ROAD_LANE_DASH_LENGTH;
+    const gapLen = CONFIG.ROAD_LANE_DASH_GAP;
+    const step = dashLen + gapLen;
+    const mw = CONFIG.ROAD_LANE_MARKING_WIDTH;
+    const dividerXs = [-CONFIG.LANE_WIDTH / 2, CONFIG.LANE_WIDTH / 2];
 
     const firstCenter = playerZ - this.recycleBehind + L * 0.5;
     for (let i = 0; i < N; i++) {
@@ -44,14 +116,11 @@ export class RoadManager {
       road.position.y = 0.01;
       root.add(road);
 
-      const dividerXs = [-CONFIG.LANE_WIDTH / 2, CONFIG.LANE_WIDTH / 2];
-      const dashLen = 2;
-      const gapLen = 2;
-      const step = dashLen + gapLen;
-      const startZ = -L / 2 + 2;
+      const startZ = -L / 2 + 2.5;
+      const endZ = L / 2 - 2.5;
       for (const x of dividerXs) {
-        for (let z = startZ; z < L / 2 - 2; z += step) {
-          const dashGeo = new THREE.PlaneGeometry(0.12, dashLen);
+        for (let z = startZ; z < endZ; z += step) {
+          const dashGeo = new THREE.PlaneGeometry(mw, dashLen);
           dashGeo.rotateX(-Math.PI / 2);
           const dash = new THREE.Mesh(dashGeo, markingMat);
           dash.position.set(x, 0.02, z + dashLen / 2);
@@ -59,12 +128,23 @@ export class RoadManager {
         }
       }
 
-      const edgeGeo = new THREE.BoxGeometry(0.15, 0.08, L);
-      const edgeMat = new THREE.MeshStandardMaterial({ color: 0x333344, roughness: 1 });
-      const leftEdge = new THREE.Mesh(edgeGeo, edgeMat);
+      // Solid edge lines (inset from barriers)
+      const edgeInset = CONFIG.ROAD_LANE_EDGE_INSET;
+      const edgeW = CONFIG.ROAD_LANE_MARKING_WIDTH * 0.85;
+      const edgeGeo = new THREE.PlaneGeometry(edgeW, L - 3);
+      edgeGeo.rotateX(-Math.PI / 2);
+      const edgeL = new THREE.Mesh(edgeGeo, markingMat);
+      edgeL.position.set(-halfW + edgeInset, 0.021, 0);
+      root.add(edgeL);
+      const edgeR = new THREE.Mesh(edgeGeo.clone(), markingMat);
+      edgeR.position.set(halfW - edgeInset, 0.021, 0);
+      root.add(edgeR);
+
+      const curbGeo = new THREE.BoxGeometry(0.15, 0.08, L);
+      const leftEdge = new THREE.Mesh(curbGeo, edgeMat);
       leftEdge.position.set(-halfW, 0.05, 0);
       root.add(leftEdge);
-      const rightEdge = new THREE.Mesh(edgeGeo, edgeMat);
+      const rightEdge = new THREE.Mesh(curbGeo, edgeMat);
       rightEdge.position.set(halfW, 0.05, 0);
       root.add(rightEdge);
 
