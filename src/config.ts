@@ -88,7 +88,7 @@ export const CONFIG = {
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
-  SLIPSTREAM_ZONE_DEPTH: 3.5,
+  SLIPSTREAM_ZONE_DEPTH: 4.25,
   /** Per-frame @ 60Hz base fill; actual fill × (current scrollPerFrame / BASE_SCROLL_SPEED). */
   DRAFT_FILL_RATE: 0.05,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
