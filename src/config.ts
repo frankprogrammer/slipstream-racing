@@ -220,6 +220,70 @@ export const CONFIG = {
   CHAIN_POP_SCALE: 1.3,
   CHAIN_POP_DURATION: 200,
 
+  // ── Audio (Phase 4 step 32 — procedural Web Audio; tunable) ──
+  /** Master gain before destination (0–1). */
+  AUDIO_MASTER: 0.38,
+  /** When false, the taxi engine loop is silent (wind, draft, music, one-shots unchanged). */
+  AUDIO_ENGINE_ENABLED: false,
+  /** Engine loop loudness when at max scroll (relative). */
+  AUDIO_ENGINE_GAIN: 0.2,
+  /** Minimum engine mix at min scroll (keeps idle rumble). */
+  AUDIO_ENGINE_GAIN_MIN_MIX: 0.38,
+  AUDIO_ENGINE_HZ_MIN: 78,
+  AUDIO_ENGINE_HZ_MAX: 152,
+  AUDIO_ENGINE_FILTER_HZ: 380,
+  AUDIO_ENGINE_BURST_HZ_ADD: 22,
+  AUDIO_ENGINE_BURST_GAIN_MUL: 1.28,
+  AUDIO_WIND_GAIN: 0.065,
+  AUDIO_WIND_MIN_MIX: 0.55,
+  AUDIO_WIND_FILTER_HZ: 820,
+  /** Noise buffer length for wind loop (seconds). */
+  AUDIO_WIND_NOISE_SEC: 2,
+  AUDIO_DRAFT_GAIN: 0.1,
+  AUDIO_DRAFT_MIN_MIX: 0.22,
+  AUDIO_DRAFT_HZ: 288,
+  /** Gain smoothing toward targets (higher = snappier). */
+  AUDIO_LOOP_SMOOTH: 10,
+  AUDIO_SLINGSHOT_GAIN: 0.42,
+  AUDIO_SLINGSHOT_DURATION: 0.2,
+  AUDIO_SLINGSHOT_BP_HZ_START: 420,
+  AUDIO_SLINGSHOT_BP_HZ_END: 2600,
+  AUDIO_MILESTONE_GAIN: 0.22,
+  AUDIO_CRASH_GAIN: 0.48,
+  AUDIO_CRASH_DURATION: 0.38,
+  AUDIO_CRASH_LP_HZ: 420,
+
+  // ── Music (Phase 4 step 33 — procedural synthwave + chain layers) ──
+  /** When false, music bus is silent (SFX unchanged). */
+  AUDIO_MUSIC_ENABLED: false,
+  /** Gain into master for music bus (SFX use separate bus). Was ~0.14 — too quiet vs engine. */
+  AUDIO_MUSIC_MASTER: 0.78,
+  AUDIO_MUSIC_BPM: 82,
+  /** Layer crossfade smoothing (higher = faster). */
+  AUDIO_MUSIC_LAYER_SMOOTH: 8,
+  /** Fade play/pause on the music mix (higher = reach full level faster). */
+  AUDIO_MUSIC_PLAY_FADE_SMOOTH: 28,
+  /** Inner mix trim (post-gain) before music bus. */
+  AUDIO_MUSIC_MIX_INNER: 1.0,
+  AUDIO_MUSIC_BASS_HZ: 65.41,
+  AUDIO_MUSIC_BASS_GAIN: 0.22,
+  AUDIO_MUSIC_PAD_ROOT_HZ: 130.81,
+  AUDIO_MUSIC_PAD_FIFTH_HZ: 196.0,
+  AUDIO_MUSIC_PAD_GAIN: 0.1,
+  AUDIO_MUSIC_LAYER1_HZ: 392.0,
+  AUDIO_MUSIC_LAYER1_MAX: 0.1,
+  AUDIO_MUSIC_LAYER2_HZ: 440.0,
+  AUDIO_MUSIC_LAYER2_MAX: 0.09,
+  AUDIO_MUSIC_LAYER3_HZ: 987.77,
+  AUDIO_MUSIC_LAYER3_MAX: 0.08,
+  AUDIO_MUSIC_LAYER4_BP_HZ: 2400,
+  AUDIO_MUSIC_LAYER4_MAX: 0.055,
+  AUDIO_MUSIC_KICK_HZ: 58,
+  AUDIO_MUSIC_KICK_PEAK: 0.38,
+  AUDIO_MUSIC_HAT_GAIN: 0.12,
+  /** Hat layer scales with chain (× this × layer ramp). */
+  AUDIO_MUSIC_HAT_LAYER_MAX: 0.45,
+
   // ── Post-Processing (UnrealBloom — CLAUDE.md Phase 3) ──
   /** Bloom strength; emissive + bright HDR pixels. */
   BLOOM_INTENSITY: 0.4,

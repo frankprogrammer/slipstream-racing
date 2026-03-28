@@ -16,6 +16,7 @@ import { ChainManager } from './engine/ChainManager';
 import { ScoreManager } from './engine/ScoreManager';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { HUD } from './ui/HUD';
+import { GameAudio } from './engine/GameAudio';
 
 /**
  * Slipstream: Tokyo Night — Main Entry Point
@@ -100,6 +101,11 @@ const gameOverScreen = new GameOverScreen();
 const rainSystem = new RainSystem();
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
+const gameAudio = new GameAudio();
+
+container.addEventListener('pointerdown', () => gameAudio.unlock(), {
+  once: true,
+});
 
 scene.add(roadManager.group);
 scene.add(trafficSpawner.group);
@@ -147,6 +153,7 @@ gameState.onChange(state => {
   if (state === 'gameover') {
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
+    gameAudio.playCrash();
     const score = scoreManager.currentScore;
     gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits);
   }
@@ -171,6 +178,11 @@ function animate(): void {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   const nowMs = performance.now();
+
+  let scrollForAudio: number = CONFIG.BASE_SCROLL_SPEED;
+  let slipInZone = false;
+  let slipMeter = 0;
+  let audioBurst = false;
 
   rainSystem.update(delta, camera);
 
@@ -214,9 +226,11 @@ function animate(): void {
       slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
       burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
       slingshotTrail.burst(playerTaxi);
+      gameAudio.playSlingshot();
       const milestone = chainManager.onSlingshot(nowMs);
       if (milestone !== null) {
         playerTaxi.onChainMilestone(milestone, nowMs);
+        gameAudio.playMilestone(milestone);
       }
       scoreManager.addSlingshotBonus(chainManager.chain);
       if (milestone === 10) {
@@ -247,6 +261,11 @@ function animate(): void {
     }
 
     slingshotTrail.update(delta, scrollDz);
+
+    scrollForAudio = scrollPerFrame;
+    slipInZone = slip.inZone;
+    slipMeter = slip.meterDisplay;
+    audioBurst = burstRemainMs > 0;
   } else {
     trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
     slingshotTrail.update(delta, 0);
@@ -255,6 +274,15 @@ function animate(): void {
   }
 
   slipstreamWind.update(delta, gameState.isPlaying, trafficSpawner);
+
+  gameAudio.update(delta, {
+    playing: gameState.isPlaying,
+    scrollPerFrame: scrollForAudio,
+    inDraft: slipInZone,
+    draftMeter: slipMeter,
+    burstActive: audioBurst,
+    chain: chainManager.chain,
+  });
 
   if (showFps && fpsEl) {
     fpsAcc += delta;
