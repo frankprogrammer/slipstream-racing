@@ -185,3 +185,64 @@ let's make the other car bodies display in colors within our color palette
 update prompts.md
 
 ---
+
+### 2026-03-28 7:35 AM PDT
+
+cars are still getting too close. restrict cars in adjacent lanes so that they never overlap vertically, include the car dimensions and slipstream bounds in this check
+
+---
+
+### 2026-03-28 7:50 AM PDT
+
+i dont think the taxi wheels are turning at all when switching lanes
+
+---
+
+### 2026-03-28 8:05 AM PDT
+
+we need a way to show that there is a slipstream behind cars. lets make a small wind particle system that fills the slipstream zone behind cars
+
+---
+
+### 2026-03-28 8:20 AM PDT
+
+i like the particles themselves but they are currently moving in the direction of travel. they should spawn at the back of the vehicle and move towards the bottom of the screen. additionally can we make it so they only spawn on the left and right side of the slipstream zone. i want them to signify the wind resistance
+
+---
+
+### 2026-03-28 8:35 AM PDT
+
+implement step 31
+
+---
+
+### 2026-03-28 8:50 AM PDT
+
+i set up github pages choosing the github actions and static html options. the page loads but i dont see any meshes. this is the error: Navigated to https://frankprogrammer.github.io/slipstream-tokyo-night/
+slipstream-tokyo-night/:188  GET https://frankprogrammer.github.io/src/main.ts net::ERR_ABORTED 404 (Not Found)
+
+---
+
+### 2026-03-28 9:05 AM PDT
+
+in addition to the burst speed, hitting a successful slipstream should give a small increment to the base speed
+
+---
+
+### 2026-03-28 9:20 AM PDT
+
+it doesnt seem like BASE_SCROLL_SPEED, MAX_SCROLL_SPEED, SPEED_RAMP_RATE, and SLINGSHOT_BASE_SPEED_INCREMENT are actually doing anything
+
+---
+
+### 2026-03-28 9:35 AM PDT
+
+i want the cars to have headlights that turn on when the player successfully completes a slipstream on them. They should not be actual Three.js lights but just some type of transparent representation of lights
+
+---
+
+### 2026-03-28 9:50 AM PDT
+
+update my @PROMPTS.md
+
+---

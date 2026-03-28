@@ -24,6 +24,7 @@ type PoolEntry = {
   typeIndex: 0 | 1;
   tailMaterial: THREE.MeshBasicMaterial;
   tailBaseColor: THREE.Color;
+  headlightGroup: THREE.Group;
 };
 
 /**
@@ -56,6 +57,7 @@ export class TrafficSpawner {
     g.add(built.root);
     const tailMaterial = built.tailMaterial;
     const tailBaseColor = tailMaterial.color.clone();
+    const headlightGroup = built.headlightGroup;
 
     g.visible = false;
     this.group.add(g);
@@ -67,6 +69,7 @@ export class TrafficSpawner {
       typeIndex,
       tailMaterial,
       tailBaseColor,
+      headlightGroup,
     };
   }
 
@@ -204,6 +207,7 @@ export class TrafficSpawner {
     idle.speedMul = Math.max(0.4, variance);
     idle.active = true;
     idle.group.visible = true;
+    idle.headlightGroup.visible = false;
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
     let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
     z = this.resolveSpawnZ(lane, idle, z);
@@ -230,6 +234,7 @@ export class TrafficSpawner {
       if (p.group.position.z < CONFIG.TAXI_POSITION_Z - this.despawnBehindZ) {
         p.active = false;
         p.group.visible = false;
+        p.headlightGroup.visible = false;
       }
     }
 
@@ -258,6 +263,35 @@ export class TrafficSpawner {
       const dims = p.typeIndex === 0 ? COMPACT : TRUCK;
       cb(i, true, p.group.position.x, p.group.position.z, dims.d / 2);
     }
+  }
+
+  /**
+   * After a successful slipstream release, turn on fake headlamps for that car.
+   * Uses nearest active vehicle to the slipstream snapshot — strict XZ matching fails
+   * because the car moves between the last draft frame and the release frame.
+   */
+  enableHeadlightsAfterSlipstream(target: TrafficCollisionBounds | null): void {
+    if (!target) return;
+    const p = this.findClosestActiveVehicleXZ(target.cx, target.cz);
+    if (p) p.headlightGroup.visible = true;
+  }
+
+  private findClosestActiveVehicleXZ(cx: number, cz: number): PoolEntry | null {
+    const maxD = CONFIG.TRAFFIC_HEADLIGHT_MATCH_MAX_DIST;
+    const maxSq = maxD * maxD;
+    let best: PoolEntry | null = null;
+    let bestSq = Infinity;
+    for (const p of this.pool) {
+      if (!p.active) continue;
+      const dx = p.group.position.x - cx;
+      const dz = p.group.position.z - cz;
+      const sq = dx * dx + dz * dz;
+      if (sq < bestSq && sq <= maxSq) {
+        bestSq = sq;
+        best = p;
+      }
+    }
+    return best;
   }
 
   getActiveCollisionBounds(): TrafficCollisionBounds[] {

@@ -162,6 +162,20 @@ export const CONFIG = {
    */
   /** Min gap (world Z) between body+slipstream footprints when spawning / separating. */
   TRAFFIC_SPAWN_MIN_Z_BUFFER: 6,
+  /**
+   * Headlight beam trapezoids (XZ on road, no Three.js lights).
+   * Widths scale × vehicle width; depth is world units along +Z from bumper.
+   */
+  TRAFFIC_HEADLIGHT_BEAM_NEAR_FRAC: 0.14,
+  TRAFFIC_HEADLIGHT_BEAM_FAR_FRAC: 0.48,
+  TRAFFIC_HEADLIGHT_BEAM_FAR_SOFT_FRAC: 0.62,
+  TRAFFIC_HEADLIGHT_BEAM_DEPTH: 2.35,
+  TRAFFIC_HEADLIGHT_BEAM_SOFT_DEPTH: 2.55,
+  TRAFFIC_HEADLIGHT_BEAM_Y: 0.08,
+  TRAFFIC_HEADLIGHT_BEAM_OPACITY: 0.18,
+  TRAFFIC_HEADLIGHT_BEAM_SOFT_OPACITY: 0.088,
+  /** Max XZ distance to match slipstream snapshot → pool car (cars move between frames). */
+  TRAFFIC_HEADLIGHT_MATCH_MAX_DIST: 12,
 
   // ── Player Taxi ──
   TAXI_BODY_ROLL: -10,

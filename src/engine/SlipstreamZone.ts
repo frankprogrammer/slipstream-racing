@@ -10,6 +10,7 @@ import { playerInVehicleSlipstream } from './slipstreamOverlap';
 export class SlipstreamZone {
   private meter = 0;
   private wasInZone = false;
+  private lastDraftTarget: TrafficCollisionBounds | null = null;
 
   get draftMeter(): number {
     return this.meter;
@@ -18,6 +19,7 @@ export class SlipstreamZone {
   reset(): void {
     this.meter = 0;
     this.wasInZone = false;
+    this.lastDraftTarget = null;
   }
 
   /**
@@ -28,7 +30,14 @@ export class SlipstreamZone {
     scrollPerFrame: number,
     player: PlayerTaxi,
     traffic: TrafficSpawner
-  ): { inZone: boolean; meter: number; slingshotFired: boolean; meterDisplay: number } {
+  ): {
+    inZone: boolean;
+    meter: number;
+    slingshotFired: boolean;
+    meterDisplay: number;
+    /** Vehicle drafted when slingshot released (for traffic VFX). */
+    slingshotTarget: TrafficCollisionBounds | null;
+  } {
     const pb = player.getCollisionBounds();
     const vehicles = traffic.getActiveCollisionBounds();
     const inZone = this.isPlayerInAnySlipstream(pb, vehicles);
@@ -36,11 +45,19 @@ export class SlipstreamZone {
     const leftZone = this.wasInZone && !inZone;
     let slingshotFired = false;
 
+    let slingshotTarget: TrafficCollisionBounds | null = null;
     if (leftZone && this.meter >= 1) {
       slingshotFired = true;
+      slingshotTarget = this.lastDraftTarget
+        ? { ...this.lastDraftTarget }
+        : null;
     }
 
     if (inZone) {
+      const v = this.findDraftVehicle(pb, vehicles);
+      if (v) {
+        this.lastDraftTarget = { cx: v.cx, cz: v.cz, hx: v.hx, hz: v.hz };
+      }
       if (this.meter < 1) {
         const speedScale = Math.max(
           0.25,
@@ -63,7 +80,23 @@ export class SlipstreamZone {
         ? Math.min(1, this.meter)
         : 0;
 
-    return { inZone, meter: this.meter, slingshotFired, meterDisplay };
+    return {
+      inZone,
+      meter: this.meter,
+      slingshotFired,
+      meterDisplay,
+      slingshotTarget,
+    };
+  }
+
+  private findDraftVehicle(
+    pb: { cx: number; cz: number; hx: number; hz: number },
+    vehicles: TrafficCollisionBounds[]
+  ): TrafficCollisionBounds | null {
+    for (const v of vehicles) {
+      if (playerInVehicleSlipstream(pb, v)) return v;
+    }
+    return null;
   }
 
   private isPlayerInAnySlipstream(
