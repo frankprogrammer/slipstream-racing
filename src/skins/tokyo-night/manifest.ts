@@ -23,9 +23,9 @@ export const SKIN_MANIFEST = {
     uiDim: '#8A7FA3',         // muted purple
   },
 
-  // ── 3D Models (null = use procedural box geometry for prototype) ──
+  // ── 3D Models (null = procedural mesh in engine until swapped) ──
   models: {
-    playerTaxi: null,          // 'models/taxi.glb'
+    playerTaxi: null,          // null: PlayerTaxi low-poly stack; else e.g. 'models/taxi.glb'
     vehicleA: null,            // 'models/compact-car.glb'
     vehicleB: null,            // 'models/delivery-truck.glb'
     neonSign: null,            // 'models/neon-sign.glb'
