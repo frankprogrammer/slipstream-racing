@@ -232,8 +232,8 @@ function animate(): void {
     scoreManager.addDistance(scrollDz, chainManager.chain);
     distanceUnits += scrollDz;
 
-    hud.updateScore(scoreManager.currentScore);
-    hud.updateChain(chainManager.chain);
+    playerTaxi.worldHud.setScore(scoreManager.currentScore);
+    playerTaxi.worldHud.setChain(chainManager.chain);
     playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
     trafficSpawner.setDraftTailHighlight(
       playerTaxi.getCollisionBounds(),

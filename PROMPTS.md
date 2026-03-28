@@ -246,3 +246,39 @@ i want the cars to have headlights that turn on when the player successfully com
 update my @PROMPTS.md
 
 ---
+
+### 2026-03-28 10:00 AM PDT
+
+lets move the chain text just below the position where the slipstream meter is. make the text a little larger too
+
+---
+
+### 2026-03-28 10:15 AM PDT
+
+right now the chain text is all pink. lets make it white the same color outline as the slipstream meter fill color
+
+---
+
+### 2026-03-28 10:30 AM PDT
+
+because of the bloom, the chain text is blown out. what do you recommend to make it better?
+
+---
+
+### 2026-03-28 10:45 AM PDT
+
+lets make the chain text outline black
+
+---
+
+### 2026-03-28 11:00 AM PDT
+
+lets make the chain text outline a little thicker. also change the text color from white to the same color as the slipstream meter
+
+---
+
+### 2026-03-28 11:05 AM PDT
+
+update @PROMPTS.md
+
+---

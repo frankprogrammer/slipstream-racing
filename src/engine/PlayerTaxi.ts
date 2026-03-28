@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config';
+import { TaxiWorldHud } from './TaxiWorldHud';
 
 /**
  * Player taxi — Phase 3: low-poly Japanese taxi silhouette (stacked primitives, no GLB).
@@ -7,6 +8,7 @@ import { CONFIG } from '../config';
  */
 export class PlayerTaxi {
   readonly group = new THREE.Group();
+  readonly worldHud: TaxiWorldHud;
 
   private readonly chassisGroup: THREE.Group;
   private readonly roofLight: THREE.Mesh;
@@ -216,6 +218,15 @@ export class PlayerTaxi {
     this.draftBarGroup.scale.set(-1, 1, 1);
     this.chassisGroup.add(this.draftBarGroup);
 
+    const scoreZ = zBack - CONFIG.TAXI_WORLD_HUD_SCORE_BEHIND_Z;
+    const scoreY = H * CONFIG.TAXI_WORLD_HUD_SCORE_Y_FRAC;
+    this.worldHud = new TaxiWorldHud(this.chassisGroup, {
+      scoreY,
+      scoreZ,
+      draftBarY: barY,
+      draftBarZ: barZ,
+    });
+
     this.reset();
   }
 
@@ -227,6 +238,7 @@ export class PlayerTaxi {
     this.roofMilestone10EndMs = 0;
     this.roofLightMat.color.setHex(CONFIG.PALETTE.TAXI_ROOF_LIGHT);
     this.setDraftMeter(0, false);
+    this.worldHud.reset();
   }
 
   applyLaneVisuals(laneX: number, rollRad: number, wheelSteerRad = 0): void {

@@ -183,6 +183,16 @@ export const CONFIG = {
   TAXI_WHEEL_TURN: 5,
   TAXI_POSITION_Z: 0,
   TAXI_DIMENSIONS: { width: 1.8, height: 0.8, length: 3.5 },
+  /** Gap under draft bar plane to chain sprite (chassis local Y). */
+  TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP: 0.65,
+  /** Local −Z offset from rear bumper for score + chain (behind taxi). */
+  TAXI_WORLD_HUD_SCORE_BEHIND_Z: 0.55,
+  /** Score sprite height as fraction of taxi body height (chassis local Y). */
+  TAXI_WORLD_HUD_SCORE_Y_FRAC: 0.52,
+  TAXI_WORLD_HUD_CHAIN_SCALE_X: 2.0,
+  TAXI_WORLD_HUD_CHAIN_SCALE_Y: 0.85,
+  TAXI_WORLD_HUD_SCORE_SCALE_X: 4.0,
+  TAXI_WORLD_HUD_SCORE_SCALE_Y: 1.05,
   /**
    * Collision AABB half-length (Z) × this vs full taxi length/2 — only traffic collision uses it;
    * slipstream still uses full bounds. 0.9 ≈ 10% shorter front+back (forgiving).
@@ -260,6 +270,8 @@ export const CONFIG = {
     ROAD_DARK: 0x808080,
     TRAFFIC_BODY_COMPACT: 0x575766,
     TRAFFIC_BODY_TRUCK: 0x424254,
+    /** Muted green body (replaces dark gray in traffic paint rotation). */
+    TRAFFIC_BODY_GREEN: 0x3a7d5c,
     SKY: 0x08050e,
     TAXI_BODY: 0xe8b84d,
     TAXI_ROOF_LIGHT: 0x00ff88,
@@ -287,7 +299,7 @@ export const CONFIG = {
 /** Traffic body paint — every value is a `PALETTE` color (add/remove to tune variety). */
 export const TRAFFIC_PAINT_COLORS = [
   CONFIG.PALETTE.TRAFFIC_BODY_COMPACT,
-  CONFIG.PALETTE.TRAFFIC_BODY_TRUCK,
+  CONFIG.PALETTE.TRAFFIC_BODY_GREEN,
   CONFIG.PALETTE.NEON_PINK,
   CONFIG.PALETTE.NEON_BLUE,
   CONFIG.PALETTE.NEON_PURPLE,

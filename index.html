@@ -17,38 +17,13 @@
     }
     canvas { display: block; width: 100%; height: 100%; }
 
-    /* HUD Overlay */
-    #hud {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      pointer-events: none;
-      z-index: 10;
-      font-family: 'Orbitron', sans-serif;
-      text-align: center;
-      padding-top: 40px;
-    }
-    #score {
-      font-size: 28px;
-      font-weight: 900;
-      color: #F0E8FF;
-      text-shadow: 0 0 20px rgba(180,77,255,0.3);
-      letter-spacing: 2px;
-    }
-    #chain {
-      font-size: 18px;
-      font-weight: 700;
-      color: #FF2D7B;
-      opacity: 0;
-      transform-origin: center center;
-      letter-spacing: 1px;
-    }
-    #chain.active { opacity: 1; }
-
     #milestone-text {
       position: absolute;
       top: 40%;
       left: 50%;
       transform: translate(-50%, -50%);
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
       font-size: 36px;
       font-weight: 900;
       color: #FF2D7B;
@@ -164,11 +139,6 @@
   <div id="game-container">
     <!-- Three.js canvas injected here -->
 
-    <!-- HUD -->
-    <div id="hud">
-      <div id="score">0</div>
-      <div id="chain">×1</div>
-    </div>
     <div id="milestone-text"></div>
     <div id="screen-flash"></div>
 
