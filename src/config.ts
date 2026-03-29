@@ -57,8 +57,12 @@ export const CONFIG = {
    * Match `ROAD_SEGMENT_LENGTH` for a square 20×20 segment; keep `ROAD_WIDTH` smaller so lanes stay centered.
    */
   ROAD_SEGMENT_VISUAL_WIDTH: 20,
-  /** When set (e.g. `/road1.glb` in `public/`), each segment clones this GLB; set `null` for procedural road. */
-  ROAD_SEGMENT_GLB: '/road1.glb',
+  /**
+   * GLB in `public/` (copied to dist root). Uses Vite `import.meta.env.BASE_URL` so project sites
+   * (e.g. GitHub Pages at `/repo-name/`) resolve correctly — avoid a leading `/` on the filename alone.
+   * Set `null` for procedural road.
+   */
+  ROAD_SEGMENT_GLB: `${import.meta.env.BASE_URL}road1.glb`,
   /** Authoring width across the road (Blender units); 0 = use bounding box. */
   ROAD_SEGMENT_GLB_WIDTH: 20,
   /** Authoring length along the road (Z); 0 = use bounding box. */
