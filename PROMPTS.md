@@ -282,3 +282,57 @@ lets make the chain text outline a little thicker. also change the text color fr
 update @PROMPTS.md
 
 ---
+
+### 2026-03-28 11:30 AM PDT
+
+the width of road1.glb is actually 20 units. can you adjust it so that it scales visually properly. I do not want to change any of the gameplay mechanics
+
+---
+
+### 2026-03-28 11:45 AM PDT
+
+there was no visual change. The segment still looks like it is 20 units deep but 10 units wide. I need it to be a uniform 20 x 20
+
+---
+
+### 2026-03-28 12:00 PM PDT
+
+remove all neon signs we are adding to a segment. i will no longer use this
+
+---
+
+### 2026-03-28 12:15 PM PDT
+
+getting this error in github pages: Navigated to https://frankprogrammer.github.io/slipstream-tokyo-night/ — GET https://frankprogrammer.github.io/road1.glb 404 (Not Found); RoadManager: failed to load ROAD_SEGMENT_GLB; using procedural road
+
+---
+
+### 2026-03-28 12:30 PM PDT
+
+I added these meshes to /public. There are 3 environments. I want it so the 2 meshes for env1 will randomly spawn for say 20 segments. then it will swap to randomly spawning the 2 env2 segments for another 20 segments and finally the env3 models for 20 segments. then it loops around and repeats. assume i will add more segments per environments — env1-1.glb, env1-2.glb, env2-1.glb, env2-2.glb, env3-1.glb, env3-2.glb
+
+---
+
+### 2026-03-28 12:45 PM PDT
+
+we should no longer be spawning road1.glb
+
+---
+
+### 2026-03-28 1:00 PM PDT
+
+the segments dont appear to be linking correctly. the environment 2 meshes are floating in the air. is this an asset issue?
+
+---
+
+### 2026-03-28 1:15 PM PDT
+
+They are still not linking up correctly, the segments all have the same width and depth but they all have different height. it feels like currently the code is centering them vertically rather than using the y of the mesh's pivot point
+
+---
+
+### 2026-03-28 1:30 PM PDT
+
+update PROPMTS.md
+
+---

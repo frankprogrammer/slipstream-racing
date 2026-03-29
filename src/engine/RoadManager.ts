@@ -44,39 +44,76 @@ function createAsphaltTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+function hash01(n: number): number {
+  const t = Math.sin(n * 12.9898) * 43758.5453123;
+  return t - Math.floor(t);
+}
+
+/** Union of all mesh geometry bounds (world space); ignores lights/cameras/empties that inflate scene bbox. */
+function setBoxFromMeshes(root: THREE.Object3D, target: THREE.Box3): boolean {
+  root.updateMatrixWorld(true);
+  let has = false;
+  root.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh) || !obj.geometry) return;
+    const geom = obj.geometry;
+    if (!geom.boundingBox) geom.computeBoundingBox();
+    const local = geom.boundingBox;
+    if (!local) return;
+    const b = local.clone();
+    b.applyMatrix4(obj.matrixWorld);
+    if (!has) {
+      target.copy(b);
+      has = true;
+    } else {
+      target.union(b);
+    }
+  });
+  return has;
+}
+
 /**
- * Scale + pivot imported road mesh to `ROAD_SEGMENT_VISUAL_WIDTH` × `ROAD_SEGMENT_LENGTH` (XZ) and sit on y=0.
- * Gameplay lanes still use `ROAD_WIDTH` (typically narrower, centered).
+ * Scale GLB to world width × length on XZ; center segment on XZ using bbox center.
+ * @param meshBoundsOnly — use mesh union for bbox (recommended for env GLBs so helpers don’t break scale).
+ * @param verticalAlign — `bboxBottom`: snap lowest Y to 0 (road). `pivot`: keep scene root at y=0 (env; height varies per asset).
  */
-function fitRoadGltfToSegment(gltf: GLTF): THREE.Group {
+function fitGltfToSegmentFootprint(
+  gltf: GLTF,
+  widthWorld: number,
+  lengthWorld: number,
+  widthRefAuthoring: number,
+  depthRefAuthoring: number,
+  wrapperName: string,
+  meshBoundsOnly: boolean,
+  verticalAlign: 'pivot' | 'bboxBottom'
+): THREE.Group {
   const wrapper = new THREE.Group();
   const node = gltf.scene.clone(true);
   wrapper.add(node);
 
   node.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(node);
+  const box = new THREE.Box3();
+  if (!(meshBoundsOnly && setBoxFromMeshes(node, box))) {
+    box.setFromObject(node);
+  }
+
   const size = new THREE.Vector3();
   box.getSize(size);
   if (size.x < 1e-4 || size.z < 1e-4) {
-    console.warn('RoadManager: GLB has very small bounds; skipping scale fit');
+    console.warn(`RoadManager: ${wrapperName} GLB has very small bounds; skipping scale fit`);
     return wrapper;
   }
 
   const widthRef =
-    CONFIG.ROAD_SEGMENT_GLB_WIDTH > 0
-      ? CONFIG.ROAD_SEGMENT_GLB_WIDTH
-      : size.x;
+    widthRefAuthoring > 0 ? widthRefAuthoring : size.x;
   const depthRef =
-    CONFIG.ROAD_SEGMENT_GLB_DEPTH > 0
-      ? CONFIG.ROAD_SEGMENT_GLB_DEPTH
-      : size.z;
+    depthRefAuthoring > 0 ? depthRefAuthoring : size.z;
   if (widthRef < 1e-4 || depthRef < 1e-4) {
-    console.warn('RoadManager: GLB width/depth refs invalid; skipping scale fit');
+    console.warn(`RoadManager: ${wrapperName} width/depth refs invalid; skipping scale fit`);
     return wrapper;
   }
 
-  const sx = CONFIG.ROAD_SEGMENT_VISUAL_WIDTH / widthRef;
-  const sz = CONFIG.ROAD_SEGMENT_LENGTH / depthRef;
+  const sx = widthWorld / widthRef;
+  const sz = lengthWorld / depthRef;
   const sy = (sx + sz) * 0.5;
   node.scale.set(sx, sy, sz);
   node.updateMatrixWorld(true);
@@ -86,32 +123,114 @@ function fitRoadGltfToSegment(gltf: GLTF): THREE.Group {
   box2.getCenter(center);
   node.position.x -= center.x;
   node.position.z -= center.z;
-  node.position.y -= box2.min.y;
+  if (verticalAlign === 'bboxBottom') {
+    node.position.y -= box2.min.y;
+  }
   node.updateMatrixWorld(true);
 
-  wrapper.name = 'RoadSegmentGLB';
+  wrapper.name = wrapperName;
   return wrapper;
+}
+
+function fitRoadGltfToSegment(gltf: GLTF): THREE.Group {
+  return fitGltfToSegmentFootprint(
+    gltf,
+    CONFIG.ROAD_SEGMENT_VISUAL_WIDTH,
+    CONFIG.ROAD_SEGMENT_LENGTH,
+    CONFIG.ROAD_SEGMENT_GLB_WIDTH,
+    CONFIG.ROAD_SEGMENT_GLB_DEPTH,
+    'RoadSegmentGLB',
+    false,
+    'bboxBottom'
+  );
+}
+
+function fitEnvGltfToSegment(gltf: GLTF): THREE.Group {
+  return fitGltfToSegmentFootprint(
+    gltf,
+    CONFIG.ROAD_SEGMENT_VISUAL_WIDTH,
+    CONFIG.ROAD_SEGMENT_LENGTH,
+    CONFIG.ROAD_ENV_GLB_WIDTH,
+    CONFIG.ROAD_ENV_GLB_DEPTH,
+    'RoadEnvGLB',
+    true,
+    'pivot'
+  );
+}
+
+function publicAssetUrl(file: string): string {
+  return `${import.meta.env.BASE_URL}${file}`;
+}
+
+function pickEnvFilename(segmentIndex: number): string | null {
+  const phases = CONFIG.ROAD_ENVIRONMENTS;
+  const K = CONFIG.ROAD_ENV_SEGMENTS_PER_PHASE;
+  if (!phases.length || K <= 0) return null;
+  const phase = Math.floor(segmentIndex / K) % phases.length;
+  const variants = phases[phase];
+  if (!variants.length) return null;
+  const pick =
+    Math.floor(hash01(segmentIndex * 7919 + phase * 17) * variants.length) %
+    variants.length;
+  return variants[pick] ?? null;
+}
+
+async function loadEnvTemplates(
+  loader: GLTFLoader
+): Promise<Map<string, THREE.Group>> {
+  const map = new Map<string, THREE.Group>();
+  const phases = CONFIG.ROAD_ENVIRONMENTS;
+  if (!phases.length) return map;
+
+  const unique = new Set<string>();
+  for (const row of phases) {
+    for (const f of row) unique.add(f);
+  }
+
+  await Promise.all(
+    [...unique].map(async (file) => {
+      try {
+        const gltf = await loader.loadAsync(publicAssetUrl(file));
+        map.set(file, fitEnvGltfToSegment(gltf));
+      } catch (e) {
+        console.warn(`RoadManager: failed to load environment GLB "${file}"`, e);
+      }
+    })
+  );
+  return map;
 }
 
 /**
  * RoadManager — Infinite road from recycling segments.
  * Procedural asphalt + markings, or cloned `CONFIG.ROAD_SEGMENT_GLB` per segment.
  */
+type RoadSegmentSlot = {
+  root: THREE.Group;
+  zCenter: number;
+  segmentIndex: number;
+  envHolder: THREE.Group | null;
+};
+
 export class RoadManager {
   readonly group = new THREE.Group();
 
-  private readonly segments: {
-    root: THREE.Group;
-    zCenter: number;
-  }[] = [];
+  private readonly segments: RoadSegmentSlot[] = [];
 
   private readonly playerZ: number;
   private readonly recycleBehind = 40;
+  private nextSegmentIndex: number;
+  private readonly envTemplates: Map<string, THREE.Group> | null;
 
   /** Use `create()` — loads GLB when `CONFIG.ROAD_SEGMENT_GLB` is set. */
-  private constructor(playerZ: number, glbTemplate: THREE.Group | null) {
+  private constructor(
+    playerZ: number,
+    glbTemplate: THREE.Group | null,
+    envTemplates: Map<string, THREE.Group>
+  ) {
     this.playerZ = playerZ;
     this.group.name = 'RoadGroup';
+    this.envTemplates = envTemplates.size > 0 ? envTemplates : null;
+    this.nextSegmentIndex = CONFIG.ROAD_VISIBLE_SEGMENTS;
 
     if (glbTemplate) {
       this.buildGlbSegments(glbTemplate);
@@ -121,13 +240,15 @@ export class RoadManager {
   }
 
   static async create(playerZ: number): Promise<RoadManager> {
-    const path = CONFIG.ROAD_SEGMENT_GLB;
-    if (path && path.length > 0) {
+    const loader = new GLTFLoader();
+    const envTemplates = await loadEnvTemplates(loader);
+
+    const path = CONFIG.ROAD_SEGMENT_GLB as string | null;
+    if (path !== null && path.length > 0) {
       try {
-        const loader = new GLTFLoader();
         const gltf = await loader.loadAsync(path);
         const template = fitRoadGltfToSegment(gltf);
-        return new RoadManager(playerZ, template);
+        return new RoadManager(playerZ, template, envTemplates);
       } catch (e) {
         console.warn(
           'RoadManager: failed to load ROAD_SEGMENT_GLB; using procedural road',
@@ -135,7 +256,50 @@ export class RoadManager {
         );
       }
     }
-    return new RoadManager(playerZ, null);
+    return new RoadManager(playerZ, null, envTemplates);
+  }
+
+  private makeEnvHolder(): THREE.Group | null {
+    if (!this.envTemplates) return null;
+    const g = new THREE.Group();
+    g.name = 'RoadEnvHolder';
+    return g;
+  }
+
+  private applyEnvironmentToSegment(seg: RoadSegmentSlot): void {
+    if (!seg.envHolder || !this.envTemplates) return;
+    while (seg.envHolder.children.length > 0) {
+      seg.envHolder.remove(seg.envHolder.children[0]!);
+    }
+    const file = pickEnvFilename(seg.segmentIndex);
+    if (!file) return;
+    const tmpl = this.envTemplates.get(file);
+    if (!tmpl) return;
+    seg.envHolder.add(tmpl.clone(true));
+  }
+
+  private pushSegment(
+    root: THREE.Group,
+    zCenter: number,
+    segmentIndex: number,
+    buildRoad: (root: THREE.Group) => void
+  ): void {
+    const envHolder = this.makeEnvHolder();
+    buildRoad(root);
+    if (envHolder) {
+      root.add(envHolder);
+    }
+    this.group.add(root);
+    const seg: RoadSegmentSlot = {
+      root,
+      zCenter,
+      segmentIndex,
+      envHolder,
+    };
+    if (envHolder) {
+      this.applyEnvironmentToSegment(seg);
+    }
+    this.segments.push(seg);
   }
 
   private buildGlbSegments(template: THREE.Group): void {
@@ -148,11 +312,9 @@ export class RoadManager {
       const zCenter = firstCenter + i * L;
       root.position.z = zCenter;
 
-      const road = template.clone(true);
-      root.add(road);
-
-      this.group.add(root);
-      this.segments.push({ root, zCenter });
+      this.pushSegment(root, zCenter, i, (r) => {
+        r.add(template.clone(true));
+      });
     }
   }
 
@@ -205,45 +367,44 @@ export class RoadManager {
       const zCenter = firstCenter + i * L;
       root.position.z = zCenter;
 
-      const planeGeo = new THREE.PlaneGeometry(CONFIG.ROAD_WIDTH, L);
-      planeGeo.rotateX(-Math.PI / 2);
-      const road = new THREE.Mesh(planeGeo, roadMat);
-      road.position.y = 0.01;
-      root.add(road);
+      this.pushSegment(root, zCenter, i, (r) => {
+        const planeGeo = new THREE.PlaneGeometry(CONFIG.ROAD_WIDTH, L);
+        planeGeo.rotateX(-Math.PI / 2);
+        const road = new THREE.Mesh(planeGeo, roadMat);
+        road.position.y = 0.01;
+        r.add(road);
 
-      const startZ = -L / 2 + 2.5;
-      const endZ = L / 2 - 2.5;
-      for (const x of dividerXs) {
-        for (let z = startZ; z < endZ; z += step) {
-          const dashGeo = new THREE.PlaneGeometry(mw, dashLen);
-          dashGeo.rotateX(-Math.PI / 2);
-          const dash = new THREE.Mesh(dashGeo, markingMat);
-          dash.position.set(x, 0.02, z + dashLen / 2);
-          root.add(dash);
+        const startZ = -L / 2 + 2.5;
+        const endZ = L / 2 - 2.5;
+        for (const x of dividerXs) {
+          for (let z = startZ; z < endZ; z += step) {
+            const dashGeo = new THREE.PlaneGeometry(mw, dashLen);
+            dashGeo.rotateX(-Math.PI / 2);
+            const dash = new THREE.Mesh(dashGeo, markingMat);
+            dash.position.set(x, 0.02, z + dashLen / 2);
+            r.add(dash);
+          }
         }
-      }
 
-      const edgeInset = CONFIG.ROAD_LANE_EDGE_INSET;
-      const edgeW = CONFIG.ROAD_LANE_MARKING_WIDTH * 0.85;
-      const edgeGeo = new THREE.PlaneGeometry(edgeW, L - 3);
-      edgeGeo.rotateX(-Math.PI / 2);
-      const edgeL = new THREE.Mesh(edgeGeo, markingMat);
-      edgeL.position.set(-halfW + edgeInset, 0.021, 0);
-      root.add(edgeL);
-      const edgeR = new THREE.Mesh(edgeGeo.clone(), markingMat);
-      edgeR.position.set(halfW - edgeInset, 0.021, 0);
-      root.add(edgeR);
+        const edgeInset = CONFIG.ROAD_LANE_EDGE_INSET;
+        const edgeW = CONFIG.ROAD_LANE_MARKING_WIDTH * 0.85;
+        const edgeGeo = new THREE.PlaneGeometry(edgeW, L - 3);
+        edgeGeo.rotateX(-Math.PI / 2);
+        const edgeL = new THREE.Mesh(edgeGeo, markingMat);
+        edgeL.position.set(-halfW + edgeInset, 0.021, 0);
+        r.add(edgeL);
+        const edgeR = new THREE.Mesh(edgeGeo.clone(), markingMat);
+        edgeR.position.set(halfW - edgeInset, 0.021, 0);
+        r.add(edgeR);
 
-      const curbGeo = new THREE.BoxGeometry(0.15, 0.08, L);
-      const leftEdge = new THREE.Mesh(curbGeo, edgeMat);
-      leftEdge.position.set(-halfW, 0.05, 0);
-      root.add(leftEdge);
-      const rightEdge = new THREE.Mesh(curbGeo, edgeMat);
-      rightEdge.position.set(halfW, 0.05, 0);
-      root.add(rightEdge);
-
-      this.group.add(root);
-      this.segments.push({ root, zCenter });
+        const curbGeo = new THREE.BoxGeometry(0.15, 0.08, L);
+        const leftEdge = new THREE.Mesh(curbGeo, edgeMat);
+        leftEdge.position.set(-halfW, 0.05, 0);
+        r.add(leftEdge);
+        const rightEdge = new THREE.Mesh(curbGeo, edgeMat);
+        rightEdge.position.set(halfW, 0.05, 0);
+        r.add(rightEdge);
+      });
     }
   }
 
@@ -251,10 +412,14 @@ export class RoadManager {
     const L = CONFIG.ROAD_SEGMENT_LENGTH;
     const N = CONFIG.ROAD_VISIBLE_SEGMENTS;
     const firstCenter = this.playerZ - this.recycleBehind + L * 0.5;
+    this.nextSegmentIndex = N;
     for (let i = 0; i < N; i++) {
       const zCenter = firstCenter + i * L;
-      this.segments[i].zCenter = zCenter;
-      this.segments[i].root.position.z = zCenter;
+      const s = this.segments[i]!;
+      s.zCenter = zCenter;
+      s.root.position.z = zCenter;
+      s.segmentIndex = i;
+      this.applyEnvironmentToSegment(s);
     }
   }
 
@@ -276,6 +441,8 @@ export class RoadManager {
         s.zCenter = maxZ + L;
         s.root.position.z = s.zCenter;
         maxZ = s.zCenter;
+        s.segmentIndex = this.nextSegmentIndex++;
+        this.applyEnvironmentToSegment(s);
       }
     }
   }

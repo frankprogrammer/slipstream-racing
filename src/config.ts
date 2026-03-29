@@ -58,15 +58,34 @@ export const CONFIG = {
    */
   ROAD_SEGMENT_VISUAL_WIDTH: 20,
   /**
-   * GLB in `public/` (copied to dist root). Uses Vite `import.meta.env.BASE_URL` so project sites
-   * (e.g. GitHub Pages at `/repo-name/`) resolve correctly — avoid a leading `/` on the filename alone.
-   * Set `null` for procedural road.
+   * GLB in `public/` (with `import.meta.env.BASE_URL` prefix if used). `null` = procedural asphalt + lane markings only.
    */
-  ROAD_SEGMENT_GLB: `${import.meta.env.BASE_URL}road1.glb`,
+  ROAD_SEGMENT_GLB: null,
   /** Authoring width across the road (Blender units); 0 = use bounding box. */
   ROAD_SEGMENT_GLB_WIDTH: 20,
   /** Authoring length along the road (Z); 0 = use bounding box. */
   ROAD_SEGMENT_GLB_DEPTH: 20,
+  /**
+   * Roadside / environment GLBs in `public/` (filenames only). Each row is one environment phase.
+   * For `ROAD_ENV_SEGMENTS_PER_PHASE` consecutive segment spawns, one variant per row is picked (deterministic hash).
+   * Phases cycle: row 0 → row 1 → … → row 0. Empty array disables environment meshes.
+   * Place each file’s **origin on the road surface** in Blender — Y is pivot-based (not bbox-bottom snapped).
+   */
+  ROAD_ENVIRONMENTS: [
+    ["env1-1.glb", "env1-2.glb"],
+    ["env2-1.glb", "env2-2.glb"],
+    ["env3-1.glb", "env3-2.glb"],
+  ] as readonly (readonly string[])[],
+  /** How many recycled road segments before advancing to the next environment phase. */
+  ROAD_ENV_SEGMENTS_PER_PHASE: 20,
+  /**
+   * Environment GLB scale refs (Blender units). Use `0` for both so each file is fit from its **bounding box**
+   * to `ROAD_SEGMENT_VISUAL_WIDTH` × `ROAD_SEGMENT_LENGTH` — fixes seams when env2/env3 aren’t the same size as env1.
+   * Non-zero = fixed authoring size (all variants must match that width/depth or they won’t span one segment).
+   */
+  ROAD_ENV_GLB_WIDTH: 0,
+  /** 0 = bbox Z (recommended for consistent segment linking across phases). */
+  ROAD_ENV_GLB_DEPTH: 0,
   /** World units per asphalt texture tile (repeat on road plane). */
   ROAD_ASPHALT_TILE_WORLD: 2.75,
   /** Dashed lane divider along segment +Z. */
