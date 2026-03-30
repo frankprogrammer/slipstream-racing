@@ -18,6 +18,10 @@ import { GameOverScreen } from './ui/GameOverScreen';
 import { HUD } from './ui/HUD';
 import { GameAudio } from './engine/GameAudio';
 
+function easeInCubic(t: number): number {
+  return t ** 3;
+}
+
 /**
  * Slipstream: Tokyo Night — Main Entry Point
  *
@@ -113,10 +117,17 @@ let distanceUnits = 0;
 let burstRemainMs = 0;
 /** Extra base scroll from successful slipstreams this run (before burst). */
 let slingshotBaseBonus = 0;
+/** False until intro Z tween finishes; blocks scroll, input, and collision. */
+let runGameplayReady = false;
+/** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
+let introElapsedMs = 0;
 
 function resetGame(): void {
   gameState.reset();
-  laneSystem.enabled = true;
+  laneSystem.reset();
+  laneSystem.enabled = false;
+  runGameplayReady = false;
+  introElapsedMs = 0;
   runTimeMs = 0;
   distanceUnits = 0;
   burstRemainMs = 0;
@@ -135,7 +146,12 @@ function resetGame(): void {
   const roll = laneSystem.getBodyRollRad(nowMs);
   const steer = laneSystem.getWheelSteerRad(nowMs);
   playerTaxi.applyLaneVisuals(x, roll, steer);
+  // Frame the camera at the gameplay start position, not the intro offset position.
+  // This allows the taxi to actually travel up from off-screen during the intro tween.
+  const introZ = playerTaxi.group.position.z;
+  playerTaxi.group.position.z = CONFIG.TAXI_POSITION_Z;
   cameraController.snap(playerTaxi);
+  playerTaxi.group.position.z = introZ;
   gameOverScreen.hide();
 }
 
@@ -179,85 +195,114 @@ function animate(): void {
   rainSystem.update(delta, camera);
 
   if (gameState.isPlaying) {
-    runTimeMs += delta * 1000;
-    burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
-
-    const base = CONFIG.BASE_SCROLL_SPEED;
-    const maxScroll = CONFIG.MAX_SCROLL_SPEED;
-    const headroom = Math.max(0, maxScroll - base);
-    const timeRamp = Math.min(
-      runTimeMs * CONFIG.SPEED_RAMP_RATE,
-      headroom
-    );
-    const baseScroll = Math.min(
-      base + timeRamp + slingshotBaseBonus,
-      maxScroll
-    );
-    const scrollPerFrame =
-      baseScroll +
-      (burstRemainMs > 0 ? CONFIG.SLINGSHOT_SPEED_BURST : 0);
-    const scrollDz = scrollPerFrame * 60 * delta;
-
-    roadManager?.update(scrollDz);
-    trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
-    const laneX = laneSystem.getLaneX(nowMs);
-    const roll = laneSystem.getBodyRollRad(nowMs);
-    const steer = laneSystem.getWheelSteerRad(nowMs);
-    playerTaxi.applyLaneVisuals(laneX, roll, steer);
-    milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
-    hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
-
-    const slip = slipstreamZone.update(
-      delta,
-      scrollPerFrame,
-      playerTaxi,
-      trafficSpawner
-    );
-    chainManager.tick(nowMs, slip.inZone);
-
-    if (slip.slingshotFired) {
-      trafficSpawner.enableHeadlightsAfterSlipstream(slip.slingshotTarget);
-      slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
-      burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
-      gameAudio.playSlingshot();
-      const milestone = chainManager.onSlingshot(nowMs);
-      if (milestone !== null) {
-        playerTaxi.onChainMilestone(milestone, nowMs);
-        gameAudio.playMilestone(milestone);
+    if (!runGameplayReady) {
+      const dur = CONFIG.TAXI_INTRO_DURATION_MS;
+      introElapsedMs += delta * 1000;
+      const t = Math.min(1, introElapsedMs / dur);
+      const e = easeInCubic(t);
+      const z0 = CONFIG.TAXI_POSITION_Z + CONFIG.TAXI_INTRO_START_Z_OFFSET;
+      const z1 = CONFIG.TAXI_POSITION_Z;
+      playerTaxi.group.position.z = z0 + (z1 - z0) * e;
+      if (t >= 1) {
+        runGameplayReady = true;
+        laneSystem.enabled = true;
+        playerTaxi.group.position.z = z1;
       }
-      scoreManager.addSlingshotBonus(chainManager.chain);
-      hud.showMilestone(`×${chainManager.chain}`, milestone === 10);
-      if (milestone === 10) {
-        hud.flashScreenPerfect();
+
+      const laneX = laneSystem.getLaneX(nowMs);
+      const roll = laneSystem.getBodyRollRad(nowMs);
+      const steer = laneSystem.getWheelSteerRad(nowMs);
+      playerTaxi.applyLaneVisuals(laneX, roll, steer);
+      milestoneAnchorWorld.set(laneX, 1.1, playerTaxi.group.position.z + 2.2);
+      hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
+
+      trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
+      slingshotTrail.setBoostActive(false);
+      slingshotTrail.update(delta, 0, playerTaxi);
+      playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
+
+      scrollForAudio = CONFIG.BASE_SCROLL_SPEED;
+    } else {
+      runTimeMs += delta * 1000;
+      burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
+
+      const base = CONFIG.BASE_SCROLL_SPEED;
+      const maxScroll = CONFIG.MAX_SCROLL_SPEED;
+      const headroom = Math.max(0, maxScroll - base);
+      const timeRamp = Math.min(
+        runTimeMs * CONFIG.SPEED_RAMP_RATE,
+        headroom
+      );
+      const baseScroll = Math.min(
+        base + timeRamp + slingshotBaseBonus,
+        maxScroll
+      );
+      const scrollPerFrame =
+        baseScroll +
+        (burstRemainMs > 0 ? CONFIG.SLINGSHOT_SPEED_BURST : 0);
+      const scrollDz = scrollPerFrame * 60 * delta;
+
+      roadManager?.update(scrollDz);
+      trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
+      const laneX = laneSystem.getLaneX(nowMs);
+      const roll = laneSystem.getBodyRollRad(nowMs);
+      const steer = laneSystem.getWheelSteerRad(nowMs);
+      playerTaxi.applyLaneVisuals(laneX, roll, steer);
+      milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
+      hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
+
+      const slip = slipstreamZone.update(
+        delta,
+        scrollPerFrame,
+        playerTaxi,
+        trafficSpawner
+      );
+      chainManager.tick(nowMs, slip.inZone);
+
+      if (slip.slingshotFired) {
+        trafficSpawner.enableHeadlightsAfterSlipstream(slip.slingshotTarget);
+        slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
+        burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
+        gameAudio.playSlingshot();
+        const milestone = chainManager.onSlingshot(nowMs);
+        if (milestone !== null) {
+          playerTaxi.onChainMilestone(milestone, nowMs);
+          gameAudio.playMilestone(milestone);
+        }
+        scoreManager.addSlingshotBonus(chainManager.chain);
+        hud.showMilestone(`×${chainManager.chain}`, milestone === 10);
+        if (milestone === 10) {
+          hud.flashScreenPerfect();
+        }
       }
+
+      playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
+
+      scoreManager.addDistance(scrollDz, chainManager.chain);
+      distanceUnits += scrollDz;
+
+      playerTaxi.worldHud.setScore(scoreManager.currentScore);
+      playerTaxi.worldHud.setChain(chainManager.chain);
+      playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
+      trafficSpawner.setDraftTailHighlight(
+        playerTaxi.getCollisionBounds(),
+        slip.inZone
+      );
+
+      cameraController.update(playerTaxi, chainManager.chain);
+
+      if (collisionSystem.check(playerTaxi, trafficSpawner)) {
+        gameState.transition('gameover');
+      }
+
+      slingshotTrail.setBoostActive(burstRemainMs > 0);
+      slingshotTrail.update(delta, scrollDz, playerTaxi);
+
+      scrollForAudio = scrollPerFrame;
+      slipInZone = slip.inZone;
+      slipMeter = slip.meterDisplay;
+      audioBurst = burstRemainMs > 0;
     }
-
-    playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
-
-    scoreManager.addDistance(scrollDz, chainManager.chain);
-    distanceUnits += scrollDz;
-
-    playerTaxi.worldHud.setScore(scoreManager.currentScore);
-    playerTaxi.worldHud.setChain(chainManager.chain);
-    playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
-    trafficSpawner.setDraftTailHighlight(
-      playerTaxi.getCollisionBounds(),
-      slip.inZone
-    );
-
-    cameraController.update(playerTaxi, chainManager.chain);
-
-    if (collisionSystem.check(playerTaxi, trafficSpawner)) {
-      gameState.transition('gameover');
-    }
-
-    slingshotTrail.setBoostActive(burstRemainMs > 0);
-    slingshotTrail.update(delta, scrollDz, playerTaxi);
-
-    scrollForAudio = scrollPerFrame;
-    slipInZone = slip.inZone;
-    slipMeter = slip.meterDisplay;
-    audioBurst = burstRemainMs > 0;
   } else {
     trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
     slingshotTrail.setBoostActive(false);
@@ -269,10 +314,14 @@ function animate(): void {
     hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
 
-  slipstreamWind.update(delta, gameState.isPlaying, trafficSpawner);
+  slipstreamWind.update(
+    delta,
+    gameState.isPlaying && runGameplayReady,
+    trafficSpawner
+  );
 
   gameAudio.update(delta, {
-    playing: gameState.isPlaying,
+    playing: gameState.isPlaying && runGameplayReady,
     scrollPerFrame: scrollForAudio,
     inDraft: slipInZone,
     draftMeter: slipMeter,
@@ -303,6 +352,9 @@ void (async () => {
   scene.add(rainSystem.group);
   scene.add(slingshotTrail.group);
   resetGame();
+  // First `getDelta()` after load would otherwise equal time since `new Clock()` (async gap) and
+  // would instantly complete the intro tween and skew runTime on frame 1.
+  clock.getDelta();
   animate();
 })();
 

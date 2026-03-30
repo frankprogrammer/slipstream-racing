@@ -231,7 +231,11 @@ export class PlayerTaxi {
   }
 
   reset(): void {
-    this.group.position.set(0, 0, CONFIG.TAXI_POSITION_Z);
+    this.group.position.set(
+      0,
+      0,
+      CONFIG.TAXI_POSITION_Z + CONFIG.TAXI_INTRO_START_Z_OFFSET
+    );
     this.group.rotation.set(0, 0, 0);
     this.chassisGroup.rotation.set(0, 0, 0);
     for (const w of this.frontWheels) w.rotation.y = 0;

@@ -232,6 +232,11 @@ export const CONFIG = {
   TAXI_ROLL_DURATION: 300,
   TAXI_WHEEL_TURN: 5,
   TAXI_POSITION_Z: 0,
+  /**
+   * Run start: taxi begins at TAXI_POSITION_Z + this (toward camera, below frame) and tweens in.
+   */
+  TAXI_INTRO_START_Z_OFFSET: -8,
+  TAXI_INTRO_DURATION_MS: 400,
   TAXI_DIMENSIONS: { width: 1.8, height: 0.8, length: 3.5 },
   /** Gap under draft bar plane to chain sprite (chassis local Y). */
   TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP: 0.65,

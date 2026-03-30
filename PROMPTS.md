@@ -6,6 +6,30 @@ User prompts only (assistant replies are not logged).
 
 ---
 
+### 2026-03-30 7:30 AM PDT
+
+lets try chaging the easeOutCubic to easeInCubic instead
+
+---
+
+### 2026-03-30 2:20 PM PDT
+
+there is a pause at the start but the player taxi is not starting offscreen at the bottom. it just sits at the same starting position
+
+---
+
+### 2026-03-30 2:18 PM PDT
+
+the taxi doesn't seem to start offscreen. it starts at its final position
+
+---
+
+### 2026-03-30 2:13 PM PDT
+
+make it so at the start of the run the taxi is offscreen at the bottom and then tweens in to its starting position. the world should not start moving and input should not be accepted until the taxi is in position
+
+---
+
 ### 2026-03-30 8:33 AM PDT
 
 I like the flow rails idea. let's implement this
