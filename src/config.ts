@@ -1,9 +1,8 @@
 /**
- * SLIPSTREAM: TOKYO NIGHT — Game Configuration
+ * SLIPSTREAM — Grand Prix / Formula 1 configuration
  *
  * All tunable gameplay values in one file.
- * Change the game's feel by editing ONLY this file.
- * Engine code should never hardcode any of these values.
+ * Engine code should not hardcode tunables duplicated here.
  */
 
 export interface TrafficPhase {
@@ -138,8 +137,8 @@ export const CONFIG = {
   SLIPSTREAM_WIND_PARTICLES_PER_VEHICLE: 8,
   SLIPSTREAM_WIND_POINT_SIZE: 0.165,
   SLIPSTREAM_WIND_OPACITY: 0.5,
-  /** Soft cyan; reads as disturbed air. */
-  SLIPSTREAM_WIND_COLOR: 0xa8e8ff,
+  /** Slipstream wake tint (track cyan). */
+  SLIPSTREAM_WIND_COLOR: 0x5eead4,
   /** Base Y and ± spread for wind points above the road. */
   SLIPSTREAM_WIND_Y: 0.52,
   SLIPSTREAM_WIND_Y_SPREAD: 0.38,
@@ -379,25 +378,30 @@ export const CONFIG = {
   /** World-Z motion vs road scroll (1 = same as traffic). */
   SLINGSHOT_TRAIL_SCROLL_SCALE: 1.05,
 
-  // ── Palette (Tokyo Night) ──
+  // ── Palette (Formula 1 / broadcast: red, cyan, carbon, white) ──
   PALETTE: {
-    NEON_PINK: 0xff2d7b,
-    NEON_BLUE: 0x00e5ff,
-    NEON_PURPLE: 0xb44dff,
-    NEON_ORANGE: 0xff6b2d,
-    /** Asphalt / road surface (mid gray — was dark purple-black). */
-    ROAD_DARK: 0x808080,
-    TRAFFIC_BODY_COMPACT: 0x575766,
-    TRAFFIC_BODY_TRUCK: 0x424254,
-    /** Muted green body (replaces dark gray in traffic paint rotation). */
-    TRAFFIC_BODY_GREEN: 0x3a7d5c,
+    /** Primary accent — podium / DRS / milestone juice. */
+    NEON_PINK: 0xe10600,
+    /** Secondary — draft meter, slipstream UI, telemetry cyan. */
+    NEON_BLUE: 0x00d2be,
+    /** Tertiary accent — alternate team / HUD highlight. */
+    NEON_PURPLE: 0x3671c6,
+    /** Warning / papaya accent. */
+    NEON_ORANGE: 0xff8700,
+    ROAD_DARK: 0x5c5c62,
+    TRAFFIC_BODY_COMPACT: 0x2a2a32,
+    TRAFFIC_BODY_TRUCK: 0x1c1c24,
+    /** Racing blue body in traffic rotation. */
+    TRAFFIC_BODY_RACING_BLUE: 0x3671c6,
     SKY: 0x7ec8ff,
-    TAXI_BODY: 0xe8b84d,
-    TAXI_ROOF_LIGHT: 0x00ff88,
-    TAIL_LIGHT: 0xff3333,
-    HEADLIGHT: 0xffeedd,
+    /** Race car — light shell (carbon accents via materials). */
+    TAXI_BODY: 0xeeeff2,
+    /** Halo / status lamp — broadcast cyan. */
+    TAXI_ROOF_LIGHT: 0x00d2be,
+    TAIL_LIGHT: 0xc40000,
+    HEADLIGHT: 0xfff8f0,
     LANE_MARKING: 0xffffff,
-    UI_TEXT: 0xf0e8ff,
+    UI_TEXT: 0xf8fafc,
   },
 
   // ── Touch / pointer (lane input) ──
@@ -424,7 +428,8 @@ export const CONFIG = {
 /** Traffic body paint — every value is a `PALETTE` color (add/remove to tune variety). */
 export const TRAFFIC_PAINT_COLORS = [
   CONFIG.PALETTE.TRAFFIC_BODY_COMPACT,
-  CONFIG.PALETTE.TRAFFIC_BODY_GREEN,
+  CONFIG.PALETTE.TRAFFIC_BODY_TRUCK,
+  CONFIG.PALETTE.TRAFFIC_BODY_RACING_BLUE,
   CONFIG.PALETTE.NEON_PINK,
   CONFIG.PALETTE.NEON_BLUE,
   CONFIG.PALETTE.NEON_PURPLE,

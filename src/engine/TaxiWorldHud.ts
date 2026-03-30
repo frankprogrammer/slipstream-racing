@@ -146,7 +146,7 @@ export class TaxiWorldHud {
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `700 ${Math.round(h * 0.5)}px Orbitron, system-ui, sans-serif`;
+    ctx.font = `700 ${Math.round(h * 0.5)}px "Exo 2", system-ui, sans-serif`;
     ctx.globalAlpha = dim;
     ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(5, Math.round(h * 0.12));
@@ -170,9 +170,9 @@ export class TaxiWorldHud {
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `900 ${Math.round(h * 0.34)}px Orbitron, system-ui, sans-serif`;
+    ctx.font = `800 ${Math.round(h * 0.34)}px "Exo 2", system-ui, sans-serif`;
     ctx.fillStyle = ui;
-    ctx.shadowColor = 'rgba(180,77,255,0.45)';
+    ctx.shadowColor = 'rgba(225,6,0,0.35)';
     ctx.shadowBlur = 22;
     ctx.fillText(text, w / 2, h / 2);
     ctx.shadowBlur = 0;

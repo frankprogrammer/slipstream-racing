@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <title>Slipstream: Tokyo Night</title>
+  <title>Slipstream: Grand Prix</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Exo+2:wght@400;500;600;700;800&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #08050E; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #15151E; }
     #game-container {
       width: 100%; height: 100%;
       position: relative;
@@ -22,25 +22,25 @@
       top: 40%;
       left: 50%;
       transform: translate(-50%, -100%);
-      font-family: 'Orbitron', sans-serif;
+      font-family: 'Bebas Neue', sans-serif;
       text-align: center;
-      font-size: 36px;
-      font-weight: 900;
-      color: #FF2D7B;
-      text-shadow: 0 0 40px rgba(255,45,123,0.6), 0 0 80px rgba(255,45,123,0.3);
+      font-size: 42px;
+      font-weight: 400;
+      color: #E10600;
+      text-shadow: 0 0 32px rgba(225,6,0,0.55), 0 0 64px rgba(0,210,190,0.2);
       opacity: 0;
-      letter-spacing: 4px;
+      letter-spacing: 0.12em;
       pointer-events: none;
       z-index: 12;
       transition: opacity 0.35s ease-out;
     }
     #milestone-text.perfect {
-      font-size: clamp(42px, 12vw, 64px);
-      letter-spacing: 0.28em;
+      font-size: clamp(48px, 12vw, 72px);
+      letter-spacing: 0.22em;
       text-shadow:
-        0 0 50px rgba(255,45,123,0.95),
-        0 0 100px rgba(255,45,123,0.5),
-        0 0 140px rgba(0,229,255,0.25);
+        0 0 40px rgba(225,6,0,0.9),
+        0 0 80px rgba(225,6,0,0.45),
+        0 0 120px rgba(0,210,190,0.25);
       animation: perfect-pop 0.5s cubic-bezier(0.34, 1.45, 0.64, 1) both;
     }
     @keyframes perfect-pop {
@@ -64,22 +64,22 @@
     #screen-flash {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255,45,123,0.3);
+      background: rgba(225,6,0,0.22);
       opacity: 0;
       pointer-events: none;
       z-index: 5;
       transition: opacity 0.12s ease-out, background 0.2s ease;
     }
     #screen-flash.perfect-hit {
-      background: rgba(255,45,123,0.52);
-      box-shadow: inset 0 0 120px rgba(0,229,255,0.12);
+      background: rgba(225,6,0,0.4);
+      box-shadow: inset 0 0 120px rgba(0,210,190,0.1);
     }
 
     /* Game Over Overlay */
     #gameover {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(8,5,14,0.85);
+      background: rgba(21,21,30,0.92);
       display: none;
       flex-direction: column;
       align-items: center;
@@ -87,27 +87,33 @@
       box-sizing: border-box;
       padding: min(36px, 4.5vw);
       z-index: 20;
-      font-family: 'Orbitron', sans-serif;
-      color: #F0E8FF;
+      font-family: 'Exo 2', sans-serif;
+      color: #F8FAFC;
     }
     #gameover.visible { display: flex; }
     #gameover h2 {
-      font-size: 30px;
-      letter-spacing: 6px;
-      color: #FF2D7B;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px;
+      letter-spacing: 0.28em;
+      color: #E10600;
       margin: 0 0 30px 0;
+      font-weight: 400;
     }
     #final-score {
-      font-size: 72px;
-      font-weight: 900;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 76px;
+      font-weight: 400;
       line-height: 1.05;
       margin: 0 0 12px 0;
+      letter-spacing: 0.06em;
     }
     #new-best {
-      font-size: 21px;
-      color: #00E5FF;
+      font-size: 20px;
+      font-weight: 600;
+      color: #00D2BE;
       margin: 0 0 36px 0;
       display: none;
+      letter-spacing: 0.08em;
     }
     .stat-row {
       display: flex;
@@ -115,28 +121,30 @@
       justify-content: center;
       gap: 48px;
       margin: 0 0 48px 0;
-      font-size: 21px;
-      color: #8A7FA3;
-      letter-spacing: 1.5px;
+      font-size: 18px;
+      font-weight: 500;
+      color: #9CA3AF;
+      letter-spacing: 0.12em;
     }
-    .stat-row span strong { color: #F0E8FF; }
+    .stat-row span strong { color: #F8FAFC; font-weight: 700; }
     #retry-btn {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 24px;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 22px;
       font-weight: 700;
-      letter-spacing: 4.5px;
-      color: #F0E8FF;
+      letter-spacing: 0.2em;
+      color: #F8FAFC;
       background: transparent;
-      border: 3px solid #FF2D7B;
-      border-radius: 12px;
-      padding: 24px 72px;
+      border: 3px solid #E10600;
+      border-radius: 8px;
+      padding: 22px 64px;
       cursor: pointer;
       transition: background 0.2s, box-shadow 0.2s;
       pointer-events: auto;
+      text-transform: uppercase;
     }
     #retry-btn:hover, #retry-btn:active {
-      background: rgba(255,45,123,0.15);
-      box-shadow: 0 0 45px rgba(255,45,123,0.35);
+      background: rgba(225,6,0,0.12);
+      box-shadow: 0 0 40px rgba(225,6,0,0.35);
     }
   </style>
 </head>

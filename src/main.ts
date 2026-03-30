@@ -22,7 +22,7 @@ function easeInCubic(t: number): number {
 }
 
 /**
- * Slipstream: Tokyo Night — Main Entry Point
+ * Slipstream: Grand Prix — Main entry
  *
  * Phase 2+: slipstream, chain, score, HUD, game over. Direct render (no bloom) — daytime F1 look.
  */
@@ -353,5 +353,5 @@ void (async () => {
 })();
 
 console.log(
-  'Slipstream: Tokyo Night — Phase 2 (slipstream / chain / score). ?fps=1 for FPS overlay.'
+  'Slipstream: Grand Prix — ?fps=1 for FPS overlay.'
 );

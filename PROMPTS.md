@@ -6,6 +6,12 @@ User prompts only (assistant replies are not logged).
 
 ---
 
+### 2026-03-30 2:08 PM PDT
+
+we have changed the game design to formula 1 racing. let's change our entire color palette and fonts to reflect this
+
+---
+
 ### 2026-03-30 2:01 PM PDT
 
 right now the camera height is fixed. Just like we update the camera fov when entering the slipstream using CAMERA_FOV_CHAIN_FOR_MAX, i want to use the same chain number to change lerp the camera height to 10 at max

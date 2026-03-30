@@ -6,16 +6,16 @@ export const SKIN_MANIFEST = {
 
   // ── Color Palette ──
   palette: {
-    neonPrimary: '#FF2D7B',    // accent / UI
-    neonSecondary: '#00E5FF',  // accent / UI
-    neonAccent: '#B44DFF',     // accent
-    neonWarm: '#FF6B2D',       // accent
-    road: '#3A3A3E',           // asphalt gray
-    sky: '#7EC8FF',            // clear daytime
-    taxiBody: '#E8B84D',       // warm orange-cream
-    taxiRoof: '#00FF88',       // green (vacant)
-    uiText: '#F0E8FF',        // cool white
-    uiDim: '#8A7FA3',         // muted purple
+    neonPrimary: '#E10600',    // F1 red
+    neonSecondary: '#00D2BE',  // broadcast cyan
+    neonAccent: '#3671C6',   // racing blue
+    neonWarm: '#FF8700',       // papaya / accent
+    road: '#5C5C62',
+    sky: '#7EC8FF',
+    taxiBody: '#EEEFF2',
+    taxiRoof: '#00D2BE',
+    uiText: '#F8FAFC',
+    uiDim: '#9CA3AF',
   },
 
   // ── 3D Models (null = procedural mesh in engine until swapped) ──
@@ -66,5 +66,7 @@ export const SKIN_MANIFEST = {
   },
 
   // ── Neon accent colors (reference; palette / UI) ──
-  neonSignColors: [0xFF2D7B, 0x00E5FF, 0xB44DFF, 0xFF6B2D, 0x00FF88, 0xFFEE00],
+  neonSignColors: [
+    0xe10600, 0x00d2be, 0x3671c6, 0xff8700, 0xffffff, 0x15151e,
+  ],
 };
