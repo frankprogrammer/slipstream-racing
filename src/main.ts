@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { CONFIG } from './config';
-import { createBloomComposer, resizeBloomComposer } from './engine/postProcessing';
 import { GameState } from './engine/GameState';
 import { LaneSystem } from './engine/LaneSystem';
 import { RoadManager } from './engine/RoadManager';
@@ -25,7 +24,7 @@ function easeInCubic(t: number): number {
 /**
  * Slipstream: Tokyo Night — Main Entry Point
  *
- * Phase 2+: slipstream, chain, score, HUD, game over; post-processing in `postProcessing.ts`.
+ * Phase 2+: slipstream, chain, score, HUD, game over. Direct render (no bloom) — daytime F1 look.
  */
 
 const container = document.getElementById('game-container')!;
@@ -78,16 +77,12 @@ dirLight.position.set(
 dirLight.castShadow = false;
 scene.add(dirLight);
 
-const bloomBundle = createBloomComposer(renderer, scene, camera);
-const { composer } = bloomBundle;
-
 window.addEventListener('resize', () => {
   const w = window.innerWidth;
   const h = window.innerHeight;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
-  resizeBloomComposer(bloomBundle, w, h);
 });
 
 const gameState = new GameState();
@@ -339,7 +334,7 @@ function animate(): void {
     }
   }
 
-  composer.render();
+  renderer.render(scene, camera);
 }
 
 void (async () => {

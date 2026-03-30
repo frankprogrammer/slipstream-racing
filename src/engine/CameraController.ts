@@ -13,13 +13,16 @@ export class CameraController {
   private readonly rearNdc = new THREE.Vector3();
   /** Distance along -Z behind player (world); larger = camera further back on the road. */
   private followDistance: number = CONFIG.CAMERA_DISTANCE;
+  /** Smoothed chase height; lerps toward chain-driven target like FOV. */
+  private currentHeight: number = CONFIG.CAMERA_HEIGHT;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
 
   /**
-   * @param chain — current multiplier; FOV eases from FOV_BASE toward FOV_MAX as chain rises.
+   * @param chain — current multiplier; FOV eases from FOV_BASE toward FOV_MAX as chain rises;
+   *                height eases from CAMERA_HEIGHT toward CAMERA_HEIGHT_CHAIN_MAX with the same t.
    */
   update(playerTaxi: PlayerTaxi, chain: number): void {
     const t = this.fovTFromChain(chain);
@@ -33,12 +36,23 @@ export class CameraController {
       targetFov,
       CONFIG.CAMERA_FOV_LERP
     );
+    const targetHeight = THREE.MathUtils.lerp(
+      CONFIG.CAMERA_HEIGHT,
+      CONFIG.CAMERA_HEIGHT_CHAIN_MAX,
+      t
+    );
+    this.currentHeight = THREE.MathUtils.lerp(
+      this.currentHeight,
+      targetHeight,
+      CONFIG.CAMERA_FOV_LERP
+    );
     this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
   }
 
   snap(playerTaxi: PlayerTaxi): void {
     this.followDistance = CONFIG.CAMERA_DISTANCE;
+    this.currentHeight = CONFIG.CAMERA_HEIGHT;
     this.camera.fov = CONFIG.CAMERA_FOV_BASE;
     this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
@@ -54,7 +68,7 @@ export class CameraController {
   private applyCamera(playerTaxi: PlayerTaxi): void {
     const playerZ = playerTaxi.group.position.z;
     const lookZ = playerZ + CONFIG.CAMERA_LOOK_AHEAD;
-    const h = CONFIG.CAMERA_HEIGHT;
+    const h = this.currentHeight;
     const lookY = CONFIG.CAMERA_LOOK_AT_Y;
 
     playerTaxi.getRearWorldPosition(this.rearWorld);

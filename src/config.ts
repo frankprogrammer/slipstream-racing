@@ -39,6 +39,11 @@ export const CONFIG = {
   CAMERA_FOV_LERP: 0.02,
   /** Linear ramp: FOV reaches FOV_MAX when chain ≥ this (×1 = FOV_BASE). */
   CAMERA_FOV_CHAIN_FOR_MAX: 16,
+  /**
+   * At `CAMERA_FOV_CHAIN_FOR_MAX`, camera world Y lerps to this height (same t as FOV).
+   * Below that chain, height lerps between `CAMERA_HEIGHT` and this value.
+   */
+  CAMERA_HEIGHT_CHAIN_MAX: 10,
   CAMERA_SHAKE_INTENSITY: 0.03,
   CAMERA_SHAKE_DECAY: 0.9,
 
@@ -49,7 +54,7 @@ export const CONFIG = {
 
   // ── Road ──
   ROAD_SEGMENT_LENGTH: 20,
-  ROAD_VISIBLE_SEGMENTS: 6,
+  ROAD_VISIBLE_SEGMENTS: 8,
   /** Lanes, collision, traffic — playable corridor width (world units). */
   ROAD_WIDTH: 10,
   /**
@@ -94,11 +99,12 @@ export const CONFIG = {
   ROAD_LANE_MARKING_WIDTH: 0.12,
   /** Solid white edge lines inset from road width (world units). */
   ROAD_LANE_EDGE_INSET: 0.38,
-  /** Lane marking emissive intensity (bloom; keep modest). */
+  /** Lane marking emissive intensity (readability on asphalt). */
   ROAD_LANE_MARKING_EMISSIVE: 0.18,
-  FOG_NEAR: 15,
-  FOG_FAR: 80,
-  FOG_COLOR: 0x08050e,
+  /** Daytime track — soft aerial haze; matches sky / horizon. */
+  FOG_NEAR: 25,
+  FOG_FAR: 120,
+  FOG_COLOR: 0xb8d4f0,
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
   /** Starting base scroll at run start (before time ramp / slingshot bonus). */
@@ -132,7 +138,7 @@ export const CONFIG = {
   SLIPSTREAM_WIND_PARTICLES_PER_VEHICLE: 8,
   SLIPSTREAM_WIND_POINT_SIZE: 0.165,
   SLIPSTREAM_WIND_OPACITY: 0.5,
-  /** Soft cyan; reads as disturbed air (bloom picks up slightly bright points). */
+  /** Soft cyan; reads as disturbed air. */
   SLIPSTREAM_WIND_COLOR: 0xa8e8ff,
   /** Base Y and ± spread for wind points above the road. */
   SLIPSTREAM_WIND_Y: 0.52,
@@ -341,16 +347,8 @@ export const CONFIG = {
   /** Hat layer scales with chain (× this × layer ramp). */
   AUDIO_MUSIC_HAT_LAYER_MAX: 0.45,
 
-  // ── Post-Processing (UnrealBloom — CLAUDE.md Phase 3) ──
-  /** Bloom strength; emissive + bright HDR pixels. */
-  BLOOM_INTENSITY: 0.3,
-  /** Higher = only very bright pixels bloom (keeps mid-gray road from glowing). */
-  BLOOM_THRESHOLD: 0.1,
-  BLOOM_RADIUS: 0.0,
-  /** Bloom buffer scale (GPU savings; <1 = half-res bloom pass). */
-  BLOOM_RESOLUTION_SCALE: 0.5,
-  /** ACESFilmic exposure. */
-  TONE_MAPPING_EXPOSURE: 1.0,
+  /** ACESFilmic exposure (direct render, no bloom). */
+  TONE_MAPPING_EXPOSURE: 1.05,
 
   // ── Particles ──
   SPEED_LINES_COUNT: 30,
@@ -366,7 +364,7 @@ export const CONFIG = {
   RAIN_HEIGHT_BELOW: 8,
   RAIN_PARTICLE_SIZE: 0.055,
   RAIN_PARTICLE_OPACITY: 0.42,
-  RAIN_PARTICLE_COLOR: 0x99aacc,
+  RAIN_PARTICLE_COLOR: 0xc8d8e8,
   /** Neon streaks behind taxi on slingshot (CLAUDE: 3–4). */
   SLINGSHOT_TRAIL_STREAK_COUNT: 4,
   SLINGSHOT_TRAIL_DURATION_MS: 500,
@@ -393,7 +391,7 @@ export const CONFIG = {
     TRAFFIC_BODY_TRUCK: 0x424254,
     /** Muted green body (replaces dark gray in traffic paint rotation). */
     TRAFFIC_BODY_GREEN: 0x3a7d5c,
-    SKY: 0x08050e,
+    SKY: 0x7ec8ff,
     TAXI_BODY: 0xe8b84d,
     TAXI_ROOF_LIGHT: 0x00ff88,
     TAIL_LIGHT: 0xff3333,
@@ -412,15 +410,15 @@ export const CONFIG = {
   SWIPE_THRESHOLD: 30,
   SWIPE_MAX_TIME: 300,
 
-  // ── Scene lighting (MeshStandard vehicles need readable fill) ──
-  AMBIENT_LIGHT_COLOR: 0x8899bb,
-  AMBIENT_LIGHT_INTENSITY: 0.825,
-  DIRECTIONAL_LIGHT_COLOR: 0xffeedd,
-  DIRECTIONAL_LIGHT_INTENSITY: 0.75,
-  DIRECTIONAL_LIGHT_POSITION: [8, 18, 6] as const,
-  HEMISPHERE_LIGHT_SKY: 0x6688cc,
-  HEMISPHERE_LIGHT_GROUND: 0x1a1428,
-  HEMISPHERE_LIGHT_INTENSITY: 0.42,
+  // ── Scene lighting (daytime / outdoor track — MeshStandard fill) ──
+  AMBIENT_LIGHT_COLOR: 0xffffff,
+  AMBIENT_LIGHT_INTENSITY: 0.55,
+  DIRECTIONAL_LIGHT_COLOR: 0xfff5e6,
+  DIRECTIONAL_LIGHT_INTENSITY: 1.35,
+  DIRECTIONAL_LIGHT_POSITION: [12, 28, 10] as const,
+  HEMISPHERE_LIGHT_SKY: 0x87c8ff,
+  HEMISPHERE_LIGHT_GROUND: 0x6a6a62,
+  HEMISPHERE_LIGHT_INTENSITY: 0.65,
 } as const;
 
 /** Traffic body paint — every value is a `PALETTE` color (add/remove to tune variety). */
