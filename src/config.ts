@@ -130,7 +130,7 @@ export const CONFIG = {
 
   /** Points per traffic pool slot; fills the slipstream box behind each active vehicle. */
   SLIPSTREAM_WIND_PARTICLES_PER_VEHICLE: 8,
-  SLIPSTREAM_WIND_POINT_SIZE: 0.065,
+  SLIPSTREAM_WIND_POINT_SIZE: 0.165,
   SLIPSTREAM_WIND_OPACITY: 0.5,
   /** Soft cyan; reads as disturbed air (bloom picks up slightly bright points). */
   SLIPSTREAM_WIND_COLOR: 0xa8e8ff,
