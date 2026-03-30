@@ -20,7 +20,7 @@ export const CONFIG = {
   GAME_HEIGHT: 844,
 
   // ── Camera (road-centered: fixed X=0, chase down centerline) ──
-  CAMERA_HEIGHT: 22.0,
+  CAMERA_HEIGHT: 16.0,
   CAMERA_DISTANCE: 10.5,
   /** Aim at a point this far ahead on the road (small = steeper look-down at the taxi). */
   CAMERA_LOOK_AHEAD: 7.5,
@@ -49,7 +49,7 @@ export const CONFIG = {
 
   // ── Road ──
   ROAD_SEGMENT_LENGTH: 20,
-  ROAD_VISIBLE_SEGMENTS: 5,
+  ROAD_VISIBLE_SEGMENTS: 6,
   /** Lanes, collision, traffic — playable corridor width (world units). */
   ROAD_WIDTH: 10,
   /**
@@ -97,7 +97,7 @@ export const CONFIG = {
   /** Lane marking emissive intensity (bloom; keep modest). */
   ROAD_LANE_MARKING_EMISSIVE: 0.18,
   FOG_NEAR: 15,
-  FOG_FAR: 60,
+  FOG_FAR: 80,
   FOG_COLOR: 0x08050e,
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
@@ -117,7 +117,7 @@ export const CONFIG = {
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
-  SLIPSTREAM_ZONE_DEPTH: 4.25,
+  SLIPSTREAM_ZONE_DEPTH: 6,
   /** Per-frame @ 60Hz base fill; actual fill × (current scrollPerFrame / BASE_SCROLL_SPEED). */
   DRAFT_FILL_RATE: 0.05,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
@@ -183,7 +183,7 @@ export const CONFIG = {
   /**
    * World +Z ahead of player for new spawns. Higher = farther up the road / nearer screen top (horizon).
    */
-  TRAFFIC_SPAWN_AHEAD_Z: 48,
+  TRAFFIC_SPAWN_AHEAD_Z: 70,
   /** Extra random +Z spread (0..this) on each spawn. */
   TRAFFIC_SPAWN_AHEAD_Z_JITTER: 12,
   /**
