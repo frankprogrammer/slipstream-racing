@@ -100,10 +100,9 @@ export const CONFIG = {
   ROAD_LANE_EDGE_INSET: 0.38,
   /** Lane marking emissive intensity (readability on asphalt). */
   ROAD_LANE_MARKING_EMISSIVE: 0.18,
-  /** Daytime track — soft aerial haze; matches sky / horizon. */
+  /** Daytime track — soft aerial haze; fog color matches `PALETTE.SKY` in main.ts. */
   FOG_NEAR: 25,
   FOG_FAR: 120,
-  FOG_COLOR: 0xb8d4f0,
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
   /** Starting base scroll at run start (before time ramp / slingshot bonus). */

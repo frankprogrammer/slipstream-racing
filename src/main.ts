@@ -42,7 +42,7 @@ container.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(CONFIG.PALETTE.SKY);
-scene.fog = new THREE.Fog(CONFIG.FOG_COLOR, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
+scene.fog = new THREE.Fog(CONFIG.PALETTE.SKY, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
 
 const camera = new THREE.PerspectiveCamera(
   CONFIG.CAMERA_FOV_BASE,
