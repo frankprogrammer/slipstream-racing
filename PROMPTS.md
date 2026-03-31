@@ -502,3 +502,9 @@ play @public/thousandsuns.mp3 in a loop. it should not restart when starting a n
 ### 2026-03-30 9:30 PM PDT
 
 when entering a slipstream it should no longer highlight the material on top of the car. when activating a slipstream it should no longer activate headbeams
+
+---
+
+### 2026-03-30 9:40 PM PDT
+
+enable an fps meter

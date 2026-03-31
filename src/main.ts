@@ -166,7 +166,7 @@ gameState.onChange(state => {
 
 const clock = new THREE.Clock();
 
-const showFps = new URLSearchParams(window.location.search).has('fps');
+const showFps = true;
 let fpsEl: HTMLElement | null = null;
 let fpsAcc = 0;
 let fpsFrames = 0;
@@ -347,6 +347,4 @@ void (async () => {
   animate();
 })();
 
-console.log(
-  'Slipstream: Grand Prix — ?fps=1 for FPS overlay.'
-);
+console.log('Slipstream: Grand Prix — FPS overlay enabled.');
