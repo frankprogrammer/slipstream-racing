@@ -23,6 +23,7 @@ export class GameAudio {
   private music: SynthwaveMusic | null = null;
   private loopsBuilt = false;
   private bgMusicEl: HTMLAudioElement | null = null;
+  private appFocused = true;
 
   private engineOsc: OscillatorNode | null = null;
   private engineFilter: BiquadFilterNode | null = null;
@@ -70,8 +71,29 @@ export class GameAudio {
       this.buildLoops();
     }
 
-    void this.ctx.resume();
-    void this.bgMusicEl?.play().catch(() => {});
+    this.applyFocusState();
+  }
+
+  setAppFocused(focused: boolean): void {
+    this.appFocused = focused;
+    this.applyFocusState();
+  }
+
+  private applyFocusState(): void {
+    if (this.ctx) {
+      if (this.appFocused) {
+        void this.ctx.resume();
+      } else {
+        void this.ctx.suspend();
+      }
+    }
+    if (this.bgMusicEl) {
+      if (this.appFocused && CONFIG.AUDIO_BG_MUSIC_ENABLED) {
+        void this.bgMusicEl.play().catch(() => {});
+      } else {
+        this.bgMusicEl.pause();
+      }
+    }
   }
 
   private buildLoops(): void {

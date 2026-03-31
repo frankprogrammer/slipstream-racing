@@ -556,3 +556,9 @@ the lines are still not animated. lets make it dashed lines that are animated. T
 ### 2026-03-31 3:07 PM PDT
 
 the slipstream outline vertical stripes seem to always seem to past the bottom horizontal line of the outine. need to stop at or before this line
+
+---
+
+### 2026-03-31 3:17 PM PDT
+
+i want the music and all game update to stop whenever the game is not in focus

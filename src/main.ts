@@ -109,6 +109,25 @@ container.addEventListener('pointerdown', () => gameAudio.unlock(), {
   once: true,
 });
 
+let appFocused = document.visibilityState === 'visible' && document.hasFocus();
+let needsDeltaReset = false;
+gameAudio.setAppFocused(appFocused);
+
+function refreshAppFocus(): void {
+  const focused = document.visibilityState === 'visible' && document.hasFocus();
+  if (focused === appFocused) return;
+  appFocused = focused;
+  gameAudio.setAppFocused(appFocused);
+  if (appFocused) {
+    // Drop stale elapsed time on next frame so gameplay doesn't jump on resume.
+    needsDeltaReset = true;
+  }
+}
+
+document.addEventListener('visibilitychange', refreshAppFocus);
+window.addEventListener('focus', refreshAppFocus);
+window.addEventListener('blur', refreshAppFocus);
+
 let runTimeMs = 0;
 let distanceUnits = 0;
 let burstRemainMs = 0;
@@ -181,6 +200,11 @@ if (showFps) {
 
 function animate(): void {
   requestAnimationFrame(animate);
+  if (!appFocused) return;
+  if (needsDeltaReset) {
+    clock.getDelta();
+    needsDeltaReset = false;
+  }
   const delta = clock.getDelta();
   const nowMs = performance.now();
 
