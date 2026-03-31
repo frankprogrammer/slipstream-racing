@@ -10,6 +10,7 @@ import { CameraController } from "./engine/CameraController";
 import { RainSystem } from "./engine/RainSystem";
 import { SlipstreamWindSystem } from "./engine/SlipstreamWindSystem";
 import { SlingshotTrailSystem } from "./engine/SlingshotTrailSystem";
+import { SlipstreamActivateBurst } from "./engine/SlipstreamActivateBurst";
 import { SlipstreamZone } from "./engine/SlipstreamZone";
 import { ChainManager } from "./engine/ChainManager";
 import { ScoreManager } from "./engine/ScoreManager";
@@ -130,6 +131,7 @@ const gameOverScreen = new GameOverScreen();
 const rainSystem = new RainSystem();
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
+const slipstreamActivateBurst = new SlipstreamActivateBurst();
 const gameAudio = new GameAudio();
 const milestoneAnchorWorld = new THREE.Vector3();
 const touchHintLeftWorld = new THREE.Vector3();
@@ -183,6 +185,7 @@ function resetGame(): void {
   slipstreamWind.reset();
   playerTaxi.reset();
   slingshotTrail.reset();
+  slipstreamActivateBurst.reset();
   slipstreamZone.reset();
   chainManager.reset();
   scoreManager.reset();
@@ -321,6 +324,7 @@ function animate(): void {
         trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
+        slipstreamActivateBurst.burst();
         gameAudio.playSlingshot();
         const milestone = chainManager.onSlingshot(nowMs);
         if (milestone !== null) {
@@ -385,6 +389,7 @@ function animate(): void {
     gameState.isPlaying && runGameplayReady,
     trafficSpawner,
   );
+  slipstreamActivateBurst.update(delta);
 
   gameAudio.update(delta, {
     playing: gameState.isPlaying && runGameplayReady,
@@ -433,6 +438,7 @@ void (async () => {
   scene.add(playerTaxi.group);
   scene.add(rainSystem.group);
   scene.add(slingshotTrail.group);
+  playerTaxi.group.add(slipstreamActivateBurst.anchor);
   resetGame();
   // First `getDelta()` after load would otherwise equal time since `new Clock()` (async gap) and
   // would instantly complete the intro tween and skew runTime on frame 1.

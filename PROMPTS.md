@@ -634,3 +634,9 @@ Also show to the side the current scroll speed without any conversion, the raw v
 ### 2026-03-31 6:32 PM PDT
 
 Megits of both of the streams coming out from the back of the player's car are red.
+
+---
+
+### 2026-03-31 7:15 PM PDT
+
+When the slipstream is successfully activated, I want to spawn a burst of particles that starts at the back of the player car and shoots out in a stream towards the bottom of the screen.
