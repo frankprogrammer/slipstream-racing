@@ -2,8 +2,17 @@ import * as THREE from 'three';
 import { CONFIG } from '../config';
 import type { TrafficSpawner } from './TrafficSpawner';
 
+type OutlineSlot = {
+  group: THREE.Group;
+  leftDashes: THREE.Mesh[];
+  rightDashes: THREE.Mesh[];
+  dashLength: number;
+  cycleLength: number;
+};
+
 /**
  * Side strips of the slipstream box: spawn at the bumper, stream toward −Z (screen bottom).
+ * Also renders a road-projected slipstream outline behind active vehicles.
  */
 export class SlipstreamWindSystem {
   readonly group = new THREE.Group();
@@ -24,6 +33,9 @@ export class SlipstreamWindSystem {
   private readonly particlesPerVehicle: number;
   private readonly poolSlots: number;
   private readonly slotSeeded: boolean[];
+  private readonly outlineSlots: OutlineSlot[] = [];
+  private readonly outlineCoreMat: THREE.MeshBasicMaterial;
+  private readonly outlineGlowMat: THREE.MeshBasicMaterial;
 
   constructor() {
     this.group.name = 'SlipstreamWind';
@@ -55,12 +67,45 @@ export class SlipstreamWindSystem {
     this.points.renderOrder = 2;
     this.group.add(this.points);
 
+    this.outlineCoreMat = new THREE.MeshBasicMaterial({
+      color: CONFIG.SLIPSTREAM_ZONE_OUTLINE_COLOR,
+      transparent: true,
+      opacity: CONFIG.SLIPSTREAM_ZONE_OUTLINE_OPACITY,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    this.outlineGlowMat = new THREE.MeshBasicMaterial({
+      color: CONFIG.SLIPSTREAM_ZONE_OUTLINE_COLOR,
+      transparent: true,
+      opacity: CONFIG.SLIPSTREAM_ZONE_OUTLINE_GLOW_OPACITY,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+
+    for (let i = 0; i < this.poolSlots; i++) {
+      const slot = this.buildOutlineSlot();
+      this.outlineSlots.push(slot);
+      this.group.add(slot.group);
+    }
+
     this.hideAll();
   }
 
   dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
+    this.outlineCoreMat.dispose();
+    this.outlineGlowMat.dispose();
+    for (const slot of this.outlineSlots) {
+      for (const child of slot.group.children) {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (child.material instanceof THREE.Material) child.material.dispose();
+        }
+      }
+    }
   }
 
   reset(): void {
@@ -79,6 +124,74 @@ export class SlipstreamWindSystem {
     }
     const attr = this.geometry.attributes.position;
     if (attr) attr.needsUpdate = true;
+    for (const slot of this.outlineSlots) {
+      slot.group.visible = false;
+    }
+  }
+
+  private buildOutlineSlot(): OutlineSlot {
+    const g = new THREE.Group();
+    g.visible = false;
+    g.renderOrder = 3;
+
+    const zw = CONFIG.SLIPSTREAM_ZONE_WIDTH;
+    const zd = CONFIG.SLIPSTREAM_ZONE_DEPTH;
+    const t = CONFIG.SLIPSTREAM_ZONE_OUTLINE_THICKNESS;
+    const tg = t * CONFIG.SLIPSTREAM_ZONE_OUTLINE_GLOW_SCALE;
+    const half = zw * 0.5;
+
+    const frontBackCoreGeo = new THREE.PlaneGeometry(zw, t);
+    const frontBackGlowGeo = new THREE.PlaneGeometry(zw, tg);
+
+    const addFrontBack = (geo: THREE.PlaneGeometry, mat: THREE.MeshBasicMaterial, z: number): void => {
+      const m = new THREE.Mesh(geo.clone(), mat.clone());
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(0, 0, z);
+      m.frustumCulled = false;
+      m.renderOrder = 3;
+      g.add(m);
+    };
+    // Keep front/back solid and static.
+    addFrontBack(frontBackGlowGeo, this.outlineGlowMat, 0);
+    addFrontBack(frontBackGlowGeo, this.outlineGlowMat, -zd);
+    addFrontBack(frontBackCoreGeo, this.outlineCoreMat, 0);
+    addFrontBack(frontBackCoreGeo, this.outlineCoreMat, -zd);
+
+    const dashCount = Math.max(2, CONFIG.SLIPSTREAM_ZONE_OUTLINE_DASHES_PER_SIDE);
+    const cycle = zd / dashCount;
+    const dashLen = cycle * Math.max(0.12, Math.min(0.95, CONFIG.SLIPSTREAM_ZONE_OUTLINE_DASH_DUTY));
+    const sideDashGeo = new THREE.PlaneGeometry(t, dashLen);
+    const sideDashGlowGeo = new THREE.PlaneGeometry(tg, dashLen * 1.1);
+    const leftDashes: THREE.Mesh[] = [];
+    const rightDashes: THREE.Mesh[] = [];
+
+    const createSideDash = (x: number, isGlow: boolean): THREE.Mesh => {
+      const geo = isGlow ? sideDashGlowGeo : sideDashGeo;
+      const baseMat = isGlow ? this.outlineGlowMat : this.outlineCoreMat;
+      const m = new THREE.Mesh(geo.clone(), baseMat.clone());
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, 0, 0);
+      m.frustumCulled = false;
+      m.renderOrder = 3;
+      g.add(m);
+      return m;
+    };
+
+    // Animated side dashes: core + glow
+    for (let i = 0; i < dashCount; i++) {
+      leftDashes.push(createSideDash(-half, true));
+      leftDashes.push(createSideDash(-half, false));
+      rightDashes.push(createSideDash(half, true));
+      rightDashes.push(createSideDash(half, false));
+    }
+
+    return {
+      group: g,
+      leftDashes,
+      rightDashes,
+      dashLength: dashLen,
+      cycleLength: cycle,
+    };
   }
 
   private randomLXInStrip(halfZW: number, side: -1 | 1): number {
@@ -119,12 +232,36 @@ export class SlipstreamWindSystem {
     }
   }
 
+  private updateOutlineDashes(slot: OutlineSlot, zd: number, timeSec: number): void {
+    const speed = CONFIG.SLIPSTREAM_ZONE_OUTLINE_DASH_SPEED;
+    const phase = (timeSec * speed) % zd;
+    const cycle = slot.cycleLength;
+    const offset = slot.dashLength * 0.5;
+    const dashPairs = Math.floor(slot.leftDashes.length / 2);
+
+    for (let i = 0; i < dashPairs; i++) {
+      const zFrontToBack = (i * cycle + phase) % zd;
+      const zCenter = -zFrontToBack - offset;
+
+      const leftGlow = slot.leftDashes[i * 2]!;
+      const leftCore = slot.leftDashes[i * 2 + 1]!;
+      const rightGlow = slot.rightDashes[i * 2]!;
+      const rightCore = slot.rightDashes[i * 2 + 1]!;
+
+      leftGlow.position.z = zCenter;
+      leftCore.position.z = zCenter;
+      rightGlow.position.z = zCenter;
+      rightCore.position.z = zCenter;
+    }
+  }
+
   /**
    * When playing, advances particles along −Z in the wake; when not playing, hides all points.
    */
   update(delta: number, playing: boolean, traffic: TrafficSpawner): void {
     if (!playing) {
       this.points.visible = false;
+      for (const slot of this.outlineSlots) slot.group.visible = false;
       return;
     }
     this.points.visible = true;
@@ -137,11 +274,14 @@ export class SlipstreamWindSystem {
     const K = this.particlesPerVehicle;
     const pos = this.positions;
     const off = this.offsetXZ;
+    const nowSec = performance.now() * 0.001;
 
-    traffic.forEachPoolWindSlot((slot, active, cx, cz, hz) => {
-      const base = slot * K;
-      if (!active) {
-        this.slotSeeded[slot] = false;
+    traffic.forEachPoolWindSlot((slotIndex, active, slipstreamAvailable, cx, cz, hz) => {
+      const outline = this.outlineSlots[slotIndex];
+      const base = slotIndex * K;
+      if (!active || !slipstreamAvailable) {
+        if (outline) outline.group.visible = false;
+        this.slotSeeded[slotIndex] = false;
         for (let k = 0; k < K; k++) {
           const j = (base + k) * 3;
           pos[j] = 0;
@@ -152,10 +292,17 @@ export class SlipstreamWindSystem {
       }
 
       const rearZ = cz - hz;
+      if (outline && CONFIG.SLIPSTREAM_ZONE_OUTLINE_ENABLED) {
+        outline.group.visible = true;
+        outline.group.position.set(cx, CONFIG.SLIPSTREAM_ZONE_OUTLINE_Y, rearZ);
+        this.updateOutlineDashes(outline, zd, nowSec);
+      } else if (outline) {
+        outline.group.visible = false;
+      }
 
-      if (!this.slotSeeded[slot]) {
-        this.seedSlot(slot, halfZW, zd);
-        this.slotSeeded[slot] = true;
+      if (!this.slotSeeded[slotIndex]) {
+        this.seedSlot(slotIndex, halfZW, zd);
+        this.slotSeeded[slotIndex] = true;
       }
 
       for (let k = 0; k < K; k++) {

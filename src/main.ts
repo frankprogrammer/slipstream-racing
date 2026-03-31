@@ -255,6 +255,7 @@ function animate(): void {
       chainManager.tick(nowMs, slip.inZone);
 
       if (slip.slingshotFired) {
+        trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
         gameAudio.playSlingshot();

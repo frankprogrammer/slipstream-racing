@@ -149,6 +149,23 @@ export const CONFIG = {
   SLIPSTREAM_WIND_X_INSET: 0.1,
   /** Width of each left/right spawn column inside the zone. */
   SLIPSTREAM_WIND_SIDE_STRIP_WIDTH: 0.24,
+  /** Road-projected glow outline for each traffic slipstream zone. */
+  SLIPSTREAM_ZONE_OUTLINE_ENABLED: true,
+  SLIPSTREAM_ZONE_OUTLINE_COLOR: 0xe10600,
+  /** World Y lift above asphalt to avoid z-fighting. */
+  SLIPSTREAM_ZONE_OUTLINE_Y: 0.05,
+  /** Core line thickness in world units. */
+  SLIPSTREAM_ZONE_OUTLINE_THICKNESS: 0.06,
+  /** Glow line thickness multiplier over core. */
+  SLIPSTREAM_ZONE_OUTLINE_GLOW_SCALE: 2.15,
+  SLIPSTREAM_ZONE_OUTLINE_OPACITY: 0.8,
+  SLIPSTREAM_ZONE_OUTLINE_GLOW_OPACITY: 0.28,
+  /** Side-outline dashed animation speed in world units/sec (front -> back). */
+  SLIPSTREAM_ZONE_OUTLINE_DASH_SPEED: 8.5,
+  /** Number of animated dashes per side edge. */
+  SLIPSTREAM_ZONE_OUTLINE_DASHES_PER_SIDE: 10,
+  /** Filled portion of each dash cycle (0..1). */
+  SLIPSTREAM_ZONE_OUTLINE_DASH_DUTY: 0.58,
 
   // ── Chain ──
   CHAIN_TIMEOUT: 3000,

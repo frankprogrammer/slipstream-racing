@@ -22,6 +22,8 @@ type PoolEntry = {
   /** Cloned glTF root (liveries applied here). */
   carRoot: THREE.Object3D;
   active: boolean;
+  /** True after player successfully slingshots from this car. */
+  slipstreamConsumed: boolean;
   laneIndex: number;
   speedMul: number;
 };
@@ -76,6 +78,7 @@ export class TrafficSpawner {
       group: g,
       carRoot,
       active: false,
+      slipstreamConsumed: false,
       laneIndex: 1,
       speedMul: 1,
     };
@@ -89,6 +92,7 @@ export class TrafficSpawner {
     this.railActive = false;
     for (const p of this.pool) {
       p.active = false;
+      p.slipstreamConsumed = false;
       p.group.visible = false;
     }
   }
@@ -253,6 +257,7 @@ export class TrafficSpawner {
     applyLiveryColors(idle.carRoot, pickRandomLivery());
 
     idle.active = true;
+    idle.slipstreamConsumed = false;
     idle.group.visible = true;
 
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
@@ -307,6 +312,7 @@ export class TrafficSpawner {
     cb: (
       slotIndex: number,
       active: boolean,
+      slipstreamAvailable: boolean,
       cx: number,
       cz: number,
       hz: number
@@ -316,11 +322,35 @@ export class TrafficSpawner {
     for (let i = 0; i < this.pool.length; i++) {
       const p = this.pool[i]!;
       if (!p.active) {
-        cb(i, false, 0, 0, 0);
+        cb(i, false, false, 0, 0, 0);
         continue;
       }
-      cb(i, true, p.group.position.x, p.group.position.z, hz);
+      cb(i, true, !p.slipstreamConsumed, p.group.position.x, p.group.position.z, hz);
     }
+  }
+
+  markSlipstreamConsumed(target: TrafficCollisionBounds | null): void {
+    if (!target) return;
+    const p = this.findClosestActiveVehicleXZ(target.cx, target.cz);
+    if (p) p.slipstreamConsumed = true;
+  }
+
+  private findClosestActiveVehicleXZ(cx: number, cz: number): PoolEntry | null {
+    const maxD = CONFIG.TRAFFIC_HEADLIGHT_MATCH_MAX_DIST;
+    const maxSq = maxD * maxD;
+    let best: PoolEntry | null = null;
+    let bestSq = Infinity;
+    for (const p of this.pool) {
+      if (!p.active || p.slipstreamConsumed) continue;
+      const dx = p.group.position.x - cx;
+      const dz = p.group.position.z - cz;
+      const sq = dx * dx + dz * dz;
+      if (sq < bestSq && sq <= maxSq) {
+        bestSq = sq;
+        best = p;
+      }
+    }
+    return best;
   }
 
   getActiveCollisionBounds(): TrafficCollisionBounds[] {
@@ -329,7 +359,7 @@ export class TrafficSpawner {
     const hz = length / 2;
     const out: TrafficCollisionBounds[] = [];
     for (const p of this.pool) {
-      if (!p.active) continue;
+      if (!p.active || p.slipstreamConsumed) continue;
       out.push({
         cx: p.group.position.x,
         cz: p.group.position.z,

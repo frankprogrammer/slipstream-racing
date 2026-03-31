@@ -526,3 +526,27 @@ these arrow should exist in world space over the left and right lanes. the arrow
 ### 2026-03-30 10:05 PM PDT
 
 the arrows are currently flipped. they are also too high, they should be in the left and right lanes at about the z of the back of the player car
+
+---
+
+### 2026-03-30 10:15 PM PDT
+
+the slipstream zone should be represented by a glowing outline projected onto the road behind enemy vehicles
+
+---
+
+### 2026-03-30 10:20 PM PDT
+
+the shape is perfect right now the solid color almost makes it look static. lets make it a color animation on it that helps give it an appearance of moving forward
+
+---
+
+### 2026-03-30 10:30 PM PDT
+
+it doesn't seem to be animated at all and is still using a single solid color. it should also stop rendering once the slipstream has been successfully activated for that car
+
+---
+
+### 2026-03-30 10:40 PM PDT
+
+the lines are still not animated. lets make it dashed lines that are animated. The front and back lines should not be animated but the side lines of the outline should animate the dashes from front to back. set the outline color to red
