@@ -304,7 +304,7 @@ function animate(): void {
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
-      cameraController.update(playerTaxi, chainManager.chain);
+      cameraController.update(playerTaxi, runTimeMs);
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
         gameState.transition('gameover');
@@ -321,7 +321,7 @@ function animate(): void {
   } else {
     slingshotTrail.setBoostActive(false);
     slingshotTrail.update(delta, 0, playerTaxi);
-    cameraController.update(playerTaxi, 1);
+    cameraController.update(playerTaxi, 0);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
     const laneX = laneSystem.getLaneX(nowMs);
     milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);

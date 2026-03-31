@@ -13,6 +13,23 @@ export interface TrafficPhase {
   laneChange?: boolean;
 }
 
+export interface CameraFovPhase {
+  /** How long this phase holds its FOV and height (ms). */
+  holdMs: number;
+  /** FOV during this phase. */
+  fov: number;
+  /**
+   * Camera world Y (chase height) during this phase — same timeline as FOV.
+   * Omit to use `CAMERA_HEIGHT` for that phase.
+   */
+  height?: number;
+  /**
+   * Blend time into the next phase (ms). If omitted, uses 0 (hard cut).
+   * On the **last** phase, this is the blend back to the **first** phase when looping.
+   */
+  transitionMs?: number;
+}
+
 export const CONFIG = {
   // ── Canvas ──
   GAME_WIDTH: 390,
@@ -34,15 +51,16 @@ export const CONFIG = {
   CAMERA_ANGLE: -45,
   CAMERA_FOV_BASE: 55,
   CAMERA_FOV_MAX: 75,
-  /** Per-frame lerp factor toward target FOV (higher chain → wider, up to FOV_MAX). */
+  /** Per-frame lerp toward phase target FOV and chase height. */
   CAMERA_FOV_LERP: 0.02,
-  /** Linear ramp: FOV reaches FOV_MAX when chain ≥ this (×1 = FOV_BASE). */
-  CAMERA_FOV_CHAIN_FOR_MAX: 30,
   /**
-   * At `CAMERA_FOV_CHAIN_FOR_MAX`, camera world Y lerps to this height (same t as FOV).
-   * Below that chain, height lerps between `CAMERA_HEIGHT` and this value.
+   * Time-phased FOV + chase height (replaces chain-driven FOV/height).
+   * Each phase holds, then transitions (last phase transitions back to the first — timeline loops).
    */
-  CAMERA_HEIGHT_CHAIN_MAX: 3,
+  CAMERA_FOV_PHASES: [
+    { holdMs: 30000, fov: 55, height: 16.0, transitionMs: 5000 },
+    { holdMs: 30000, fov: 65, height: 3.0, transitionMs: 5000 },
+  ] as const satisfies readonly CameraFovPhase[],
   CAMERA_SHAKE_INTENSITY: 0.03,
   CAMERA_SHAKE_DECAY: 0.9,
 

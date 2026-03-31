@@ -592,3 +592,21 @@ right now if there is a car in front of the player and they are both in the midd
 ### 2026-03-31 3:49 PM PDT
 
 turn off collision debug rendering for now
+
+---
+
+### 2026-03-31 5:31 PM PDT
+
+For our field of view interpolation, let's set this up in phases instead. I want it to be so I can have a phase that, say, lasts for 30 seconds, and it'll be at a specific FOV. It'll then transition over a transition time of maybe five five seconds to the next field of view phase, which would have a different FOV And it could have a different time period that's active for. Allow me to add multiple phase, a chain of phases. And they could have varying times, you know, that they are active for. Uh... We will no longer change FOV based off of the current CAMERA_FOV_CHAIN_FOR_MAX
+
+---
+
+### 2026-03-31 5:32 PM PDT
+
+I also wanted these camera FOV phases to include the height change that was taking place. I do not want the height change to be based off of the chain for Max setting. that used to exist.
+
+---
+
+### 2026-03-31 5:33 PM PDT
+
+Also, if it's not doing it already, the camera FOV phases should loop. Once it has reached the last phase.
