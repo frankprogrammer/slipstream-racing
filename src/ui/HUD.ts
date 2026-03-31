@@ -8,6 +8,8 @@ import { CONFIG } from '../config';
 export class HUD {
   private milestoneEl: HTMLElement;
   private flashEl: HTMLElement;
+  private touchHintLeftEl: HTMLElement;
+  private touchHintRightEl: HTMLElement;
   private milestoneTimer = 0;
   private milestoneClassTimer = 0;
   private perfectFlashTimer = 0;
@@ -16,6 +18,42 @@ export class HUD {
   constructor() {
     this.milestoneEl = document.getElementById('milestone-text')!;
     this.flashEl = document.getElementById('screen-flash')!;
+    const container = document.getElementById('game-container')!;
+    this.touchHintLeftEl = this.buildTouchHint('left');
+    this.touchHintRightEl = this.buildTouchHint('right');
+    container.append(this.touchHintLeftEl, this.touchHintRightEl);
+  }
+
+  private buildTouchHint(direction: 'left' | 'right'): HTMLElement {
+    const el = document.createElement('div');
+    const arrow = direction === 'left' ? '\u27a1' : '\u2b05';
+    el.textContent = arrow;
+    el.style.cssText = [
+      'position:absolute',
+      'left:0',
+      'top:0',
+      'width:72px',
+      'height:72px',
+      'border-radius:9999px',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'font-family:Orbitron, system-ui, sans-serif',
+      'font-size:34px',
+      'font-weight:900',
+      'line-height:1',
+      `color:#${CONFIG.PALETTE.UI_TEXT.toString(16).padStart(6, '0')}`,
+      `border:4px solid #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, '0')}`,
+      `background:rgba(${(CONFIG.PALETTE.ROAD_DARK >> 16) & 255},${(CONFIG.PALETTE.ROAD_DARK >> 8) & 255},${CONFIG.PALETTE.ROAD_DARK & 255},0.82)`,
+      `box-shadow:0 0 0 2px rgba(255,255,255,0.18),0 0 18px #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, '0')},0 0 34px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')}`,
+      `text-shadow:0 0 6px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')},0 0 14px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')}`,
+      'pointer-events:none',
+      'opacity:0',
+      'z-index:120',
+      'transition:opacity 120ms linear',
+      'transform:translate(-50%, -50%)',
+    ].join(';');
+    return el;
   }
 
   /**
@@ -86,6 +124,42 @@ export class HUD {
     }, CONFIG.PERFECT_FLASH_DURATION_MS + 180);
   }
 
+  /**
+   * First 5s onboarding hint: left/right lane touch circles alternate on/off.
+   */
+  updateTouchHints(
+    runTimeMs: number,
+    show: boolean,
+    camera: THREE.PerspectiveCamera,
+    container: HTMLElement,
+    leftWorldPoint: THREE.Vector3,
+    rightWorldPoint: THREE.Vector3
+  ): void {
+    const activeWindowMs = 5000;
+    if (!show || runTimeMs >= activeWindowMs) {
+      this.touchHintLeftEl.style.opacity = '0';
+      this.touchHintRightEl.style.opacity = '0';
+      return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const left = this.tmpProj.copy(leftWorldPoint).project(camera);
+    const leftPx = (left.x * 0.5 + 0.5) * rect.width;
+    const leftPy = (-left.y * 0.5 + 0.5) * rect.height;
+    this.touchHintLeftEl.style.left = `${leftPx.toFixed(1)}px`;
+    this.touchHintLeftEl.style.top = `${leftPy.toFixed(1)}px`;
+
+    const right = this.tmpProj.copy(rightWorldPoint).project(camera);
+    const rightPx = (right.x * 0.5 + 0.5) * rect.width;
+    const rightPy = (-right.y * 0.5 + 0.5) * rect.height;
+    this.touchHintRightEl.style.left = `${rightPx.toFixed(1)}px`;
+    this.touchHintRightEl.style.top = `${rightPy.toFixed(1)}px`;
+
+    const step = Math.floor(runTimeMs / 380) % 2;
+    this.touchHintLeftEl.style.opacity = step === 0 ? '1' : '0';
+    this.touchHintRightEl.style.opacity = step === 1 ? '1' : '0';
+  }
+
   reset(): void {
     window.clearTimeout(this.milestoneTimer);
     window.clearTimeout(this.milestoneClassTimer);
@@ -94,5 +168,7 @@ export class HUD {
     this.milestoneEl.style.opacity = '0';
     this.flashEl.classList.remove('perfect-hit');
     this.flashEl.style.opacity = '0';
+    this.touchHintLeftEl.style.opacity = '0';
+    this.touchHintRightEl.style.opacity = '0';
   }
 }

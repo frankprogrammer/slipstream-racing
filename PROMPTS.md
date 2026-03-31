@@ -508,3 +508,21 @@ when entering a slipstream it should no longer highlight the material on top of 
 ### 2026-03-30 9:40 PM PDT
 
 enable an fps meter
+
+---
+
+### 2026-03-30 9:50 PM PDT
+
+for the first 5 seconds of a race. i want a circle  over the bottom left and right lanes with arrows inside them point left and right. they should alternate one and one off. they represent where we want the player to touch
+
+---
+
+### 2026-03-30 10:00 PM PDT
+
+these arrow should exist in world space over the left and right lanes. the arrows should be fatter. the circles should stand out more. use our F1 color palette
+
+---
+
+### 2026-03-30 10:05 PM PDT
+
+the arrows are currently flipped. they are also too high, they should be in the left and right lanes at about the z of the back of the player car

@@ -102,6 +102,8 @@ const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const gameAudio = new GameAudio();
 const milestoneAnchorWorld = new THREE.Vector3();
+const touchHintLeftWorld = new THREE.Vector3();
+const touchHintRightWorld = new THREE.Vector3();
 
 container.addEventListener('pointerdown', () => gameAudio.unlock(), {
   once: true,
@@ -315,6 +317,19 @@ function animate(): void {
     burstActive: audioBurst,
     chain: chainManager.chain,
   });
+
+  const hintZ = playerTaxi.group.position.z - CONFIG.TAXI_DIMENSIONS.length * 0.5;
+  const hintY = 0.28;
+  touchHintLeftWorld.set(-CONFIG.LANE_WIDTH, hintY, hintZ);
+  touchHintRightWorld.set(CONFIG.LANE_WIDTH, hintY, hintZ);
+  hud.updateTouchHints(
+    runTimeMs,
+    gameState.isPlaying && runGameplayReady,
+    camera,
+    container,
+    touchHintLeftWorld,
+    touchHintRightWorld
+  );
 
   if (showFps && fpsEl) {
     fpsAcc += delta;
