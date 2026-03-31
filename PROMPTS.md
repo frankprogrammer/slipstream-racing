@@ -640,3 +640,15 @@ Megits of both of the streams coming out from the back of the player's car are r
 ### 2026-03-31 7:15 PM PDT
 
 When the slipstream is successfully activated, I want to spawn a burst of particles that starts at the back of the player car and shoots out in a stream towards the bottom of the screen.
+
+---
+
+### 2026-03-31 7:22 PM PDT
+
+turn off fps meter for now
+
+---
+
+### 2026-03-31 7:28 PM PDT
+
+On mobile, the speed in the HUD text does not all fit on one line. It should scale to fit within A single line.

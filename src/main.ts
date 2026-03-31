@@ -220,7 +220,7 @@ gameState.onChange((state) => {
 
 const clock = new THREE.Clock();
 
-const showFps = true;
+const showFps = false;
 let fpsEl: HTMLElement | null = null;
 let fpsAcc = 0;
 let fpsFrames = 0;
@@ -241,7 +241,24 @@ if (showFps) {
 }
 
 const speedHudEl = document.getElementById("speed-hud");
+const speedTextWrapEl = document.getElementById("speed-text-wrap");
 const speedTextEl = document.getElementById("speed-text");
+
+function fitSpeedHudText(): void {
+  if (!speedTextWrapEl || !speedTextEl) return;
+  speedTextEl.style.transform = "scale(1)";
+  const maxW = speedTextWrapEl.clientWidth;
+  if (maxW <= 0) return;
+  const w = speedTextEl.scrollWidth;
+  if (w <= maxW) return;
+  speedTextEl.style.transform = `scale(${maxW / w})`;
+}
+
+window.addEventListener("resize", () => {
+  if (speedHudEl?.style.opacity === "1") {
+    requestAnimationFrame(() => fitSpeedHudText());
+  }
+});
 
 function animate(): void {
   requestAnimationFrame(animate);
@@ -381,6 +398,7 @@ function animate(): void {
       const speedKmh = speedMps * 3.6 * 2;
       speedTextEl.textContent = `${Math.round(speedKmh)} KM/H`;
       speedHudEl.style.opacity = "1";
+      requestAnimationFrame(() => fitSpeedHudText());
     }
   }
 
@@ -446,4 +464,6 @@ void (async () => {
   animate();
 })();
 
-console.log("Slipstream: Grand Prix — FPS overlay enabled.");
+if (showFps) {
+  console.log("Slipstream: Grand Prix — FPS overlay enabled.");
+}
