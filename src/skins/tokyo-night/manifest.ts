@@ -1,21 +1,23 @@
+import { GAME_PALETTE, hexToCss } from '../../config';
+
 /**
- * Skin manifest (procedural F1 / track reskin — engine uses `CONFIG`; this is reference for art swaps).
+ * Skin manifest (procedural F1 / track reskin — engine uses `CONFIG.PALETTE`; this mirrors it for art swaps).
  */
 export const SKIN_MANIFEST = {
   name: 'Track Day (F1)',
 
-  // ── Color Palette ──
+  // ── Color Palette (derived from `GAME_PALETTE` — single source of truth) ──
   palette: {
-    neonPrimary: '#E10600',    // F1 red
-    neonSecondary: '#00D2BE',  // broadcast cyan
-    neonAccent: '#3671C6',   // racing blue
-    neonWarm: '#FF8700',       // papaya / accent
-    road: '#5C5C62',
-    sky: '#7EC8FF',
-    taxiBody: '#EEEFF2',
-    taxiRoof: '#00D2BE',
-    uiText: '#F8FAFC',
-    uiDim: '#9CA3AF',
+    neonPrimary: hexToCss(GAME_PALETTE.NEON_PINK),
+    neonSecondary: hexToCss(GAME_PALETTE.NEON_BLUE),
+    neonAccent: hexToCss(GAME_PALETTE.NEON_PURPLE),
+    neonWarm: hexToCss(GAME_PALETTE.NEON_ORANGE),
+    road: hexToCss(GAME_PALETTE.ROAD_DARK),
+    sky: hexToCss(GAME_PALETTE.SKY),
+    taxiBody: hexToCss(GAME_PALETTE.TAXI_BODY),
+    taxiRoof: hexToCss(GAME_PALETTE.TAXI_ROOF_LIGHT),
+    uiText: hexToCss(GAME_PALETTE.UI_TEXT),
+    uiDim: hexToCss(GAME_PALETTE.UI_DIM),
   },
 
   // ── 3D Models (null = procedural mesh in engine until swapped) ──
@@ -65,8 +67,13 @@ export const SKIN_MANIFEST = {
     toneMappingExposure: 1.05,
   },
 
-  // ── Neon accent colors (reference; palette / UI) ──
+  // ── Neon accent colors (reference; matches `GAME_PALETTE`) ──
   neonSignColors: [
-    0xe10600, 0x00d2be, 0x3671c6, 0xff8700, 0xffffff, 0x15151e,
+    GAME_PALETTE.NEON_PINK,
+    GAME_PALETTE.NEON_BLUE,
+    GAME_PALETTE.NEON_PURPLE,
+    GAME_PALETTE.NEON_ORANGE,
+    GAME_PALETTE.LANE_MARKING,
+    GAME_PALETTE.UI_BG_APP,
   ],
 };

@@ -30,6 +30,101 @@ export interface CameraFovPhase {
   transitionMs?: number;
 }
 
+export function hexToCss(hex: number): string {
+  return `#${hex.toString(16).padStart(6, '0')}`;
+}
+
+export function rgbaFromHex(hex: number, alpha: number): string {
+  const r = (hex >> 16) & 255;
+  const g = (hex >> 8) & 255;
+  const b = hex & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Formula 1 / broadcast — single source for engine materials, particles, and UI.
+ * Do not hardcode colors elsewhere; reference `CONFIG.PALETTE` or these keys.
+ */
+export const GAME_PALETTE = {
+  /** Primary accent — podium / DRS / slipstream outline / milestones. */
+  NEON_PINK: 0xe10600,
+  /** Telemetry cyan — draft meter, chain fill, wind particles. */
+  NEON_BLUE: 0x00d2be,
+  /** Racing blue — liveries, accents. */
+  NEON_PURPLE: 0x3671c6,
+  /** Papaya / warning accent. */
+  NEON_ORANGE: 0xff8700,
+  /** Asphalt / tire wall read. */
+  ROAD_DARK: 0x5c5c62,
+  TRAFFIC_BODY_COMPACT: 0x2a2a32,
+  TRAFFIC_BODY_TRUCK: 0x1c1c24,
+  TRAFFIC_BODY_RACING_BLUE: 0x3671c6,
+  SKY: 0x7ec8ff,
+  TAXI_BODY: 0xeeeff2,
+  TAXI_ROOF_LIGHT: 0x00d2be,
+  TAIL_LIGHT: 0xc40000,
+  HEADLIGHT: 0xfff8f0,
+  LANE_MARKING: 0xffffff,
+  UI_TEXT: 0xf8fafc,
+  /** Muted stats / secondary copy. */
+  UI_DIM: 0x9ca3af,
+  /** App chrome behind canvas. */
+  UI_BG_APP: 0x15151e,
+  /** Solid black for outlines / strokes. */
+  UI_OUTLINE: 0x000000,
+  /** Draft bar track (dark carbon behind fill). */
+  DRAFT_BAR_TRACK: 0x0f1a26,
+  /** Slipstream wake particles (same family as telemetry cyan). */
+  SLIPSTREAM_WIND: 0x00d2be,
+  SLIPSTREAM_OUTLINE: 0xe10600,
+  RAIN_MIST: 0xc8d8e8,
+  /** Roof lamp while drafting. */
+  TAXI_ROOF_DRAFT_AMBER: 0xffaa00,
+  SLINGSHOT_TRAIL_LEFT: 0xe10600,
+  SLINGSHOT_TRAIL_RIGHT: 0x00d2be,
+  /** Dev FPS overlay (telemetry-style). */
+  FPS_TELEMETRY: 0x22c55e,
+  /** Score sprite glow (primary). */
+  HUD_SCORE_GLOW: 0xe10600,
+  /** Screen flash / milestone tints — primary at low alpha in CSS. */
+  SCREEN_FLASH_TINT: 0xe10600,
+  /** Scene lights (match outdoor track). */
+  AMBIENT_LIGHT: 0xffffff,
+  DIRECTIONAL_LIGHT: 0xfff5e6,
+  HEMISPHERE_SKY: 0x87c8ff,
+  HEMISPHERE_GROUND: 0x6a6a62,
+  /** Extra livery slots for enemy variety. */
+  METALLIC_SILVER: 0xd1d5db,
+  CARBON_BLACK: 0x1a1a1e,
+  NIGHT_NAVY: 0x1e3a5f,
+  BRITISH_GREEN: 0x008f6b,
+  BORDEAUX: 0x6b1c3a,
+  SAFETY_YELLOW: 0xfde047,
+} as const;
+
+const TRAFFIC_LIVERY_VARIANTS = [
+  { red: GAME_PALETTE.NEON_PINK, white: GAME_PALETTE.TAXI_BODY, blue: GAME_PALETTE.NEON_PURPLE },
+  { red: GAME_PALETTE.NEON_BLUE, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_PINK },
+  { red: GAME_PALETTE.NEON_ORANGE, white: GAME_PALETTE.UI_TEXT, blue: GAME_PALETTE.NEON_PURPLE },
+  { red: GAME_PALETTE.NEON_PURPLE, white: GAME_PALETTE.METALLIC_SILVER, blue: GAME_PALETTE.NEON_ORANGE },
+  { red: GAME_PALETTE.TRAFFIC_BODY_COMPACT, white: GAME_PALETTE.TAXI_BODY, blue: GAME_PALETTE.NEON_BLUE },
+  { red: GAME_PALETTE.NEON_PINK, white: GAME_PALETTE.TRAFFIC_BODY_COMPACT, blue: GAME_PALETTE.NEON_BLUE },
+  { red: GAME_PALETTE.TRAFFIC_BODY_TRUCK, white: GAME_PALETTE.UI_TEXT, blue: GAME_PALETTE.NEON_PINK },
+  { red: GAME_PALETTE.NEON_BLUE, white: GAME_PALETTE.NEON_PINK, blue: GAME_PALETTE.NEON_PURPLE },
+  { red: GAME_PALETTE.NEON_ORANGE, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_BLUE },
+  { red: GAME_PALETTE.NEON_PURPLE, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_ORANGE },
+  { red: GAME_PALETTE.BRITISH_GREEN, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_ORANGE },
+  { red: GAME_PALETTE.METALLIC_SILVER, white: GAME_PALETTE.NIGHT_NAVY, blue: GAME_PALETTE.NEON_PINK },
+  { red: GAME_PALETTE.NIGHT_NAVY, white: GAME_PALETTE.UI_TEXT, blue: GAME_PALETTE.NEON_BLUE },
+  { red: GAME_PALETTE.BORDEAUX, white: GAME_PALETTE.TAXI_BODY, blue: GAME_PALETTE.NEON_PURPLE },
+  { red: GAME_PALETTE.CARBON_BLACK, white: GAME_PALETTE.SAFETY_YELLOW, blue: GAME_PALETTE.NEON_PINK },
+  { red: GAME_PALETTE.NEON_PURPLE, white: GAME_PALETTE.NEON_ORANGE, blue: GAME_PALETTE.CARBON_BLACK },
+  { red: GAME_PALETTE.NEON_BLUE, white: GAME_PALETTE.METALLIC_SILVER, blue: GAME_PALETTE.BRITISH_GREEN },
+  { red: GAME_PALETTE.NEON_ORANGE, white: GAME_PALETTE.BORDEAUX, blue: GAME_PALETTE.NEON_BLUE },
+  { red: GAME_PALETTE.TAXI_BODY, white: GAME_PALETTE.NIGHT_NAVY, blue: GAME_PALETTE.NEON_PINK },
+  { red: GAME_PALETTE.TRAFFIC_BODY_RACING_BLUE, white: GAME_PALETTE.UI_DIM, blue: GAME_PALETTE.NEON_ORANGE },
+] as const;
+
 export const CONFIG = {
   // ── Canvas ──
   GAME_WIDTH: 390,
@@ -154,8 +249,8 @@ export const CONFIG = {
   SLIPSTREAM_WIND_PARTICLES_PER_VEHICLE: 0,
   SLIPSTREAM_WIND_POINT_SIZE: 0.165,
   SLIPSTREAM_WIND_OPACITY: 0.5,
-  /** Slipstream wake tint (track cyan). */
-  SLIPSTREAM_WIND_COLOR: 0x5eead4,
+  /** Slipstream wake tint — see `PALETTE.SLIPSTREAM_WIND`. */
+  SLIPSTREAM_WIND_COLOR: GAME_PALETTE.SLIPSTREAM_WIND,
   /** Base Y and ± spread for wind points above the road. */
   SLIPSTREAM_WIND_Y: 0.52,
   SLIPSTREAM_WIND_Y_SPREAD: 0.38,
@@ -169,7 +264,7 @@ export const CONFIG = {
   SLIPSTREAM_WIND_SIDE_STRIP_WIDTH: 0.24,
   /** Road-projected glow outline for each traffic slipstream zone. */
   SLIPSTREAM_ZONE_OUTLINE_ENABLED: true,
-  SLIPSTREAM_ZONE_OUTLINE_COLOR: 0xe10600,
+  SLIPSTREAM_ZONE_OUTLINE_COLOR: GAME_PALETTE.SLIPSTREAM_OUTLINE,
   /** World Y lift above asphalt to avoid z-fighting. */
   SLIPSTREAM_ZONE_OUTLINE_Y: 0.05,
   /** Core line thickness in world units. */
@@ -289,22 +384,8 @@ export const CONFIG = {
   TRAFFIC_DRAFT_TAIL_MATERIAL_NAME: "red",
   /** Strip PBR maps so hex liveries read clearly on clones. */
   TRAFFIC_LIVERY_IGNORE_TEXTURES: true,
-  /**
-   * Random traffic liveries: `{ red, white, blue }` hex colors applied to the three glTF materials.
-   * F1-style palette (primaries, carbon, cyan, papaya).
-   */
-  TRAFFIC_LIVERY_VARIANTS: [
-    { red: 0xe10600, white: 0xeeeff2, blue: 0x3671c6 },
-    { red: 0x00d2be, white: 0x1a1a1e, blue: 0xe10600 },
-    { red: 0xff8700, white: 0xf8fafc, blue: 0x3671c6 },
-    { red: 0x3671c6, white: 0xf0f0f0, blue: 0xff8700 },
-    { red: 0x2a2a32, white: 0xeeeff2, blue: 0x00d2be },
-    { red: 0xe10600, white: 0x2a2a32, blue: 0x00d2be },
-    { red: 0x1c1c24, white: 0xf8fafc, blue: 0xe10600 },
-    { red: 0x00d2be, white: 0xe10600, blue: 0x3671c6 },
-    { red: 0xff8700, white: 0x1c1c24, blue: 0x00d2be },
-    { red: 0x3671c6, white: 0x1a1a1e, blue: 0xff8700 },
-  ] as const,
+  /** Random traffic liveries — `{ red, white, blue }` from `GAME_PALETTE`. */
+  TRAFFIC_LIVERY_VARIANTS,
   /** Gap under draft bar plane to chain sprite (chassis local Y). */
   TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP: 0.65,
   /** Local −Z offset from rear bumper for score + chain (behind taxi). */
@@ -321,7 +402,7 @@ export const CONFIG = {
    */
   TAXI_COLLISION_Z_HALF_SCALE: 0.9,
   /** Roof lamp while drafting (空車 off). */
-  TAXI_ROOF_LIGHT_DRAFT: 0xffaa00,
+  TAXI_ROOF_LIGHT_DRAFT: GAME_PALETTE.TAXI_ROOF_DRAFT_AMBER,
   /** ×10 milestone: neon pink flash window (CLAUDE.md). */
   TAXI_ROOF_LIGHT_M10_FLASH_MS: 2000,
   TAXI_ROOF_LIGHT_M10_PULSE_HZ: 5,
@@ -432,7 +513,7 @@ export const CONFIG = {
   RAIN_HEIGHT_BELOW: 8,
   RAIN_PARTICLE_SIZE: 0.055,
   RAIN_PARTICLE_OPACITY: 0.42,
-  RAIN_PARTICLE_COLOR: 0xc8d8e8,
+  RAIN_PARTICLE_COLOR: GAME_PALETTE.RAIN_MIST,
   /** Neon streaks behind taxi on slingshot (CLAUDE: 3–4). */
   SLINGSHOT_TRAIL_STREAK_COUNT: 4,
   SLINGSHOT_TRAIL_DURATION_MS: 500,
@@ -447,31 +528,8 @@ export const CONFIG = {
   /** World-Z motion vs road scroll (1 = same as traffic). */
   SLINGSHOT_TRAIL_SCROLL_SCALE: 1.05,
 
-  // ── Palette (Formula 1 / broadcast: red, cyan, carbon, white) ──
-  PALETTE: {
-    /** Primary accent — podium / DRS / milestone juice. */
-    NEON_PINK: 0xe10600,
-    /** Secondary — draft meter, slipstream UI, telemetry cyan. */
-    NEON_BLUE: 0x00d2be,
-    /** Tertiary accent — alternate team / HUD highlight. */
-    NEON_PURPLE: 0x3671c6,
-    /** Warning / papaya accent. */
-    NEON_ORANGE: 0xff8700,
-    ROAD_DARK: 0x5c5c62,
-    TRAFFIC_BODY_COMPACT: 0x2a2a32,
-    TRAFFIC_BODY_TRUCK: 0x1c1c24,
-    /** Racing blue body in traffic rotation. */
-    TRAFFIC_BODY_RACING_BLUE: 0x3671c6,
-    SKY: 0x7ec8ff,
-    /** Race car — light shell (carbon accents via materials). */
-    TAXI_BODY: 0xeeeff2,
-    /** Halo / status lamp — broadcast cyan. */
-    TAXI_ROOF_LIGHT: 0x00d2be,
-    TAIL_LIGHT: 0xc40000,
-    HEADLIGHT: 0xfff8f0,
-    LANE_MARKING: 0xffffff,
-    UI_TEXT: 0xf8fafc,
-  },
+  /** Alias for `GAME_PALETTE` — use in engine + UI. */
+  PALETTE: GAME_PALETTE,
 
   // ── Touch / pointer (lane input) ──
   /** Half-screen tap ignores touches within this many px of horizontal center. */
@@ -483,13 +541,9 @@ export const CONFIG = {
   SWIPE_THRESHOLD: 30,
   SWIPE_MAX_TIME: 300,
 
-  // ── Scene lighting (daytime / outdoor track — MeshStandard fill) ──
-  AMBIENT_LIGHT_COLOR: 0xffffff,
+  // ── Scene lighting (daytime / outdoor track — MeshStandard fill; colors: `PALETTE`) ──
   AMBIENT_LIGHT_INTENSITY: 0.55,
-  DIRECTIONAL_LIGHT_COLOR: 0xfff5e6,
   DIRECTIONAL_LIGHT_INTENSITY: 1.35,
   DIRECTIONAL_LIGHT_POSITION: [12, 28, 10] as const,
-  HEMISPHERE_LIGHT_SKY: 0x87c8ff,
-  HEMISPHERE_LIGHT_GROUND: 0x6a6a62,
   HEMISPHERE_LIGHT_INTENSITY: 0.65,
 } as const;

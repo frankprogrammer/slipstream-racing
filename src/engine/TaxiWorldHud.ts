@@ -1,9 +1,5 @@
 import * as THREE from 'three';
-import { CONFIG } from '../config';
-
-function hexToCss(hex: number): string {
-  return `#${hex.toString(16).padStart(6, '0')}`;
-}
+import { CONFIG, hexToCss, rgbaFromHex } from '../config';
 
 /**
  * Score + chain as canvas sprites parented to the taxi chassis (roll with body).
@@ -140,7 +136,7 @@ export class TaxiWorldHud {
     const h = this.chainCanvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const outline = '#000000';
+    const outline = hexToCss(CONFIG.PALETTE.UI_OUTLINE);
     const fill = hexToCss(CONFIG.PALETTE.NEON_BLUE);
     const dim = chain > 1 ? 1 : 0.55;
 
@@ -172,7 +168,7 @@ export class TaxiWorldHud {
     ctx.textBaseline = 'middle';
     ctx.font = `800 ${Math.round(h * 0.34)}px "Exo 2", system-ui, sans-serif`;
     ctx.fillStyle = ui;
-    ctx.shadowColor = 'rgba(225,6,0,0.35)';
+    ctx.shadowColor = rgbaFromHex(CONFIG.PALETTE.HUD_SCORE_GLOW, 0.35);
     ctx.shadowBlur = 22;
     ctx.fillText(text, w / 2, h / 2);
     ctx.shadowBlur = 0;

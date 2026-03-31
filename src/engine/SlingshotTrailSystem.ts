@@ -27,7 +27,10 @@ export class SlingshotTrailSystem {
     const geo = new THREE.BoxGeometry(w, h, len);
     geo.translate(0, 0, -len * 0.5);
 
-    for (const color of [CONFIG.PALETTE.NEON_PINK, CONFIG.PALETTE.NEON_PINK]) {
+    for (const color of [
+      CONFIG.PALETTE.SLINGSHOT_TRAIL_LEFT,
+      CONFIG.PALETTE.SLINGSHOT_TRAIL_RIGHT,
+    ]) {
       const m = new THREE.MeshBasicMaterial({
         color,
         transparent: true,

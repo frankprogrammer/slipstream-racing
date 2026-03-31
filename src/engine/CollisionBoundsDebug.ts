@@ -29,7 +29,7 @@ export class CollisionBoundsDebug {
       CONFIG.TAXI_DIMENSIONS.width,
       CONFIG.TAXI_DIMENSIONS.height,
       CONFIG.TAXI_DIMENSIONS.length,
-      0x00e5ff
+      CONFIG.PALETTE.NEON_BLUE
     );
     this.group.add(this.playerSlot.mesh);
 
@@ -38,7 +38,7 @@ export class CollisionBoundsDebug {
         CONFIG.TAXI_DIMENSIONS.width,
         CONFIG.TAXI_DIMENSIONS.height,
         CONFIG.TAXI_DIMENSIONS.length,
-        0xff6b2d
+        CONFIG.PALETTE.NEON_ORANGE
       );
       slot.mesh.visible = false;
       this.trafficSlots.push(slot);
@@ -48,10 +48,14 @@ export class CollisionBoundsDebug {
 
   dispose(): void {
     this.playerSlot.geometry.dispose();
-    this.playerSlot.mesh.material.dispose();
+    const pm = this.playerSlot.mesh.material;
+    if (Array.isArray(pm)) pm.forEach(m => m.dispose());
+    else pm.dispose();
     for (const slot of this.trafficSlots) {
       slot.geometry.dispose();
-      slot.mesh.material.dispose();
+      const m = slot.mesh.material;
+      if (Array.isArray(m)) m.forEach(x => x.dispose());
+      else m.dispose();
     }
   }
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CONFIG } from './config';
+import { CONFIG, hexToCss, rgbaFromHex } from './config';
 import { GameState } from './engine/GameState';
 import { LaneSystem } from './engine/LaneSystem';
 import { RoadManager } from './engine/RoadManager';
@@ -27,6 +27,30 @@ function easeInCubic(t: number): number {
  * Phase 2+: slipstream, chain, score, HUD, game over. Direct render (no bloom) — daytime F1 look.
  */
 
+function applyF1CssVariables(): void {
+  const p = CONFIG.PALETTE;
+  const r = document.documentElement;
+  r.style.setProperty('--f1-primary', hexToCss(p.NEON_PINK));
+  r.style.setProperty('--f1-cyan', hexToCss(p.NEON_BLUE));
+  r.style.setProperty('--f1-blue', hexToCss(p.NEON_PURPLE));
+  r.style.setProperty('--f1-warm', hexToCss(p.NEON_ORANGE));
+  r.style.setProperty('--f1-ui-text', hexToCss(p.UI_TEXT));
+  r.style.setProperty('--f1-ui-dim', hexToCss(p.UI_DIM));
+  r.style.setProperty('--f1-bg-app', hexToCss(p.UI_BG_APP));
+  r.style.setProperty('--f1-gameover-scrim', rgbaFromHex(p.UI_BG_APP, 0.92));
+  r.style.setProperty('--f1-flash-tint', rgbaFromHex(p.SCREEN_FLASH_TINT, 0.22));
+  r.style.setProperty('--f1-flash-perfect', rgbaFromHex(p.SCREEN_FLASH_TINT, 0.4));
+  r.style.setProperty('--f1-retry-hover', rgbaFromHex(p.NEON_PINK, 0.12));
+  r.style.setProperty('--f1-retry-glow', rgbaFromHex(p.NEON_PINK, 0.35));
+  r.style.setProperty('--f1-milestone-glow', rgbaFromHex(p.NEON_PINK, 0.55));
+  r.style.setProperty('--f1-milestone-cyan', rgbaFromHex(p.NEON_BLUE, 0.2));
+  r.style.setProperty('--f1-perfect-glow-1', rgbaFromHex(p.NEON_PINK, 0.9));
+  r.style.setProperty('--f1-perfect-glow-2', rgbaFromHex(p.NEON_PINK, 0.45));
+  r.style.setProperty('--f1-perfect-cyan', rgbaFromHex(p.NEON_BLUE, 0.25));
+  r.style.setProperty('--f1-perfect-inset', rgbaFromHex(p.NEON_BLUE, 0.1));
+}
+applyF1CssVariables();
+
 const container = document.getElementById('game-container')!;
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -52,21 +76,21 @@ const camera = new THREE.PerspectiveCamera(
 );
 
 const ambientLight = new THREE.AmbientLight(
-  CONFIG.AMBIENT_LIGHT_COLOR,
+  CONFIG.PALETTE.AMBIENT_LIGHT,
   CONFIG.AMBIENT_LIGHT_INTENSITY
 );
 scene.add(ambientLight);
 
 const hemiLight = new THREE.HemisphereLight(
-  CONFIG.HEMISPHERE_LIGHT_SKY,
-  CONFIG.HEMISPHERE_LIGHT_GROUND,
+  CONFIG.PALETTE.HEMISPHERE_SKY,
+  CONFIG.PALETTE.HEMISPHERE_GROUND,
   CONFIG.HEMISPHERE_LIGHT_INTENSITY
 );
 hemiLight.position.set(0, 40, 0);
 scene.add(hemiLight);
 
 const dirLight = new THREE.DirectionalLight(
-  CONFIG.DIRECTIONAL_LIGHT_COLOR,
+  CONFIG.PALETTE.DIRECTIONAL_LIGHT,
   CONFIG.DIRECTIONAL_LIGHT_INTENSITY
 );
 dirLight.position.set(
@@ -193,8 +217,17 @@ let fpsAcc = 0;
 let fpsFrames = 0;
 if (showFps) {
   fpsEl = document.createElement('div');
-  fpsEl.style.cssText =
-    'position:absolute;left:8px;bottom:8px;z-index:100;font:12px monospace;color:#0f0;background:rgba(0,0,0,.5);padding:4px 8px;pointer-events:none;';
+  fpsEl.style.cssText = [
+    'position:absolute',
+    'left:8px',
+    'bottom:8px',
+    'z-index:100',
+    'font:12px monospace',
+    `color:${hexToCss(CONFIG.PALETTE.FPS_TELEMETRY)}`,
+    `background:${rgbaFromHex(CONFIG.PALETTE.UI_BG_APP, 0.55)}`,
+    'padding:4px 8px',
+    'pointer-events:none',
+  ].join(';');
   container.appendChild(fpsEl);
 }
 

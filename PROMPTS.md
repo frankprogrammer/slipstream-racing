@@ -610,3 +610,9 @@ I also wanted these camera FOV phases to include the height change that was taki
 ### 2026-03-31 5:33 PM PDT
 
 Also, if it's not doing it already, the camera FOV phases should loop. Once it has reached the last phase.
+
+---
+
+### 2026-03-31 5:45 PM PDT
+
+right now the color palette is not unified. lets remove any hardcoded colors and make sure the game is using a new palette for Formula One. This includes car colors, all particles, all ui in world and on screen, the slipstream meter. Add more color variations to enemy players

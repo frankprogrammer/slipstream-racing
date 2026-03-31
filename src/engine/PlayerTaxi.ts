@@ -41,7 +41,7 @@ export class PlayerTaxi {
     this.draftBarGroup.position.set(0, barY, barZ);
 
     const trackMat = new THREE.MeshBasicMaterial({
-      color: 0x0a1a28,
+      color: CONFIG.PALETTE.DRAFT_BAR_TRACK,
       transparent: true,
       opacity: 0.92,
       side: THREE.DoubleSide,
