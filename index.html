@@ -18,6 +18,43 @@
     }
     canvas { display: block; width: 100%; height: 100%; }
 
+    /* Speed readout: KM/H + raw scrollPerFrame (no conversion) */
+    #speed-hud {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Exo 2', system-ui, sans-serif;
+      background: rgba(0,0,0,0.18);
+      padding: 8px 14px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      pointer-events: none;
+      z-index: 12;
+      opacity: 0;
+      transition: opacity 120ms linear;
+      user-select: none;
+    }
+    #speed-text {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: var(--f1-ui-text, #F8FAFC);
+      text-shadow: 0 0 12px var(--f1-milestone-glow, rgba(225,6,0,0.55));
+    }
+    #speed-scroll-raw {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--f1-ui-dim, #9CA3AF);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
     #milestone-text {
       position: absolute;
       top: 40%;
@@ -153,6 +190,10 @@
   <div id="game-container">
     <!-- Three.js canvas injected here -->
 
+    <div id="speed-hud">
+      <span id="speed-text"></span>
+      <span id="speed-scroll-raw"></span>
+    </div>
     <div id="milestone-text"></div>
     <div id="screen-flash"></div>
 

@@ -1,21 +1,21 @@
-import * as THREE from 'three';
-import { CONFIG, hexToCss, rgbaFromHex } from './config';
-import { GameState } from './engine/GameState';
-import { LaneSystem } from './engine/LaneSystem';
-import { RoadManager } from './engine/RoadManager';
-import { PlayerTaxi } from './engine/PlayerTaxi';
-import { TrafficSpawner } from './engine/TrafficSpawner';
-import { CollisionSystem } from './engine/CollisionSystem';
-import { CameraController } from './engine/CameraController';
-import { RainSystem } from './engine/RainSystem';
-import { SlipstreamWindSystem } from './engine/SlipstreamWindSystem';
-import { SlingshotTrailSystem } from './engine/SlingshotTrailSystem';
-import { SlipstreamZone } from './engine/SlipstreamZone';
-import { ChainManager } from './engine/ChainManager';
-import { ScoreManager } from './engine/ScoreManager';
-import { GameOverScreen } from './ui/GameOverScreen';
-import { HUD } from './ui/HUD';
-import { GameAudio } from './engine/GameAudio';
+import * as THREE from "three";
+import { CONFIG, hexToCss, rgbaFromHex } from "./config";
+import { GameState } from "./engine/GameState";
+import { LaneSystem } from "./engine/LaneSystem";
+import { RoadManager } from "./engine/RoadManager";
+import { PlayerTaxi } from "./engine/PlayerTaxi";
+import { TrafficSpawner } from "./engine/TrafficSpawner";
+import { CollisionSystem } from "./engine/CollisionSystem";
+import { CameraController } from "./engine/CameraController";
+import { RainSystem } from "./engine/RainSystem";
+import { SlipstreamWindSystem } from "./engine/SlipstreamWindSystem";
+import { SlingshotTrailSystem } from "./engine/SlingshotTrailSystem";
+import { SlipstreamZone } from "./engine/SlipstreamZone";
+import { ChainManager } from "./engine/ChainManager";
+import { ScoreManager } from "./engine/ScoreManager";
+import { GameOverScreen } from "./ui/GameOverScreen";
+import { HUD } from "./ui/HUD";
+import { GameAudio } from "./engine/GameAudio";
 
 function easeInCubic(t: number): number {
   return t ** 3;
@@ -30,32 +30,38 @@ function easeInCubic(t: number): number {
 function applyF1CssVariables(): void {
   const p = CONFIG.PALETTE;
   const r = document.documentElement;
-  r.style.setProperty('--f1-primary', hexToCss(p.NEON_PINK));
-  r.style.setProperty('--f1-cyan', hexToCss(p.NEON_BLUE));
-  r.style.setProperty('--f1-blue', hexToCss(p.NEON_PURPLE));
-  r.style.setProperty('--f1-warm', hexToCss(p.NEON_ORANGE));
-  r.style.setProperty('--f1-ui-text', hexToCss(p.UI_TEXT));
-  r.style.setProperty('--f1-ui-dim', hexToCss(p.UI_DIM));
-  r.style.setProperty('--f1-bg-app', hexToCss(p.UI_BG_APP));
-  r.style.setProperty('--f1-gameover-scrim', rgbaFromHex(p.UI_BG_APP, 0.92));
-  r.style.setProperty('--f1-flash-tint', rgbaFromHex(p.SCREEN_FLASH_TINT, 0.22));
-  r.style.setProperty('--f1-flash-perfect', rgbaFromHex(p.SCREEN_FLASH_TINT, 0.4));
-  r.style.setProperty('--f1-retry-hover', rgbaFromHex(p.NEON_PINK, 0.12));
-  r.style.setProperty('--f1-retry-glow', rgbaFromHex(p.NEON_PINK, 0.35));
-  r.style.setProperty('--f1-milestone-glow', rgbaFromHex(p.NEON_PINK, 0.55));
-  r.style.setProperty('--f1-milestone-cyan', rgbaFromHex(p.NEON_BLUE, 0.2));
-  r.style.setProperty('--f1-perfect-glow-1', rgbaFromHex(p.NEON_PINK, 0.9));
-  r.style.setProperty('--f1-perfect-glow-2', rgbaFromHex(p.NEON_PINK, 0.45));
-  r.style.setProperty('--f1-perfect-cyan', rgbaFromHex(p.NEON_BLUE, 0.25));
-  r.style.setProperty('--f1-perfect-inset', rgbaFromHex(p.NEON_BLUE, 0.1));
+  r.style.setProperty("--f1-primary", hexToCss(p.NEON_PINK));
+  r.style.setProperty("--f1-cyan", hexToCss(p.NEON_BLUE));
+  r.style.setProperty("--f1-blue", hexToCss(p.NEON_PURPLE));
+  r.style.setProperty("--f1-warm", hexToCss(p.NEON_ORANGE));
+  r.style.setProperty("--f1-ui-text", hexToCss(p.UI_TEXT));
+  r.style.setProperty("--f1-ui-dim", hexToCss(p.UI_DIM));
+  r.style.setProperty("--f1-bg-app", hexToCss(p.UI_BG_APP));
+  r.style.setProperty("--f1-gameover-scrim", rgbaFromHex(p.UI_BG_APP, 0.92));
+  r.style.setProperty(
+    "--f1-flash-tint",
+    rgbaFromHex(p.SCREEN_FLASH_TINT, 0.22),
+  );
+  r.style.setProperty(
+    "--f1-flash-perfect",
+    rgbaFromHex(p.SCREEN_FLASH_TINT, 0.4),
+  );
+  r.style.setProperty("--f1-retry-hover", rgbaFromHex(p.NEON_PINK, 0.12));
+  r.style.setProperty("--f1-retry-glow", rgbaFromHex(p.NEON_PINK, 0.35));
+  r.style.setProperty("--f1-milestone-glow", rgbaFromHex(p.NEON_PINK, 0.55));
+  r.style.setProperty("--f1-milestone-cyan", rgbaFromHex(p.NEON_BLUE, 0.2));
+  r.style.setProperty("--f1-perfect-glow-1", rgbaFromHex(p.NEON_PINK, 0.9));
+  r.style.setProperty("--f1-perfect-glow-2", rgbaFromHex(p.NEON_PINK, 0.45));
+  r.style.setProperty("--f1-perfect-cyan", rgbaFromHex(p.NEON_BLUE, 0.25));
+  r.style.setProperty("--f1-perfect-inset", rgbaFromHex(p.NEON_BLUE, 0.1));
 }
 applyF1CssVariables();
 
-const container = document.getElementById('game-container')!;
+const container = document.getElementById("game-container")!;
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: false,
-  powerPreference: 'high-performance',
+  powerPreference: "high-performance",
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -72,36 +78,36 @@ const camera = new THREE.PerspectiveCamera(
   CONFIG.CAMERA_FOV_BASE,
   window.innerWidth / window.innerHeight,
   0.1,
-  200
+  200,
 );
 
 const ambientLight = new THREE.AmbientLight(
   CONFIG.PALETTE.AMBIENT_LIGHT,
-  CONFIG.AMBIENT_LIGHT_INTENSITY
+  CONFIG.AMBIENT_LIGHT_INTENSITY,
 );
 scene.add(ambientLight);
 
 const hemiLight = new THREE.HemisphereLight(
   CONFIG.PALETTE.HEMISPHERE_SKY,
   CONFIG.PALETTE.HEMISPHERE_GROUND,
-  CONFIG.HEMISPHERE_LIGHT_INTENSITY
+  CONFIG.HEMISPHERE_LIGHT_INTENSITY,
 );
 hemiLight.position.set(0, 40, 0);
 scene.add(hemiLight);
 
 const dirLight = new THREE.DirectionalLight(
   CONFIG.PALETTE.DIRECTIONAL_LIGHT,
-  CONFIG.DIRECTIONAL_LIGHT_INTENSITY
+  CONFIG.DIRECTIONAL_LIGHT_INTENSITY,
 );
 dirLight.position.set(
   CONFIG.DIRECTIONAL_LIGHT_POSITION[0],
   CONFIG.DIRECTIONAL_LIGHT_POSITION[1],
-  CONFIG.DIRECTIONAL_LIGHT_POSITION[2]
+  CONFIG.DIRECTIONAL_LIGHT_POSITION[2],
 );
 dirLight.castShadow = false;
 scene.add(dirLight);
 
-window.addEventListener('resize', () => {
+window.addEventListener("resize", () => {
   const w = window.innerWidth;
   const h = window.innerHeight;
   camera.aspect = w / h;
@@ -129,16 +135,16 @@ const milestoneAnchorWorld = new THREE.Vector3();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
 
-container.addEventListener('pointerdown', () => gameAudio.unlock(), {
+container.addEventListener("pointerdown", () => gameAudio.unlock(), {
   once: true,
 });
 
-let appFocused = document.visibilityState === 'visible';
+let appFocused = document.visibilityState === "visible";
 let needsDeltaReset = false;
 gameAudio.setAppFocused(appFocused);
 
 function refreshAppFocus(): void {
-  const focused = document.visibilityState === 'visible';
+  const focused = document.visibilityState === "visible";
   if (focused === appFocused) return;
   appFocused = focused;
   gameAudio.setAppFocused(appFocused);
@@ -148,9 +154,9 @@ function refreshAppFocus(): void {
   }
 }
 
-document.addEventListener('visibilitychange', refreshAppFocus);
-window.addEventListener('focus', refreshAppFocus);
-window.addEventListener('blur', refreshAppFocus);
+document.addEventListener("visibilitychange", refreshAppFocus);
+window.addEventListener("focus", refreshAppFocus);
+window.addEventListener("blur", refreshAppFocus);
 
 let runTimeMs = 0;
 let distanceUnits = 0;
@@ -199,8 +205,8 @@ gameOverScreen.onRetry(() => {
   resetGame();
 });
 
-gameState.onChange(state => {
-  if (state === 'gameover') {
+gameState.onChange((state) => {
+  if (state === "gameover") {
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
     gameAudio.playCrash();
@@ -216,20 +222,24 @@ let fpsEl: HTMLElement | null = null;
 let fpsAcc = 0;
 let fpsFrames = 0;
 if (showFps) {
-  fpsEl = document.createElement('div');
+  fpsEl = document.createElement("div");
   fpsEl.style.cssText = [
-    'position:absolute',
-    'left:8px',
-    'bottom:8px',
-    'z-index:100',
-    'font:12px monospace',
+    "position:absolute",
+    "left:8px",
+    "bottom:8px",
+    "z-index:100",
+    "font:12px monospace",
     `color:${hexToCss(CONFIG.PALETTE.FPS_TELEMETRY)}`,
     `background:${rgbaFromHex(CONFIG.PALETTE.UI_BG_APP, 0.55)}`,
-    'padding:4px 8px',
-    'pointer-events:none',
-  ].join(';');
+    "padding:4px 8px",
+    "pointer-events:none",
+  ].join(";");
   container.appendChild(fpsEl);
 }
+
+const speedHudEl = document.getElementById("speed-hud");
+const speedTextEl = document.getElementById("speed-text");
+const speedScrollRawEl = document.getElementById("speed-scroll-raw");
 
 function animate(): void {
   requestAnimationFrame(animate);
@@ -282,13 +292,10 @@ function animate(): void {
       const base = CONFIG.BASE_SCROLL_SPEED;
       const maxScroll = CONFIG.MAX_SCROLL_SPEED;
       const headroom = Math.max(0, maxScroll - base);
-      const timeRamp = Math.min(
-        runTimeMs * CONFIG.SPEED_RAMP_RATE,
-        headroom
-      );
+      const timeRamp = Math.min(runTimeMs * CONFIG.SPEED_RAMP_RATE, headroom);
       const baseScroll = Math.min(
         base + timeRamp + slingshotBaseBonus,
-        maxScroll
+        maxScroll,
       );
       // Slingshot now contributes only to persistent base bonus; no temporary speed burst.
       const scrollPerFrame = baseScroll;
@@ -307,7 +314,7 @@ function animate(): void {
         delta,
         scrollPerFrame,
         playerTaxi,
-        trafficSpawner
+        trafficSpawner,
       );
       chainManager.tick(nowMs, slip.inZone);
 
@@ -340,7 +347,7 @@ function animate(): void {
       cameraController.update(playerTaxi, runTimeMs);
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
-        gameState.transition('gameover');
+        gameState.transition("gameover");
       }
 
       slingshotTrail.setBoostActive(burstRemainMs > 0);
@@ -361,10 +368,24 @@ function animate(): void {
     hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
 
+  if (speedHudEl && speedTextEl && speedScrollRawEl) {
+    const visible = gameState.isPlaying && runGameplayReady;
+    if (!visible) {
+      speedHudEl.style.opacity = "0";
+    } else {
+      // Treat 1 world unit as 1 meter for display (km/h).
+      const speedMps = scrollForAudio * 60;
+      const speedKmh = speedMps * 3.6 * 2;
+      speedTextEl.textContent = `${Math.round(speedKmh)} KM/H`;
+      speedScrollRawEl.textContent = `scroll ${scrollForAudio.toFixed(5)}`;
+      speedHudEl.style.opacity = "1";
+    }
+  }
+
   slipstreamWind.update(
     delta,
     gameState.isPlaying && runGameplayReady,
-    trafficSpawner
+    trafficSpawner,
   );
 
   gameAudio.update(delta, {
@@ -376,7 +397,8 @@ function animate(): void {
     chain: chainManager.chain,
   });
 
-  const hintZ = playerTaxi.group.position.z - CONFIG.TAXI_DIMENSIONS.length * 0.5;
+  const hintZ =
+    playerTaxi.group.position.z - CONFIG.TAXI_DIMENSIONS.length * 0.5;
   const hintY = 0.28;
   touchHintLeftWorld.set(-CONFIG.LANE_WIDTH, hintY, hintZ);
   touchHintRightWorld.set(CONFIG.LANE_WIDTH, hintY, hintZ);
@@ -386,7 +408,7 @@ function animate(): void {
     camera,
     container,
     touchHintLeftWorld,
-    touchHintRightWorld
+    touchHintRightWorld,
   );
 
   if (showFps && fpsEl) {
@@ -420,4 +442,4 @@ void (async () => {
   animate();
 })();
 
-console.log('Slipstream: Grand Prix — FPS overlay enabled.');
+console.log("Slipstream: Grand Prix — FPS overlay enabled.");

@@ -31,7 +31,7 @@ export interface CameraFovPhase {
 }
 
 export function hexToCss(hex: number): string {
-  return `#${hex.toString(16).padStart(6, '0')}`;
+  return `#${hex.toString(16).padStart(6, "0")}`;
 }
 
 export function rgbaFromHex(hex: number, alpha: number): string {
@@ -49,7 +49,7 @@ export const GAME_PALETTE = {
   /** Primary accent — podium / DRS / slipstream outline / milestones. */
   NEON_PINK: 0xe10600,
   /** Telemetry cyan — draft meter, chain fill, wind particles. */
-  NEON_BLUE: 0x00d2be,
+  NEON_BLUE: 0xfde047,
   /** Racing blue — liveries, accents. */
   NEON_PURPLE: 0x3671c6,
   /** Papaya / warning accent. */
@@ -81,7 +81,7 @@ export const GAME_PALETTE = {
   /** Roof lamp while drafting. */
   TAXI_ROOF_DRAFT_AMBER: 0xffaa00,
   SLINGSHOT_TRAIL_LEFT: 0xe10600,
-  SLINGSHOT_TRAIL_RIGHT: 0x00d2be,
+  SLINGSHOT_TRAIL_RIGHT: 0xe10600,
   /** Dev FPS overlay (telemetry-style). */
   FPS_TELEMETRY: 0x22c55e,
   /** Score sprite glow (primary). */
@@ -103,26 +103,106 @@ export const GAME_PALETTE = {
 } as const;
 
 const TRAFFIC_LIVERY_VARIANTS = [
-  { red: GAME_PALETTE.NEON_PINK, white: GAME_PALETTE.TAXI_BODY, blue: GAME_PALETTE.NEON_PURPLE },
-  { red: GAME_PALETTE.NEON_BLUE, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_PINK },
-  { red: GAME_PALETTE.NEON_ORANGE, white: GAME_PALETTE.UI_TEXT, blue: GAME_PALETTE.NEON_PURPLE },
-  { red: GAME_PALETTE.NEON_PURPLE, white: GAME_PALETTE.METALLIC_SILVER, blue: GAME_PALETTE.NEON_ORANGE },
-  { red: GAME_PALETTE.TRAFFIC_BODY_COMPACT, white: GAME_PALETTE.TAXI_BODY, blue: GAME_PALETTE.NEON_BLUE },
-  { red: GAME_PALETTE.NEON_PINK, white: GAME_PALETTE.TRAFFIC_BODY_COMPACT, blue: GAME_PALETTE.NEON_BLUE },
-  { red: GAME_PALETTE.TRAFFIC_BODY_TRUCK, white: GAME_PALETTE.UI_TEXT, blue: GAME_PALETTE.NEON_PINK },
-  { red: GAME_PALETTE.NEON_BLUE, white: GAME_PALETTE.NEON_PINK, blue: GAME_PALETTE.NEON_PURPLE },
-  { red: GAME_PALETTE.NEON_ORANGE, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_BLUE },
-  { red: GAME_PALETTE.NEON_PURPLE, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_ORANGE },
-  { red: GAME_PALETTE.BRITISH_GREEN, white: GAME_PALETTE.CARBON_BLACK, blue: GAME_PALETTE.NEON_ORANGE },
-  { red: GAME_PALETTE.METALLIC_SILVER, white: GAME_PALETTE.NIGHT_NAVY, blue: GAME_PALETTE.NEON_PINK },
-  { red: GAME_PALETTE.NIGHT_NAVY, white: GAME_PALETTE.UI_TEXT, blue: GAME_PALETTE.NEON_BLUE },
-  { red: GAME_PALETTE.BORDEAUX, white: GAME_PALETTE.TAXI_BODY, blue: GAME_PALETTE.NEON_PURPLE },
-  { red: GAME_PALETTE.CARBON_BLACK, white: GAME_PALETTE.SAFETY_YELLOW, blue: GAME_PALETTE.NEON_PINK },
-  { red: GAME_PALETTE.NEON_PURPLE, white: GAME_PALETTE.NEON_ORANGE, blue: GAME_PALETTE.CARBON_BLACK },
-  { red: GAME_PALETTE.NEON_BLUE, white: GAME_PALETTE.METALLIC_SILVER, blue: GAME_PALETTE.BRITISH_GREEN },
-  { red: GAME_PALETTE.NEON_ORANGE, white: GAME_PALETTE.BORDEAUX, blue: GAME_PALETTE.NEON_BLUE },
-  { red: GAME_PALETTE.TAXI_BODY, white: GAME_PALETTE.NIGHT_NAVY, blue: GAME_PALETTE.NEON_PINK },
-  { red: GAME_PALETTE.TRAFFIC_BODY_RACING_BLUE, white: GAME_PALETTE.UI_DIM, blue: GAME_PALETTE.NEON_ORANGE },
+  {
+    red: GAME_PALETTE.NEON_PINK,
+    white: GAME_PALETTE.TAXI_BODY,
+    blue: GAME_PALETTE.NEON_PURPLE,
+  },
+  {
+    red: GAME_PALETTE.NEON_BLUE,
+    white: GAME_PALETTE.CARBON_BLACK,
+    blue: GAME_PALETTE.NEON_PINK,
+  },
+  {
+    red: GAME_PALETTE.NEON_ORANGE,
+    white: GAME_PALETTE.UI_TEXT,
+    blue: GAME_PALETTE.NEON_PURPLE,
+  },
+  {
+    red: GAME_PALETTE.NEON_PURPLE,
+    white: GAME_PALETTE.METALLIC_SILVER,
+    blue: GAME_PALETTE.NEON_ORANGE,
+  },
+  {
+    red: GAME_PALETTE.TRAFFIC_BODY_COMPACT,
+    white: GAME_PALETTE.TAXI_BODY,
+    blue: GAME_PALETTE.NEON_BLUE,
+  },
+  {
+    red: GAME_PALETTE.NEON_PINK,
+    white: GAME_PALETTE.TRAFFIC_BODY_COMPACT,
+    blue: GAME_PALETTE.NEON_BLUE,
+  },
+  {
+    red: GAME_PALETTE.TRAFFIC_BODY_TRUCK,
+    white: GAME_PALETTE.UI_TEXT,
+    blue: GAME_PALETTE.NEON_PINK,
+  },
+  {
+    red: GAME_PALETTE.NEON_BLUE,
+    white: GAME_PALETTE.NEON_PINK,
+    blue: GAME_PALETTE.NEON_PURPLE,
+  },
+  {
+    red: GAME_PALETTE.NEON_ORANGE,
+    white: GAME_PALETTE.CARBON_BLACK,
+    blue: GAME_PALETTE.NEON_BLUE,
+  },
+  {
+    red: GAME_PALETTE.NEON_PURPLE,
+    white: GAME_PALETTE.CARBON_BLACK,
+    blue: GAME_PALETTE.NEON_ORANGE,
+  },
+  {
+    red: GAME_PALETTE.BRITISH_GREEN,
+    white: GAME_PALETTE.CARBON_BLACK,
+    blue: GAME_PALETTE.NEON_ORANGE,
+  },
+  {
+    red: GAME_PALETTE.METALLIC_SILVER,
+    white: GAME_PALETTE.NIGHT_NAVY,
+    blue: GAME_PALETTE.NEON_PINK,
+  },
+  {
+    red: GAME_PALETTE.NIGHT_NAVY,
+    white: GAME_PALETTE.UI_TEXT,
+    blue: GAME_PALETTE.NEON_BLUE,
+  },
+  {
+    red: GAME_PALETTE.BORDEAUX,
+    white: GAME_PALETTE.TAXI_BODY,
+    blue: GAME_PALETTE.NEON_PURPLE,
+  },
+  {
+    red: GAME_PALETTE.CARBON_BLACK,
+    white: GAME_PALETTE.SAFETY_YELLOW,
+    blue: GAME_PALETTE.NEON_PINK,
+  },
+  {
+    red: GAME_PALETTE.NEON_PURPLE,
+    white: GAME_PALETTE.NEON_ORANGE,
+    blue: GAME_PALETTE.CARBON_BLACK,
+  },
+  {
+    red: GAME_PALETTE.NEON_BLUE,
+    white: GAME_PALETTE.METALLIC_SILVER,
+    blue: GAME_PALETTE.BRITISH_GREEN,
+  },
+  {
+    red: GAME_PALETTE.NEON_ORANGE,
+    white: GAME_PALETTE.BORDEAUX,
+    blue: GAME_PALETTE.NEON_BLUE,
+  },
+  {
+    red: GAME_PALETTE.TAXI_BODY,
+    white: GAME_PALETTE.NIGHT_NAVY,
+    blue: GAME_PALETTE.NEON_PINK,
+  },
+  {
+    red: GAME_PALETTE.TRAFFIC_BODY_RACING_BLUE,
+    white: GAME_PALETTE.UI_DIM,
+    blue: GAME_PALETTE.NEON_ORANGE,
+  },
 ] as const;
 
 export const CONFIG = {
@@ -221,16 +301,16 @@ export const CONFIG = {
   /** Starting base scroll at run start (before time ramp / slingshot bonus). */
   BASE_SCROLL_SPEED: 0.2,
   /** Hard cap on base scroll (time ramp + slingshot bonus included). */
-  MAX_SCROLL_SPEED: 0.5,
+  MAX_SCROLL_SPEED: 0.75,
   /**
    * Linear ramp over run time: adds up to `(MAX − BASE)` by `runTimeMs × this`.
    * Example: BASE 0.15, MAX 0.8 → headroom 0.65; at 0.00005/ms, full ramp ≈ 13s.
    */
-  SPEED_RAMP_RATE: 0.00005,
-  SLINGSHOT_SPEED_BURST: 0.1,
+  SPEED_RAMP_RATE: 0.00001,
+  SLINGSHOT_SPEED_BURST: 0.05,
   SLINGSHOT_BURST_DURATION: 750,
   /** Added to base scroll on each successful slipstream release (same units as BASE_SCROLL_SPEED). */
-  SLINGSHOT_BASE_SPEED_INCREMENT: 0.03,
+  SLINGSHOT_BASE_SPEED_INCREMENT: 0.005,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
@@ -311,7 +391,7 @@ export const CONFIG = {
    * World +Z speed (same units as BASE_SCROLL_SPEED). Traffic moves forward with the road flow
    * but slower than the player; net approach = BASE_SCROLL_SPEED − this (× speed variance).
    */
-  VEHICLE_TRAFFIC_FORWARD_SPEED: 0.07,
+  VEHICLE_TRAFFIC_FORWARD_SPEED: 0.15,
   /** Floor for net −Δz so traffic never drifts the wrong way if variance is high. */
   VEHICLE_TRAFFIC_MIN_APPROACH: 0.02,
   VEHICLE_POOL_SIZE: 20,
