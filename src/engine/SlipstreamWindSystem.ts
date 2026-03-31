@@ -234,13 +234,15 @@ export class SlipstreamWindSystem {
 
   private updateOutlineDashes(slot: OutlineSlot, zd: number, timeSec: number): void {
     const speed = CONFIG.SLIPSTREAM_ZONE_OUTLINE_DASH_SPEED;
-    const phase = (timeSec * speed) % zd;
+    // Keep each dash fully inside the front/back outline bars.
+    const travel = Math.max(0.001, zd - slot.dashLength);
+    const phase = (timeSec * speed) % travel;
     const cycle = slot.cycleLength;
     const offset = slot.dashLength * 0.5;
     const dashPairs = Math.floor(slot.leftDashes.length / 2);
 
     for (let i = 0; i < dashPairs; i++) {
-      const zFrontToBack = (i * cycle + phase) % zd;
+      const zFrontToBack = (i * cycle + phase) % travel;
       const zCenter = -zFrontToBack - offset;
 
       const leftGlow = slot.leftDashes[i * 2]!;

@@ -550,3 +550,9 @@ it doesn't seem to be animated at all and is still using a single solid color. i
 ### 2026-03-30 10:40 PM PDT
 
 the lines are still not animated. lets make it dashed lines that are animated. The front and back lines should not be animated but the side lines of the outline should animate the dashes from front to back. set the outline color to red
+
+---
+
+### 2026-03-31 3:07 PM PDT
+
+the slipstream outline vertical stripes seem to always seem to past the bottom horizontal line of the outine. need to stop at or before this line
