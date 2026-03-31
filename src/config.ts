@@ -625,7 +625,7 @@ export const CONFIG = {
 
   // ── Touch / pointer (lane input) ──
   /** Half-screen tap ignores touches within this many px of horizontal center. */
-  TOUCH_CENTER_DEAD_ZONE_PX: 20,
+  TOUCH_CENTER_DEAD_ZONE_PX: 19,
   /** Pointermove lane-steering only after finger moves this far from pointerdown (avoids double input with tap). */
   TOUCH_DRAG_SLOP_PX: 16,
 
