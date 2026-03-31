@@ -562,3 +562,9 @@ the slipstream outline vertical stripes seem to always seem to past the bottom h
 ### 2026-03-31 3:17 PM PDT
 
 i want the music and all game update to stop whenever the game is not in focus
+
+---
+
+### 2026-03-31 3:24 PM PDT
+
+It is properly pasuing the music and gameplay if i minimize the browser on iOS safari, but if i select the tab I see the game but it doesnt start playing until i touch the screen

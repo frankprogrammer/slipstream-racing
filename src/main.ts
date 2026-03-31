@@ -109,12 +109,12 @@ container.addEventListener('pointerdown', () => gameAudio.unlock(), {
   once: true,
 });
 
-let appFocused = document.visibilityState === 'visible' && document.hasFocus();
+let appFocused = document.visibilityState === 'visible';
 let needsDeltaReset = false;
 gameAudio.setAppFocused(appFocused);
 
 function refreshAppFocus(): void {
-  const focused = document.visibilityState === 'visible' && document.hasFocus();
+  const focused = document.visibilityState === 'visible';
   if (focused === appFocused) return;
   appFocused = focused;
   gameAudio.setAppFocused(appFocused);
