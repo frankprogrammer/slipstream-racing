@@ -77,7 +77,6 @@ export const GAME_PALETTE = {
   /** Slipstream wake particles (same family as telemetry cyan). */
   SLIPSTREAM_WIND: 0x00d2be,
   SLIPSTREAM_OUTLINE: 0xe10600,
-  RAIN_MIST: 0xc8d8e8,
   /** Roof lamp while drafting. */
   TAXI_ROOF_DRAFT_AMBER: 0xffaa00,
   SLINGSHOT_TRAIL_LEFT: 0xe10600,
@@ -583,17 +582,6 @@ export const CONFIG = {
   SPEED_LINES_COUNT: 30,
   SPEED_LINES_BASE_ALPHA: 0.3,
   SPEED_LINES_MAX_ALPHA: 0.8,
-  RAIN_PARTICLE_COUNT: 100,
-  /** Scaled by ×60×delta → world units/sec downward (0.3 ≈ 18 u/s). */
-  RAIN_SPEED: 0.3,
-  /** Half-width of spawn box around camera (X/Z). */
-  RAIN_SPREAD: 15,
-  /** Vertical span above/below camera for recycling (world units). */
-  RAIN_HEIGHT_ABOVE: 22,
-  RAIN_HEIGHT_BELOW: 8,
-  RAIN_PARTICLE_SIZE: 0.055,
-  RAIN_PARTICLE_OPACITY: 0.42,
-  RAIN_PARTICLE_COLOR: GAME_PALETTE.RAIN_MIST,
   /** Neon streaks behind taxi on slingshot (CLAUDE: 3–4). */
   SLINGSHOT_TRAIL_STREAK_COUNT: 4,
   SLINGSHOT_TRAIL_DURATION_MS: 500,

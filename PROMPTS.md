@@ -652,3 +652,9 @@ turn off fps meter for now
 ### 2026-03-31 7:28 PM PDT
 
 On mobile, the speed in the HUD text does not all fit on one line. It should scale to fit within A single line.
+
+---
+
+### 2026-03-31 8:05 PM PDT
+
+remove the rain effect

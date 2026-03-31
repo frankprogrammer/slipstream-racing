@@ -35,7 +35,6 @@ export const SKIN_MANIFEST = {
   textures: {
     roadSurface: null,         // 'textures/road-asphalt.png' (256x256 tiling)
     neonSignAtlas: null,       // 'textures/neon-signs.png' (512x512 atlas)
-    rainDrop: null,            // 'textures/rain-particle.png' (32x32 sprite)
     speedLine: null,           // 'textures/speed-line.png' (4x64 sprite)
     skybox: null,              // 'textures/tokyo-night-sky.png' or gradient
   },
@@ -52,7 +51,6 @@ export const SKIN_MANIFEST = {
     milestone15: null,         // 'audio/arpeggio.ogg'
     milestone20: null,         // 'audio/euphoric.ogg'
     bgMusic: null,             // 'audio/synthwave-lofi.ogg'
-    rainAmbience: null,        // 'audio/rain-ambient.ogg'
   },
 
   // ── Vehicle Dimensions (for prototype box geometry) ──

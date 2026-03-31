@@ -7,7 +7,6 @@ import { PlayerTaxi } from "./engine/PlayerTaxi";
 import { TrafficSpawner } from "./engine/TrafficSpawner";
 import { CollisionSystem } from "./engine/CollisionSystem";
 import { CameraController } from "./engine/CameraController";
-import { RainSystem } from "./engine/RainSystem";
 import { SlipstreamWindSystem } from "./engine/SlipstreamWindSystem";
 import { SlingshotTrailSystem } from "./engine/SlingshotTrailSystem";
 import { SlipstreamActivateBurst } from "./engine/SlipstreamActivateBurst";
@@ -128,7 +127,6 @@ const chainManager = new ChainManager();
 const scoreManager = new ScoreManager();
 const hud = new HUD();
 const gameOverScreen = new GameOverScreen();
-const rainSystem = new RainSystem();
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const slipstreamActivateBurst = new SlipstreamActivateBurst();
@@ -274,8 +272,6 @@ function animate(): void {
   let slipInZone = false;
   let slipMeter = 0;
   let audioBurst = false;
-
-  rainSystem.update(delta, camera);
 
   if (gameState.isPlaying) {
     if (!runGameplayReady) {
@@ -454,7 +450,6 @@ void (async () => {
   scene.add(trafficSpawner.group);
   scene.add(slipstreamWind.group);
   scene.add(playerTaxi.group);
-  scene.add(rainSystem.group);
   scene.add(slingshotTrail.group);
   playerTaxi.group.add(slipstreamActivateBurst.anchor);
   resetGame();
