@@ -658,3 +658,9 @@ On mobile, the speed in the HUD text does not all fit on one line. It should sca
 ### 2026-03-31 8:05 PM PDT
 
 remove the rain effect
+
+---
+
+### 2026-03-31 8:18 PM PDT
+
+Right now i am using GitHub pages using Github Actions which puts this game at https://frankprogrammer.github.io/slipstream-racing/ . If I make a tag named v1, i want it to make a build to https://frankprogrammer.github.io/slipstream-racing/v1
