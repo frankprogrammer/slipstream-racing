@@ -568,3 +568,9 @@ i want the music and all game update to stop whenever the game is not in focus
 ### 2026-03-31 3:24 PM PDT
 
 It is properly pasuing the music and gameplay if i minimize the browser on iOS safari, but if i select the tab I see the game but it doesnt start playing until i touch the screen
+
+---
+
+### 2026-03-31 3:27 PM PDT
+
+the music is way too loud on mobile even though i set AUDIO_BG_MUSIC_VOLUME to 0.25

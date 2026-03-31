@@ -23,6 +23,8 @@ export class GameAudio {
   private music: SynthwaveMusic | null = null;
   private loopsBuilt = false;
   private bgMusicEl: HTMLAudioElement | null = null;
+  private bgMusicSource: MediaElementAudioSourceNode | null = null;
+  private bgMusicGain: GainNode | null = null;
   private appFocused = true;
 
   private engineOsc: OscillatorNode | null = null;
@@ -69,6 +71,19 @@ export class GameAudio {
         : 0;
       this.musicBus.connect(this.master);
       this.buildLoops();
+    }
+
+    if (this.ctx && this.master && this.bgMusicEl && !this.bgMusicSource) {
+      this.bgMusicSource = this.ctx.createMediaElementSource(this.bgMusicEl);
+      this.bgMusicGain = this.ctx.createGain();
+      this.bgMusicGain.gain.value = CONFIG.AUDIO_BG_MUSIC_ENABLED
+        ? CONFIG.AUDIO_BG_MUSIC_VOLUME
+        : 0;
+      this.bgMusicSource.connect(this.bgMusicGain);
+      this.bgMusicGain.connect(this.master);
+      // iOS Safari may ignore element.volume; keep media at full and control via GainNode.
+      this.bgMusicEl.volume = 1;
+      this.bgMusicEl.muted = false;
     }
 
     this.applyFocusState();
@@ -154,16 +169,25 @@ export class GameAudio {
   }
 
   update(delta: number, u: GameAudioUpdate): void {
+    if (this.bgMusicGain) {
+      this.bgMusicGain.gain.value = CONFIG.AUDIO_BG_MUSIC_ENABLED
+        ? CONFIG.AUDIO_BG_MUSIC_VOLUME
+        : 0;
+    }
     if (!CONFIG.AUDIO_ENABLED) {
       if (this.bgMusicEl) {
-        this.bgMusicEl.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
-        this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
+        if (!this.bgMusicSource) {
+          this.bgMusicEl.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
+          this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
+        }
       }
       return;
     }
     if (this.bgMusicEl) {
-      this.bgMusicEl.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
-      this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
+      if (!this.bgMusicSource) {
+        this.bgMusicEl.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
+        this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
+      }
     }
     this.music?.update(delta, u.playing, u.chain);
     if (this.musicBus) {
