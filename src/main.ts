@@ -87,9 +87,9 @@ window.addEventListener('resize', () => {
 
 const gameState = new GameState();
 const laneSystem = new LaneSystem(container, camera);
-const playerTaxi = new PlayerTaxi();
+let playerTaxi!: PlayerTaxi;
 let roadManager: RoadManager | undefined;
-const trafficSpawner = new TrafficSpawner();
+let trafficSpawner!: TrafficSpawner;
 const collisionSystem = new CollisionSystem();
 const cameraController = new CameraController(camera);
 const slipstreamZone = new SlipstreamZone();
@@ -211,7 +211,6 @@ function animate(): void {
       milestoneAnchorWorld.set(laneX, 1.1, playerTaxi.group.position.z + 2.2);
       hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
 
-      trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
       slingshotTrail.setBoostActive(false);
       slingshotTrail.update(delta, 0, playerTaxi);
       playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
@@ -254,7 +253,6 @@ function animate(): void {
       chainManager.tick(nowMs, slip.inZone);
 
       if (slip.slingshotFired) {
-        trafficSpawner.enableHeadlightsAfterSlipstream(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
         gameAudio.playSlingshot();
@@ -278,10 +276,6 @@ function animate(): void {
       playerTaxi.worldHud.setScore(scoreManager.currentScore);
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
-      trafficSpawner.setDraftTailHighlight(
-        playerTaxi.getCollisionBounds(),
-        slip.inZone
-      );
 
       cameraController.update(playerTaxi, chainManager.chain);
 
@@ -298,7 +292,6 @@ function animate(): void {
       audioBurst = burstRemainMs > 0;
     }
   } else {
-    trafficSpawner.setDraftTailHighlight(playerTaxi.getCollisionBounds(), false);
     slingshotTrail.setBoostActive(false);
     slingshotTrail.update(delta, 0, playerTaxi);
     cameraController.update(playerTaxi, 1);
@@ -338,7 +331,9 @@ function animate(): void {
 }
 
 void (async () => {
+  playerTaxi = await PlayerTaxi.create();
   roadManager = await RoadManager.create(CONFIG.TAXI_POSITION_Z);
+  trafficSpawner = await TrafficSpawner.create();
   scene.add(roadManager.group);
   scene.add(trafficSpawner.group);
   scene.add(slipstreamWind.group);

@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import { CONFIG } from '../config';
-import type { PlayerTaxi } from './PlayerTaxi';
+import * as THREE from "three";
+import { CONFIG } from "../config";
+import type { PlayerTaxi } from "./PlayerTaxi";
 
 /**
  * Continuous boost beams from player taillights.
@@ -19,7 +19,7 @@ export class SlingshotTrailSystem {
   private boostActive = false;
 
   constructor() {
-    this.group.name = 'SlingshotTrail';
+    this.group.name = "SlingshotTrail";
 
     const w = CONFIG.SLINGSHOT_TRAIL_WIDTH * 0.75;
     const h = Math.max(0.04, CONFIG.SLINGSHOT_TRAIL_BOX_HEIGHT * 0.6);
@@ -27,7 +27,7 @@ export class SlingshotTrailSystem {
     const geo = new THREE.BoxGeometry(w, h, len);
     geo.translate(0, 0, -len * 0.5);
 
-    for (const color of [CONFIG.PALETTE.NEON_PINK, CONFIG.PALETTE.NEON_BLUE]) {
+    for (const color of [CONFIG.PALETTE.NEON_PINK, CONFIG.PALETTE.NEON_PINK]) {
       const m = new THREE.MeshBasicMaterial({
         color,
         transparent: true,

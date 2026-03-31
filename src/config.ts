@@ -33,16 +33,16 @@ export const CONFIG = {
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
   CAMERA_FOV_BASE: 55,
-  CAMERA_FOV_MAX: 65,
+  CAMERA_FOV_MAX: 75,
   /** Per-frame lerp factor toward target FOV (higher chain → wider, up to FOV_MAX). */
   CAMERA_FOV_LERP: 0.02,
   /** Linear ramp: FOV reaches FOV_MAX when chain ≥ this (×1 = FOV_BASE). */
-  CAMERA_FOV_CHAIN_FOR_MAX: 16,
+  CAMERA_FOV_CHAIN_FOR_MAX: 30,
   /**
    * At `CAMERA_FOV_CHAIN_FOR_MAX`, camera world Y lerps to this height (same t as FOV).
    * Below that chain, height lerps between `CAMERA_HEIGHT` and this value.
    */
-  CAMERA_HEIGHT_CHAIN_MAX: 10,
+  CAMERA_HEIGHT_CHAIN_MAX: 3,
   CAMERA_SHAKE_INTENSITY: 0.03,
   CAMERA_SHAKE_DECAY: 0.9,
 
@@ -174,7 +174,8 @@ export const CONFIG = {
       laneChange: true,
     },
   ] as readonly TrafficPhase[],
-  VEHICLE_TYPES: 2,
+  /** Single pooled mesh type (playerCar.glb clones); kept for design-doc parity. */
+  VEHICLE_TYPES: 1,
   VEHICLE_LANE_CHANGE_TELEGRAPH: 1500,
   /**
    * World +Z speed (same units as BASE_SCROLL_SPEED). Traffic moves forward with the road flow
@@ -232,7 +233,7 @@ export const CONFIG = {
   ] as readonly (readonly number[])[],
 
   // ── Player Taxi ──
-  TAXI_BODY_ROLL: -10,
+  TAXI_BODY_ROLL: -5,
   TAXI_ROLL_DURATION: 300,
   TAXI_WHEEL_TURN: 5,
   TAXI_POSITION_Z: 0,
@@ -241,7 +242,34 @@ export const CONFIG = {
    */
   TAXI_INTRO_START_Z_OFFSET: -8,
   TAXI_INTRO_DURATION_MS: 400,
+  PLAYER_CAR_GLB: "playerCar.glb",
+  /** Vertical offset after fit-to-dimensions (model-specific trim). */
+  PLAYER_CAR_Y_OFFSET: 0,
   TAXI_DIMENSIONS: { width: 1.8, height: 0.8, length: 3.5 },
+  /** glTF material names for traffic liveries (Blender export). */
+  TRAFFIC_MATERIAL_RED: "red",
+  TRAFFIC_MATERIAL_WHITE: "white",
+  TRAFFIC_MATERIAL_BLUE: "blue",
+  /** Which named material gets draft tail-light brighten. */
+  TRAFFIC_DRAFT_TAIL_MATERIAL_NAME: "red",
+  /** Strip PBR maps so hex liveries read clearly on clones. */
+  TRAFFIC_LIVERY_IGNORE_TEXTURES: true,
+  /**
+   * Random traffic liveries: `{ red, white, blue }` hex colors applied to the three glTF materials.
+   * F1-style palette (primaries, carbon, cyan, papaya).
+   */
+  TRAFFIC_LIVERY_VARIANTS: [
+    { red: 0xe10600, white: 0xeeeff2, blue: 0x3671c6 },
+    { red: 0x00d2be, white: 0x1a1a1e, blue: 0xe10600 },
+    { red: 0xff8700, white: 0xf8fafc, blue: 0x3671c6 },
+    { red: 0x3671c6, white: 0xf0f0f0, blue: 0xff8700 },
+    { red: 0x2a2a32, white: 0xeeeff2, blue: 0x00d2be },
+    { red: 0xe10600, white: 0x2a2a32, blue: 0x00d2be },
+    { red: 0x1c1c24, white: 0xf8fafc, blue: 0xe10600 },
+    { red: 0x00d2be, white: 0xe10600, blue: 0x3671c6 },
+    { red: 0xff8700, white: 0x1c1c24, blue: 0x00d2be },
+    { red: 0x3671c6, white: 0x1a1a1e, blue: 0xff8700 },
+  ] as const,
   /** Gap under draft bar plane to chain sprite (chassis local Y). */
   TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP: 0.65,
   /** Local −Z offset from rear bumper for score + chain (behind taxi). */
@@ -324,6 +352,13 @@ export const CONFIG = {
   AUDIO_MUSIC_LAYER_SMOOTH: 8,
   /** Fade play/pause on the music mix (higher = reach full level faster). */
   AUDIO_MUSIC_PLAY_FADE_SMOOTH: 28,
+
+  // ── Background music (external audio file) ──
+  /** Loop an external track from `public/` without resetting on retry. */
+  AUDIO_BG_MUSIC_ENABLED: true,
+  AUDIO_BG_MUSIC_FILE: "thousandsuns.mp3",
+  /** 0–1. Requested: 50%. */
+  AUDIO_BG_MUSIC_VOLUME: 0.25,
   /** Inner mix trim (post-gain) before music bus. */
   AUDIO_MUSIC_MIX_INNER: 1.0,
   AUDIO_MUSIC_BASS_HZ: 65.41,
@@ -423,14 +458,3 @@ export const CONFIG = {
   HEMISPHERE_LIGHT_GROUND: 0x6a6a62,
   HEMISPHERE_LIGHT_INTENSITY: 0.65,
 } as const;
-
-/** Traffic body paint — every value is a `PALETTE` color (add/remove to tune variety). */
-export const TRAFFIC_PAINT_COLORS = [
-  CONFIG.PALETTE.TRAFFIC_BODY_COMPACT,
-  CONFIG.PALETTE.TRAFFIC_BODY_TRUCK,
-  CONFIG.PALETTE.TRAFFIC_BODY_RACING_BLUE,
-  CONFIG.PALETTE.NEON_PINK,
-  CONFIG.PALETTE.NEON_BLUE,
-  CONFIG.PALETTE.NEON_PURPLE,
-  CONFIG.PALETTE.NEON_ORANGE,
-] as const;

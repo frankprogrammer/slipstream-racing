@@ -6,6 +6,12 @@ User prompts only (assistant replies are not logged).
 
 ---
 
+### 2026-03-30 7:30 PM PDT
+
+I have imported playerCar.glb to public. let's use this model to represent the the player. remove any current generating of the player's car including the tail lights, headlight, and car roof sign
+
+---
+
 ### 2026-03-30 2:14 PM PDT
 
 lets make the fog color the same as the sky color
@@ -480,3 +486,19 @@ They are still not linking up correctly, the segments all have the same width an
 update PROPMTS.md
 
 ---
+
+### 2026-03-30 9:15 PM PDT
+
+the colors are being generated correctly, but all cars currently share a single instance of these materials. These materials need to be instanced at runtime so that all the cars can be uniquely colored
+
+---
+
+### 2026-03-30 9:20 PM PDT
+
+play @public/thousandsuns.mp3 in a loop. it should not restart when starting a new race. it should continue playing where it left off. set the volume to 50%
+
+---
+
+### 2026-03-30 9:30 PM PDT
+
+when entering a slipstream it should no longer highlight the material on top of the car. when activating a slipstream it should no longer activate headbeams

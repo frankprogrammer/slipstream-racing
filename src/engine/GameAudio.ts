@@ -22,6 +22,7 @@ export class GameAudio {
   private musicBus: GainNode | null = null;
   private music: SynthwaveMusic | null = null;
   private loopsBuilt = false;
+  private bgMusicEl: HTMLAudioElement | null = null;
 
   private engineOsc: OscillatorNode | null = null;
   private engineFilter: BiquadFilterNode | null = null;
@@ -36,7 +37,17 @@ export class GameAudio {
 
   /** Call once from a user gesture so AudioContext can start (autoplay unlock). */
   unlock(): void {
-    if (!CONFIG.AUDIO_ENABLED) return;
+    if (!CONFIG.AUDIO_ENABLED && !CONFIG.AUDIO_BG_MUSIC_ENABLED) return;
+
+    if (CONFIG.AUDIO_BG_MUSIC_ENABLED && !this.bgMusicEl) {
+      const el = document.createElement('audio');
+      el.src = `${import.meta.env.BASE_URL}${CONFIG.AUDIO_BG_MUSIC_FILE}`;
+      el.loop = true;
+      el.preload = 'auto';
+      el.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
+      this.bgMusicEl = el;
+    }
+
     const AC =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext })
@@ -60,6 +71,7 @@ export class GameAudio {
     }
 
     void this.ctx.resume();
+    void this.bgMusicEl?.play().catch(() => {});
   }
 
   private buildLoops(): void {
@@ -120,7 +132,17 @@ export class GameAudio {
   }
 
   update(delta: number, u: GameAudioUpdate): void {
-    if (!CONFIG.AUDIO_ENABLED) return;
+    if (!CONFIG.AUDIO_ENABLED) {
+      if (this.bgMusicEl) {
+        this.bgMusicEl.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
+        this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
+      }
+      return;
+    }
+    if (this.bgMusicEl) {
+      this.bgMusicEl.volume = CONFIG.AUDIO_BG_MUSIC_VOLUME;
+      this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
+    }
     this.music?.update(delta, u.playing, u.chain);
     if (this.musicBus) {
       this.musicBus.gain.value = CONFIG.AUDIO_MUSIC_ENABLED
