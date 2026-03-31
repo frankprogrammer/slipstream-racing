@@ -239,7 +239,6 @@ if (showFps) {
 
 const speedHudEl = document.getElementById("speed-hud");
 const speedTextEl = document.getElementById("speed-text");
-const speedScrollRawEl = document.getElementById("speed-scroll-raw");
 
 function animate(): void {
   requestAnimationFrame(animate);
@@ -368,7 +367,7 @@ function animate(): void {
     hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
 
-  if (speedHudEl && speedTextEl && speedScrollRawEl) {
+  if (speedHudEl && speedTextEl) {
     const visible = gameState.isPlaying && runGameplayReady;
     if (!visible) {
       speedHudEl.style.opacity = "0";
@@ -377,7 +376,6 @@ function animate(): void {
       const speedMps = scrollForAudio * 60;
       const speedKmh = speedMps * 3.6 * 2;
       speedTextEl.textContent = `${Math.round(speedKmh)} KM/H`;
-      speedScrollRawEl.textContent = `scroll ${scrollForAudio.toFixed(5)}`;
       speedHudEl.style.opacity = "1";
     }
   }

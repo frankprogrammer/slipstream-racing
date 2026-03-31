@@ -146,7 +146,7 @@ right now we are seeing the slipstream chain text popup in the ui every 5 succes
 
 ### 2026-03-30 8:05 AM PDT
 
-right now the text is position at the same x as the player. lets  keep it centered horizontally.
+right now the text is position at the same x as the player. lets keep it centered horizontally.
 
 ---
 
@@ -513,7 +513,7 @@ enable an fps meter
 
 ### 2026-03-30 9:50 PM PDT
 
-for the first 5 seconds of a race. i want a circle  over the bottom left and right lanes with arrows inside them point left and right. they should alternate one and one off. they represent where we want the player to touch
+for the first 5 seconds of a race. i want a circle over the bottom left and right lanes with arrows inside them point left and right. they should alternate one and one off. they represent where we want the player to touch
 
 ---
 
