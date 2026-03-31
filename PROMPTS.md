@@ -574,3 +574,21 @@ It is properly pasuing the music and gameplay if i minimize the browser on iOS s
 ### 2026-03-31 3:27 PM PDT
 
 the music is way too loud on mobile even though i set AUDIO_BG_MUSIC_VOLUME to 0.25
+
+---
+
+### 2026-03-31 3:40 PM PDT
+
+can you draw the collision bounds of vehicles including the player's as outlined rectangular prisms
+
+---
+
+### 2026-03-31 3:47 PM PDT
+
+right now if there is a car in front of the player and they are both in the middle lane. I hit right and left quickly to swap lanes to the right and then back into the same lane as the car. the two cars are now right on top of each other but they do not count as a collision. they should
+
+---
+
+### 2026-03-31 3:49 PM PDT
+
+turn off collision debug rendering for now

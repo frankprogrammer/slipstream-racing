@@ -25,7 +25,7 @@ export class CollisionSystem {
   check(player: PlayerTaxi, traffic: TrafficSpawner): boolean {
     const p = player.getCollisionBounds();
     const phz = p.hz * CONFIG.TAXI_COLLISION_Z_HALF_SCALE;
-    const list = traffic.getActiveCollisionBounds();
+    const list = traffic.getAllActiveCollisionBounds();
     for (const t of list) {
       if (aabbOverlap2D(p.cx, p.cz, p.hx, phz, t.cx, t.cz, t.hx, t.hz)) {
         return true;

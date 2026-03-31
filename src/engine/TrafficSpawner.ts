@@ -369,4 +369,21 @@ export class TrafficSpawner {
     }
     return out;
   }
+
+  getAllActiveCollisionBounds(): TrafficCollisionBounds[] {
+    const { width, length } = CONFIG.TAXI_DIMENSIONS;
+    const hx = width / 2;
+    const hz = length / 2;
+    const out: TrafficCollisionBounds[] = [];
+    for (const p of this.pool) {
+      if (!p.active) continue;
+      out.push({
+        cx: p.group.position.x,
+        cz: p.group.position.z,
+        hx,
+        hz,
+      });
+    }
+    return out;
+  }
 }
