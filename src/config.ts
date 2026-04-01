@@ -193,7 +193,7 @@ export const CONFIG = {
   GAME_HEIGHT: 844,
 
   // ── Camera (road-centered: fixed X=0, chase down centerline) ──
-  CAMERA_HEIGHT: 3.0,
+  CAMERA_HEIGHT: 3.5,
   CAMERA_DISTANCE: 10.5,
   /** Aim at a point this far ahead on the road (small = steeper look-down at the taxi). */
   CAMERA_LOOK_AHEAD: 7.5,
