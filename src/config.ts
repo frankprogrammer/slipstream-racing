@@ -202,14 +202,14 @@ export const CONFIG = {
    */
   CAMERA_LOOK_AT_Y: 1,
   /** Screen Y of taxi rear: 0 = bottom, 1 = top (NDC). Solved by dolly (distance) only. */
-  CAMERA_FRAMING_BOTTOM_PCT: 0.15,
+  CAMERA_FRAMING_BOTTOM_PCT: 0.2,
   /** How fast to converge distance so rear hits CAMERA_FRAMING_BOTTOM_PCT (NDC error → Δdistance). */
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
   /** FOV at `BASE_SCROLL_SPEED` (degrees). */
   CAMERA_FOV_BASE: 55,
   /** FOV at `MAX_SCROLL_SPEED` (degrees). */
-  CAMERA_FOV_MAX: 75,
+  CAMERA_FOV_MAX: 65,
   /** Per-frame lerp toward speed-mapped target FOV. */
   CAMERA_FOV_LERP: 0.02,
   CAMERA_SHAKE_INTENSITY: 0.03,
