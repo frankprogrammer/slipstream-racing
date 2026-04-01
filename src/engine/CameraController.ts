@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import { CONFIG, type CameraFovPhase } from '../config';
+import { CONFIG } from '../config';
 import type { PlayerTaxi } from './PlayerTaxi';
 
 /**
  * Road-centered chase camera: fixed on lane center (X=0).
  * Height + look-at (pitch) come from CONFIG; only **distance behind the taxi** is refined so the
  * rear bumper lands at CAMERA_FRAMING_BOTTOM_PCT from the screen bottom (NDC).
+ * FOV interpolates between CAMERA_FOV_BASE and CAMERA_FOV_MAX as scroll speed goes from
+ * BASE_SCROLL_SPEED to MAX_SCROLL_SPEED.
  */
 export class CameraController {
   private readonly camera: THREE.PerspectiveCamera;
@@ -13,28 +15,20 @@ export class CameraController {
   private readonly rearNdc = new THREE.Vector3();
   /** Distance along -Z behind player (world); larger = camera further back on the road. */
   private followDistance: number = CONFIG.CAMERA_DISTANCE;
-  /** Smoothed chase height; driven by `CAMERA_FOV_PHASES` (same timeline as FOV). */
-  private currentHeight: number = CONFIG.CAMERA_HEIGHT;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
 
   /**
-   * @param runTimeMs — elapsed gameplay time (ms) since the run started.
+   * @param scrollPerFrame — current road scroll (same units as `CONFIG.BASE_SCROLL_SPEED`).
    */
-  update(playerTaxi: PlayerTaxi, runTimeMs: number): void {
-    const { fov: targetFov, height: targetHeight } =
-      this.cameraTargetsFromPhases(runTimeMs);
+  update(playerTaxi: PlayerTaxi, scrollPerFrame: number): void {
+    const targetFov = this.fovFromScrollSpeed(scrollPerFrame);
     this.camera.fov = THREE.MathUtils.lerp(
       this.camera.fov,
       targetFov,
-      CONFIG.CAMERA_FOV_LERP
-    );
-    this.currentHeight = THREE.MathUtils.lerp(
-      this.currentHeight,
-      targetHeight,
-      CONFIG.CAMERA_FOV_LERP
+      CONFIG.CAMERA_FOV_LERP,
     );
     this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
@@ -42,78 +36,27 @@ export class CameraController {
 
   snap(playerTaxi: PlayerTaxi): void {
     this.followDistance = CONFIG.CAMERA_DISTANCE;
-    const { fov, height } = this.cameraTargetsFromPhases(0);
-    this.currentHeight = height;
-    this.camera.fov = fov;
+    this.camera.fov = CONFIG.CAMERA_FOV_BASE;
     this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
   }
 
-  private phaseHeight(ph: CameraFovPhase): number {
-    return ph.height ?? CONFIG.CAMERA_HEIGHT;
-  }
-
-  /** One full loop: every hold + every transition (last phase’s transition wraps to index 0). */
-  private cameraPhaseCycleMs(phases: readonly CameraFovPhase[]): number {
-    let sum = 0;
-    for (const ph of phases) {
-      sum += Math.max(0, ph.holdMs);
-      const tr = 'transitionMs' in ph ? ph.transitionMs : 0;
-      sum += Math.max(0, tr ?? 0);
-    }
-    return sum;
-  }
-
-  private cameraTargetsFromPhases(runTimeMs: number): {
-    fov: number;
-    height: number;
-  } {
-    const phases = CONFIG.CAMERA_FOV_PHASES as readonly CameraFovPhase[];
-    if (!phases || phases.length === 0) {
-      return { fov: CONFIG.CAMERA_FOV_BASE, height: CONFIG.CAMERA_HEIGHT };
-    }
-
-    const n = phases.length;
-    const cycleMs = this.cameraPhaseCycleMs(phases);
-    if (cycleMs <= 0) {
-      const p = phases[0]!;
-      return { fov: p.fov, height: this.phaseHeight(p) };
-    }
-
-    let t = Math.max(0, runTimeMs) % cycleMs;
-
-    for (let i = 0; i < n; i++) {
-      const ph = phases[i]!;
-      const hold = Math.max(0, ph.holdMs);
-      const fovA = ph.fov;
-      const hA = this.phaseHeight(ph);
-      const nextIndex = (i + 1) % n;
-      const next = phases[nextIndex]!;
-      const transRaw = 'transitionMs' in ph ? ph.transitionMs : 0;
-      const trans = Math.max(0, transRaw ?? 0);
-
-      if (t <= hold) return { fov: fovA, height: hA };
-      t -= hold;
-
-      if (trans <= 0) continue;
-      if (t <= trans) {
-        const u = t / trans;
-        return {
-          fov: THREE.MathUtils.lerp(fovA, next.fov, u),
-          height: THREE.MathUtils.lerp(hA, this.phaseHeight(next), u),
-        };
-      }
-      t -= trans;
-    }
-
-    const last = phases[n - 1]!;
-    return { fov: last.fov, height: this.phaseHeight(last) };
+  private fovFromScrollSpeed(scrollPerFrame: number): number {
+    const lo = CONFIG.BASE_SCROLL_SPEED;
+    const hi = CONFIG.MAX_SCROLL_SPEED;
+    const s = THREE.MathUtils.clamp(scrollPerFrame, lo, hi);
+    const t = hi > lo ? (s - lo) / (hi - lo) : 0;
+    return THREE.MathUtils.lerp(
+      CONFIG.CAMERA_FOV_BASE,
+      CONFIG.CAMERA_FOV_MAX,
+      t,
+    );
   }
 
   private applyCamera(playerTaxi: PlayerTaxi): void {
     const playerZ = playerTaxi.group.position.z;
     const lookZ = playerZ + CONFIG.CAMERA_LOOK_AHEAD;
-    const h = this.currentHeight;
+    const h = CONFIG.CAMERA_HEIGHT;
     const lookY = CONFIG.CAMERA_LOOK_AT_Y;
 
     playerTaxi.getRearWorldPosition(this.rearWorld);

@@ -307,11 +307,13 @@ function animate(): void {
       const base = CONFIG.BASE_SCROLL_SPEED;
       const maxScroll = CONFIG.MAX_SCROLL_SPEED;
       const headroom = Math.max(0, maxScroll - base);
-      const timeRamp = Math.min(runTimeMs * CONFIG.SPEED_RAMP_RATE, headroom);
-      const baseScroll = Math.min(
-        base + timeRamp + slingshotBaseBonus,
-        maxScroll,
+      slingshotBaseBonus = Math.max(
+        0,
+        slingshotBaseBonus -
+          CONFIG.BASE_SPEED_BONUS_DECAY_PER_SECOND * delta,
       );
+      slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
+      const baseScroll = Math.min(base + slingshotBaseBonus, maxScroll);
       // Slingshot now contributes only to persistent base bonus; no temporary speed burst.
       const scrollPerFrame = baseScroll;
       const scrollDz = scrollPerFrame * 60 * delta;
@@ -336,6 +338,7 @@ function animate(): void {
       if (slip.slingshotFired) {
         trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
+        slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
         burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
         slipstreamActivateBurst.burst();
         gameAudio.playSlingshot();
@@ -360,12 +363,13 @@ function animate(): void {
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
-      cameraController.update(playerTaxi, runTimeMs);
+      cameraController.update(playerTaxi, scrollPerFrame);
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
         gameState.transition("gameover");
       }
 
+      slipstreamActivateBurst.setBurstWindowActive(burstRemainMs > 0);
       slingshotTrail.setBoostActive(burstRemainMs > 0);
       slingshotTrail.update(delta, scrollDz, playerTaxi);
 
@@ -375,9 +379,10 @@ function animate(): void {
       audioBurst = burstRemainMs > 0;
     }
   } else {
+    slipstreamActivateBurst.setBurstWindowActive(false);
     slingshotTrail.setBoostActive(false);
     slingshotTrail.update(delta, 0, playerTaxi);
-    cameraController.update(playerTaxi, 0);
+    cameraController.update(playerTaxi, CONFIG.BASE_SCROLL_SPEED);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
     const laneX = laneSystem.getLaneX(nowMs);
     milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);

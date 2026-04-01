@@ -664,3 +664,39 @@ remove the rain effect
 ### 2026-03-31 8:18 PM PDT
 
 Right now i am using GitHub pages using Github Actions which puts this game at https://frankprogrammer.github.io/slipstream-racing/ . If I make a tag named v1, i want it to make a build to https://frankprogrammer.github.io/slipstream-racing/v1
+
+---
+
+### 2026-03-31 9:12 PM PDT
+
+Right now there is a min base speed and a max base speed and they slowly increase over time. What I want to do is to make it so this speed no longer increases over time it actually decreases slowly towards the min base speed by a small amount. the only way you can add more speed is through the current slipstream boost method.
+
+---
+
+### 2026-04-01 4:50 PM PDT
+
+Right now the Slipstream Activate Burst only is instantaneous. I wanted to actually be active throughout the Slipstream Uh, purse Time.
+
+---
+
+### 2026-04-01 5:15 PM PDT
+
+This burst is playing at the wrong time. I want it to start playing when you exit the slipstream, but it has been successfully activated. It should play for the duration of the burst time.
+
+---
+
+### 2026-04-01 5:35 PM PDT
+
+Let's make it so that when you activate a slipstream burst, the FOV receives a Temporary 10 degree FOV boost through the duration of The burst it should lerp back to the to the regular FOV or the base FOV by the time the additional burst speed is complete
+
+---
+
+### 2026-04-01 5:50 PM PDT
+
+Let's actually undo that change.
+
+---
+
+### 2026-04-01 6:05 PM PDT
+
+Right now, the FOV changes based off phases. We're going to change it back so there is a base FOV and a max FOV. And that should be tied to the min speed and the max speed of the car.

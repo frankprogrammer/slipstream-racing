@@ -13,23 +13,6 @@ export interface TrafficPhase {
   laneChange?: boolean;
 }
 
-export interface CameraFovPhase {
-  /** How long this phase holds its FOV and height (ms). */
-  holdMs: number;
-  /** FOV during this phase. */
-  fov: number;
-  /**
-   * Camera world Y (chase height) during this phase — same timeline as FOV.
-   * Omit to use `CAMERA_HEIGHT` for that phase.
-   */
-  height?: number;
-  /**
-   * Blend time into the next phase (ms). If omitted, uses 0 (hard cut).
-   * On the **last** phase, this is the blend back to the **first** phase when looping.
-   */
-  transitionMs?: number;
-}
-
 export function hexToCss(hex: number): string {
   return `#${hex.toString(16).padStart(6, "0")}`;
 }
@@ -65,7 +48,7 @@ export const GAME_PALETTE = {
   TAIL_LIGHT: 0xc40000,
   HEADLIGHT: 0xfff8f0,
   LANE_MARKING: 0xffffff,
-  UI_TEXT: 0xff0000,
+  UI_TEXT: 0xf8fafc,
   /** Muted stats / secondary copy. */
   UI_DIM: 0x9ca3af,
   /** App chrome behind canvas. */
@@ -210,7 +193,7 @@ export const CONFIG = {
   GAME_HEIGHT: 844,
 
   // ── Camera (road-centered: fixed X=0, chase down centerline) ──
-  CAMERA_HEIGHT: 16.0,
+  CAMERA_HEIGHT: 3.0,
   CAMERA_DISTANCE: 10.5,
   /** Aim at a point this far ahead on the road (small = steeper look-down at the taxi). */
   CAMERA_LOOK_AHEAD: 7.5,
@@ -223,18 +206,12 @@ export const CONFIG = {
   /** How fast to converge distance so rear hits CAMERA_FRAMING_BOTTOM_PCT (NDC error → Δdistance). */
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
+  /** FOV at `BASE_SCROLL_SPEED` (degrees). */
   CAMERA_FOV_BASE: 55,
+  /** FOV at `MAX_SCROLL_SPEED` (degrees). */
   CAMERA_FOV_MAX: 75,
-  /** Per-frame lerp toward phase target FOV and chase height. */
+  /** Per-frame lerp toward speed-mapped target FOV. */
   CAMERA_FOV_LERP: 0.02,
-  /**
-   * Time-phased FOV + chase height (replaces chain-driven FOV/height).
-   * Each phase holds, then transitions (last phase transitions back to the first — timeline loops).
-   */
-  CAMERA_FOV_PHASES: [
-    { holdMs: 30000, fov: 55, height: 16.0, transitionMs: 5000 },
-    { holdMs: 30000, fov: 65, height: 3.0, transitionMs: 5000 },
-  ] as const satisfies readonly CameraFovPhase[],
   CAMERA_SHAKE_INTENSITY: 0.03,
   CAMERA_SHAKE_DECAY: 0.9,
 
@@ -297,19 +274,19 @@ export const CONFIG = {
   FOG_FAR: 120,
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
-  /** Starting base scroll at run start (before time ramp / slingshot bonus). */
-  BASE_SCROLL_SPEED: 0.2,
-  /** Hard cap on base scroll (time ramp + slingshot bonus included). */
+  /** Minimum base scroll (floor when slipstream bonus has decayed to 0). */
+  BASE_SCROLL_SPEED: 0.3,
+  /** Hard cap on base scroll (slipstream bonus included). */
   MAX_SCROLL_SPEED: 0.75,
   /**
-   * Linear ramp over run time: adds up to `(MAX − BASE)` by `runTimeMs × this`.
-   * Example: BASE 0.15, MAX 0.8 → headroom 0.65; at 0.00005/ms, full ramp ≈ 13s.
+   * Per second: slipstream-only bonus (above `BASE_SCROLL_SPEED`) decays toward 0.
+   * Speed no longer ramps up over time; only successful slipstreams add bonus.
    */
-  SPEED_RAMP_RATE: 0.00001,
-  SLINGSHOT_SPEED_BURST: 0.05,
+  BASE_SPEED_BONUS_DECAY_PER_SECOND: 0.013,
+  SLINGSHOT_SPEED_BURST: 0.0,
   SLINGSHOT_BURST_DURATION: 750,
   /** Added to base scroll on each successful slipstream release (same units as BASE_SCROLL_SPEED). */
-  SLINGSHOT_BASE_SPEED_INCREMENT: 0.005,
+  SLINGSHOT_BASE_SPEED_INCREMENT: 0.03,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
@@ -597,6 +574,8 @@ export const CONFIG = {
   SLINGSHOT_TRAIL_SCROLL_SCALE: 1.05,
 
   /** Successful slipstream: point burst from rear bumper toward screen bottom (−Z). */
+  /** Re-seeds per second during post-slingshot burst window (`SLINGSHOT_BURST_DURATION`). */
+  SLIPSTREAM_ACTIVATE_BURST_WINDOW_SPAWN_PER_SEC: 52,
   SLIPSTREAM_ACTIVATE_BURST_COUNT: 56,
   SLIPSTREAM_ACTIVATE_BURST_POINT_SIZE: 0.14,
   SLIPSTREAM_ACTIVATE_BURST_OPACITY: 0.78,

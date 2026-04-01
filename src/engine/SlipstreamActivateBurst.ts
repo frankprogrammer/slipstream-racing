@@ -2,11 +2,15 @@ import * as THREE from "three";
 import { CONFIG } from "../config";
 
 /**
- * On successful slipstream release: a burst of points from the car rear,
- * streaming along local −Z (screen bottom in chase view).
+ * Points from the car rear streaming along local −Z (screen bottom in chase view).
+ * Emits for `SLINGSHOT_BURST_DURATION` after a successful slipstream exit (slingshot).
+ * `burst()` is an optional initial fill when the window starts.
  */
 export class SlipstreamActivateBurst {
   readonly anchor = new THREE.Group();
+
+  private burstWindowActive = false;
+  private spawnAcc = 0;
 
   private readonly positions: Float32Array;
   private readonly velocities: Float32Array;
@@ -76,47 +80,80 @@ export class SlipstreamActivateBurst {
   }
 
   reset(): void {
+    this.burstWindowActive = false;
+    this.spawnAcc = 0;
     this.hideAll();
+  }
+
+  /** True while post-slingshot burst time remains (same window as `burstRemainMs` in main). */
+  setBurstWindowActive(active: boolean): void {
+    this.burstWindowActive = active;
+    if (!active) this.spawnAcc = 0;
   }
 
   burst(): void {
     this.applyAnchorLocal();
     const n = this.count;
+    for (let i = 0; i < n; i++) {
+      this.seedParticle(i);
+    }
+    const attr = this.geometry.attributes.position;
+    if (attr) attr.needsUpdate = true;
+  }
+
+  private seedParticle(i: number): void {
+    const j = i * 3;
     const sx = CONFIG.SLIPSTREAM_ACTIVATE_BURST_SPREAD_X;
     const sy = CONFIG.SLIPSTREAM_ACTIVATE_BURST_SPREAD_Y;
     const vmin = CONFIG.SLIPSTREAM_ACTIVATE_BURST_SPEED_MIN;
     const vmax = CONFIG.SLIPSTREAM_ACTIVATE_BURST_SPEED_MAX;
     const downY = CONFIG.SLIPSTREAM_ACTIVATE_BURST_SCREEN_DOWN_Y;
 
+    this.positions[j] = (Math.random() - 0.5) * 2 * sx;
+    this.positions[j + 1] = (Math.random() - 0.5) * 2 * sy;
+    this.positions[j + 2] = (Math.random() - 0.5) * 0.12;
+
+    const speed = vmin + Math.random() * (vmax - vmin);
+    const lateral = CONFIG.SLIPSTREAM_ACTIVATE_BURST_LATERAL_SCALE;
+    const vx = (Math.random() - 0.5) * 2 * lateral * speed;
+    const vz = -speed;
+    const vy =
+      downY * speed + (Math.random() - 0.5) * CONFIG.SLIPSTREAM_ACTIVATE_BURST_Y_JITTER;
+
+    this.velocities[j] = vx;
+    this.velocities[j + 1] = vy;
+    this.velocities[j + 2] = vz;
+
+    this.ages[i] = 0;
+    this.lifetimes[i] =
+      CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN +
+      Math.random() *
+        (CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MAX -
+          CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN);
+  }
+
+  /** Prefer recycling expired particles; otherwise replace a random slot so the stream stays dense. */
+  private pickSpawnIndex(): number {
+    const n = this.count;
     for (let i = 0; i < n; i++) {
-      const j = i * 3;
-      this.positions[j] = (Math.random() - 0.5) * 2 * sx;
-      this.positions[j + 1] = (Math.random() - 0.5) * 2 * sy;
-      this.positions[j + 2] = (Math.random() - 0.5) * 0.12;
-
-      const speed = vmin + Math.random() * (vmax - vmin);
-      const lateral = CONFIG.SLIPSTREAM_ACTIVATE_BURST_LATERAL_SCALE;
-      const vx = (Math.random() - 0.5) * 2 * lateral * speed;
-      const vz = -speed;
-      const vy =
-        downY * speed + (Math.random() - 0.5) * CONFIG.SLIPSTREAM_ACTIVATE_BURST_Y_JITTER;
-
-      this.velocities[j] = vx;
-      this.velocities[j + 1] = vy;
-      this.velocities[j + 2] = vz;
-
-      this.ages[i] = 0;
-      this.lifetimes[i] =
-        CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN +
-        Math.random() *
-          (CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MAX -
-            CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN);
+      if (this.ages[i] >= this.lifetimes[i]) return i;
     }
-    const attr = this.geometry.attributes.position;
-    if (attr) attr.needsUpdate = true;
+    return Math.floor(Math.random() * n);
   }
 
   update(delta: number): void {
+    this.applyAnchorLocal();
+
+    if (this.burstWindowActive) {
+      this.spawnAcc +=
+        CONFIG.SLIPSTREAM_ACTIVATE_BURST_WINDOW_SPAWN_PER_SEC * delta;
+      while (this.spawnAcc >= 1) {
+        this.spawnAcc -= 1;
+        const i = this.pickSpawnIndex();
+        this.seedParticle(i);
+      }
+    }
+
     const drag = Math.pow(CONFIG.SLIPSTREAM_ACTIVATE_BURST_DRAG, delta * 60);
     const grav = CONFIG.SLIPSTREAM_ACTIVATE_BURST_GRAVITY;
     const n = this.count;
@@ -145,7 +182,7 @@ export class SlipstreamActivateBurst {
       }
     }
 
-    if (any) {
+    if (any || this.burstWindowActive) {
       const attr = this.geometry.attributes.position;
       if (attr) attr.needsUpdate = true;
     }
