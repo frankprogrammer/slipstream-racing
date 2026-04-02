@@ -28,8 +28,14 @@ export class GameAudio {
   private appFocused = true;
 
   private engineOsc: OscillatorNode | null = null;
+  private engineOsc2: OscillatorNode | null = null;
+  private engineOsc3: OscillatorNode | null = null;
   private engineFilter: BiquadFilterNode | null = null;
   private engineGain: GainNode | null = null;
+
+  private turboSrc: AudioBufferSourceNode | null = null;
+  private turboFilter: BiquadFilterNode | null = null;
+  private turboGain: GainNode | null = null;
 
   private windSrc: AudioBufferSourceNode | null = null;
   private windFilter: BiquadFilterNode | null = null;
@@ -117,19 +123,59 @@ export class GameAudio {
     const ctx = this.ctx;
     const out = this.sfxBus;
 
-    this.engineOsc = ctx.createOscillator();
-    this.engineOsc.type = 'sawtooth';
-    this.engineOsc.frequency.value = CONFIG.AUDIO_ENGINE_HZ_MIN;
+    // F1 engine: fundamental (sawtooth) + 2nd harmonic (square) + 3rd harmonic (sawtooth)
+    const engineMixer = ctx.createGain();
+    engineMixer.gain.value = 1;
     this.engineFilter = ctx.createBiquadFilter();
     this.engineFilter.type = 'lowpass';
     this.engineFilter.frequency.value = CONFIG.AUDIO_ENGINE_FILTER_HZ;
-    this.engineFilter.Q.value = 0.7;
+    this.engineFilter.Q.value = 2.5;
     this.engineGain = ctx.createGain();
     this.engineGain.gain.value = 0;
-    this.engineOsc.connect(this.engineFilter);
+    engineMixer.connect(this.engineFilter);
     this.engineFilter.connect(this.engineGain);
     this.engineGain.connect(out);
 
+    this.engineOsc = ctx.createOscillator();
+    this.engineOsc.type = 'sawtooth';
+    this.engineOsc.frequency.value = CONFIG.AUDIO_ENGINE_HZ_MIN;
+    const osc1Gain = ctx.createGain();
+    osc1Gain.gain.value = 0.5;
+    this.engineOsc.connect(osc1Gain);
+    osc1Gain.connect(engineMixer);
+
+    this.engineOsc2 = ctx.createOscillator();
+    this.engineOsc2.type = 'square';
+    this.engineOsc2.frequency.value = CONFIG.AUDIO_ENGINE_HZ_MIN * 2;
+    const osc2Gain = ctx.createGain();
+    osc2Gain.gain.value = 0.3;
+    this.engineOsc2.connect(osc2Gain);
+    osc2Gain.connect(engineMixer);
+
+    this.engineOsc3 = ctx.createOscillator();
+    this.engineOsc3.type = 'sawtooth';
+    this.engineOsc3.frequency.value = CONFIG.AUDIO_ENGINE_HZ_MIN * 3;
+    const osc3Gain = ctx.createGain();
+    osc3Gain.gain.value = 0.15;
+    this.engineOsc3.connect(osc3Gain);
+    osc3Gain.connect(engineMixer);
+
+    // Turbo whine: bandpass-filtered noise that rises with speed
+    const turboBuf = this.makeNoiseBuffer(2);
+    this.turboSrc = ctx.createBufferSource();
+    this.turboSrc.buffer = turboBuf;
+    this.turboSrc.loop = true;
+    this.turboFilter = ctx.createBiquadFilter();
+    this.turboFilter.type = 'bandpass';
+    this.turboFilter.frequency.value = 3000;
+    this.turboFilter.Q.value = 5;
+    this.turboGain = ctx.createGain();
+    this.turboGain.gain.value = 0;
+    this.turboSrc.connect(this.turboFilter);
+    this.turboFilter.connect(this.turboGain);
+    this.turboGain.connect(out);
+
+    // Wind noise
     const noiseBuf = this.makeNoiseBuffer(CONFIG.AUDIO_WIND_NOISE_SEC);
     this.windSrc = ctx.createBufferSource();
     this.windSrc.buffer = noiseBuf;
@@ -152,6 +198,9 @@ export class GameAudio {
     this.draftGain.connect(out);
 
     this.engineOsc.start(0);
+    this.engineOsc2.start(0);
+    this.engineOsc3.start(0);
+    this.turboSrc.start(0);
     this.draftOsc.start(0);
     this.windSrc.start(0);
 
@@ -220,7 +269,20 @@ export class GameAudio {
         CONFIG.AUDIO_ENGINE_HZ_MIN +
         t * (CONFIG.AUDIO_ENGINE_HZ_MAX - CONFIG.AUDIO_ENGINE_HZ_MIN);
       if (u.burstActive) hz += CONFIG.AUDIO_ENGINE_BURST_HZ_ADD;
-      this.engineOsc.frequency.setTargetAtTime(hz, now, 0.07);
+      this.engineOsc.frequency.setTargetAtTime(hz, now, 0.05);
+      this.engineOsc2?.frequency.setTargetAtTime(hz * 2, now, 0.05);
+      this.engineOsc3?.frequency.setTargetAtTime(hz * 3, now, 0.05);
+
+      if (this.engineFilter) {
+        const filterHz = 800 + t * (CONFIG.AUDIO_ENGINE_FILTER_HZ - 800);
+        this.engineFilter.frequency.setTargetAtTime(filterHz, now, 0.08);
+      }
+      if (this.turboFilter && this.turboGain) {
+        const turboHz = 2000 + t * 4000;
+        this.turboFilter.frequency.setTargetAtTime(turboHz, now, 0.1);
+        const targetTurbo = u.playing ? 0.04 + t * 0.08 : 0;
+        this.turboGain.gain.value += (targetTurbo - this.turboGain.gain.value) * Math.min(1, 6 * delta);
+      }
     }
 
     const targetEngine =
@@ -322,31 +384,187 @@ export class GameAudio {
     }
   }
 
-  playCrash(): void {
-    if (!CONFIG.AUDIO_ENABLED) return;
+  /** Tire skid/slip sound when player switches lanes. */
+  playLaneSwitch(): void {
     if (!this.ctx || !this.sfxBus) return;
     const ctx = this.ctx;
+    const bus = this.sfxBus;
     const t0 = ctx.currentTime;
-    const dur = CONFIG.AUDIO_CRASH_DURATION;
-    const n = Math.floor(ctx.sampleRate * dur);
-    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) {
-      const fade = (1 - i / n) ** 0.45;
-      data[i] = (Math.random() * 2 - 1) * fade;
+
+    // Layer 1: main rubber skid (longer bandpassed noise with pitch sweep)
+    const skidDur = 0.22;
+    const skidN = Math.floor(ctx.sampleRate * skidDur);
+    const skidBuf = ctx.createBuffer(1, skidN, ctx.sampleRate);
+    const skidData = skidBuf.getChannelData(0);
+    for (let i = 0; i < skidN; i++) {
+      const env = Math.min(1, i / (skidN * 0.05)) * ((1 - i / skidN) ** 0.8);
+      skidData[i] = (Math.random() * 2 - 1) * env;
     }
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = CONFIG.AUDIO_CRASH_LP_HZ;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(CONFIG.AUDIO_CRASH_GAIN, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(lp);
-    lp.connect(g);
-    g.connect(this.sfxBus);
-    src.start(t0);
-    src.stop(t0 + dur + 0.03);
+    const skidSrc = ctx.createBufferSource();
+    skidSrc.buffer = skidBuf;
+    const skidBp = ctx.createBiquadFilter();
+    skidBp.type = 'bandpass';
+    skidBp.frequency.setValueAtTime(3200, t0);
+    skidBp.frequency.exponentialRampToValueAtTime(1800, t0 + skidDur);
+    skidBp.Q.value = 3.0;
+    const skidG = ctx.createGain();
+    skidG.gain.setValueAtTime(0.28, t0);
+    skidG.gain.exponentialRampToValueAtTime(0.0001, t0 + skidDur);
+    skidSrc.connect(skidBp); skidBp.connect(skidG); skidG.connect(bus);
+    skidSrc.start(t0); skidSrc.stop(t0 + skidDur + 0.02);
+
+    // Layer 2: high-pitched screech oscillator (rubber squeal)
+    const sqDur = 0.15;
+    const sqOsc = ctx.createOscillator();
+    sqOsc.type = 'sawtooth';
+    sqOsc.frequency.setValueAtTime(1400 + Math.random() * 400, t0);
+    sqOsc.frequency.exponentialRampToValueAtTime(600, t0 + sqDur);
+    const sqFilt = ctx.createBiquadFilter();
+    sqFilt.type = 'bandpass'; sqFilt.frequency.value = 1200; sqFilt.Q.value = 4;
+    const sqG = ctx.createGain();
+    sqG.gain.setValueAtTime(0.1, t0);
+    sqG.gain.exponentialRampToValueAtTime(0.0001, t0 + sqDur);
+    sqOsc.connect(sqFilt); sqFilt.connect(sqG); sqG.connect(bus);
+    sqOsc.start(t0); sqOsc.stop(t0 + sqDur + 0.02);
+
+    // Layer 3: weight transfer thud (low-freq punch)
+    const thudDur = 0.1;
+    const thudOsc = ctx.createOscillator();
+    thudOsc.type = 'sine';
+    thudOsc.frequency.setValueAtTime(140, t0);
+    thudOsc.frequency.exponentialRampToValueAtTime(50, t0 + thudDur);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.2, t0);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t0 + thudDur);
+    thudOsc.connect(tg); tg.connect(bus);
+    thudOsc.start(t0); thudOsc.stop(t0 + thudDur + 0.02);
+  }
+
+  playCrash(): void {
+    if (!this.ctx || !this.sfxBus) {
+      this.unlock();
+      if (!this.ctx || !this.sfxBus) return;
+    }
+    const ctx = this.ctx;
+    const bus = this.sfxBus;
+    const t0 = ctx.currentTime;
+
+    // Layer 1: heavy sub-bass impact — two stacked sine punches
+    const boom1 = ctx.createOscillator();
+    boom1.type = 'sine';
+    boom1.frequency.setValueAtTime(100, t0);
+    boom1.frequency.exponentialRampToValueAtTime(20, t0 + 0.5);
+    const bg1 = ctx.createGain();
+    bg1.gain.setValueAtTime(0.65, t0);
+    bg1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+    boom1.connect(bg1); bg1.connect(bus);
+    boom1.start(t0); boom1.stop(t0 + 0.52);
+
+    const boom2 = ctx.createOscillator();
+    boom2.type = 'triangle';
+    boom2.frequency.setValueAtTime(55, t0 + 0.02);
+    boom2.frequency.exponentialRampToValueAtTime(18, t0 + 0.4);
+    const bg2 = ctx.createGain();
+    bg2.gain.setValueAtTime(0, t0);
+    bg2.gain.linearRampToValueAtTime(0.45, t0 + 0.025);
+    bg2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+    boom2.connect(bg2); bg2.connect(bus);
+    boom2.start(t0); boom2.stop(t0 + 0.42);
+
+    // Layer 2: metallic crunch — resonant bandpassed noise
+    const crDur = 0.35;
+    const crN = Math.floor(ctx.sampleRate * crDur);
+    const crBuf = ctx.createBuffer(1, crN, ctx.sampleRate);
+    const crD = crBuf.getChannelData(0);
+    for (let i = 0; i < crN; i++) {
+      const env = (1 - i / crN) ** 0.5;
+      crD[i] = (Math.random() * 2 - 1) * env;
+    }
+    const crSrc = ctx.createBufferSource();
+    crSrc.buffer = crBuf;
+    const crBp = ctx.createBiquadFilter();
+    crBp.type = 'bandpass';
+    crBp.frequency.setValueAtTime(2800, t0);
+    crBp.frequency.exponentialRampToValueAtTime(600, t0 + crDur);
+    crBp.Q.value = 2.2;
+    const crG = ctx.createGain();
+    crG.gain.setValueAtTime(0.55, t0);
+    crG.gain.exponentialRampToValueAtTime(0.0001, t0 + crDur);
+    crSrc.connect(crBp); crBp.connect(crG); crG.connect(bus);
+    crSrc.start(t0); crSrc.stop(t0 + crDur + 0.02);
+
+    // Layer 3: glass/debris — staggered high-freq particles
+    const glDur = 0.6;
+    const glN = Math.floor(ctx.sampleRate * glDur);
+    const glBuf = ctx.createBuffer(1, glN, ctx.sampleRate);
+    const glD = glBuf.getChannelData(0);
+    for (let i = 0; i < glN; i++) {
+      const env = (1 - i / glN) ** 1.4;
+      const crackle = Math.random() > 0.65 ? 1 : 0.2;
+      glD[i] = (Math.random() * 2 - 1) * env * crackle;
+    }
+    const glSrc = ctx.createBufferSource();
+    glSrc.buffer = glBuf;
+    const glHp = ctx.createBiquadFilter();
+    glHp.type = 'highpass'; glHp.frequency.value = 4000; glHp.Q.value = 0.6;
+    const glG = ctx.createGain();
+    glG.gain.setValueAtTime(0, t0);
+    glG.gain.linearRampToValueAtTime(0.32, t0 + 0.03);
+    glG.gain.exponentialRampToValueAtTime(0.0001, t0 + glDur);
+    glSrc.connect(glHp); glHp.connect(glG); glG.connect(bus);
+    glSrc.start(t0); glSrc.stop(t0 + glDur + 0.02);
+
+    // Layer 4: sharp transient snap
+    const snDur = 0.04;
+    const snN = Math.floor(ctx.sampleRate * snDur);
+    const snBuf = ctx.createBuffer(1, snN, ctx.sampleRate);
+    const snD = snBuf.getChannelData(0);
+    for (let i = 0; i < snN; i++) {
+      const env = (1 - i / snN) ** 4;
+      snD[i] = Math.sign(Math.random() - 0.5) * env;
+    }
+    const snSrc = ctx.createBufferSource();
+    snSrc.buffer = snBuf;
+    const snG = ctx.createGain();
+    snG.gain.setValueAtTime(0.7, t0);
+    snG.gain.exponentialRampToValueAtTime(0.0001, t0 + snDur);
+    snSrc.connect(snG); snG.connect(bus);
+    snSrc.start(t0); snSrc.stop(t0 + snDur + 0.02);
+
+    // Layer 5: long tire screech with wobble
+    const scDur = 0.55;
+    const scOsc = ctx.createOscillator();
+    scOsc.type = 'sawtooth';
+    scOsc.frequency.setValueAtTime(1100, t0);
+    scOsc.frequency.exponentialRampToValueAtTime(350, t0 + scDur);
+    const scFilt = ctx.createBiquadFilter();
+    scFilt.type = 'bandpass'; scFilt.frequency.value = 800; scFilt.Q.value = 4;
+    const scG = ctx.createGain();
+    scG.gain.setValueAtTime(0.2, t0);
+    scG.gain.exponentialRampToValueAtTime(0.0001, t0 + scDur);
+    scOsc.connect(scFilt); scFilt.connect(scG); scG.connect(bus);
+    scOsc.start(t0); scOsc.stop(t0 + scDur + 0.02);
+
+    // Layer 6: metal scraping (delayed, gives "two car" feel)
+    const spDelay = 0.08;
+    const spDur = 0.4;
+    const spN = Math.floor(ctx.sampleRate * spDur);
+    const spBuf = ctx.createBuffer(1, spN, ctx.sampleRate);
+    const spD = spBuf.getChannelData(0);
+    for (let i = 0; i < spN; i++) {
+      const env = (1 - i / spN) ** 0.8;
+      const ring = Math.sin(i / ctx.sampleRate * Math.PI * 2 * 1800);
+      spD[i] = (Math.random() * 2 - 1) * env * 0.5 + ring * env * 0.5;
+    }
+    const spSrc = ctx.createBufferSource();
+    spSrc.buffer = spBuf;
+    const spBp = ctx.createBiquadFilter();
+    spBp.type = 'bandpass'; spBp.frequency.value = 1600; spBp.Q.value = 3;
+    const spG = ctx.createGain();
+    spG.gain.setValueAtTime(0, t0);
+    spG.gain.linearRampToValueAtTime(0.25, t0 + spDelay);
+    spG.gain.exponentialRampToValueAtTime(0.0001, t0 + spDelay + spDur);
+    spSrc.connect(spBp); spBp.connect(spG); spG.connect(bus);
+    spSrc.start(t0); spSrc.stop(t0 + spDelay + spDur + 0.02);
   }
 }

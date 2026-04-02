@@ -505,23 +505,23 @@ export const CONFIG = {
 
   // ── Audio (Phase 4 step 32 — procedural Web Audio; tunable) ──
   /** Global audio kill switch (loops, one-shots, and music). */
-  AUDIO_ENABLED: false,
+  AUDIO_ENABLED: true,
   /** Master gain before destination (0–1). */
-  AUDIO_MASTER: 0.38,
+  AUDIO_MASTER: 0.45,
   /** When false, the taxi engine loop is silent (wind, draft, music, one-shots unchanged). */
-  AUDIO_ENGINE_ENABLED: false,
+  AUDIO_ENGINE_ENABLED: true,
   /** Engine loop loudness when at max scroll (relative). */
-  AUDIO_ENGINE_GAIN: 0.2,
+  AUDIO_ENGINE_GAIN: 0.28,
   /** Minimum engine mix at min scroll (keeps idle rumble). */
-  AUDIO_ENGINE_GAIN_MIN_MIX: 0.38,
-  AUDIO_ENGINE_HZ_MIN: 78,
-  AUDIO_ENGINE_HZ_MAX: 152,
-  AUDIO_ENGINE_FILTER_HZ: 380,
-  AUDIO_ENGINE_BURST_HZ_ADD: 22,
-  AUDIO_ENGINE_BURST_GAIN_MUL: 1.28,
-  AUDIO_WIND_GAIN: 0.065,
+  AUDIO_ENGINE_GAIN_MIN_MIX: 0.45,
+  AUDIO_ENGINE_HZ_MIN: 140,
+  AUDIO_ENGINE_HZ_MAX: 420,
+  AUDIO_ENGINE_FILTER_HZ: 2800,
+  AUDIO_ENGINE_BURST_HZ_ADD: 60,
+  AUDIO_ENGINE_BURST_GAIN_MUL: 1.35,
+  AUDIO_WIND_GAIN: 0.08,
   AUDIO_WIND_MIN_MIX: 0.55,
-  AUDIO_WIND_FILTER_HZ: 820,
+  AUDIO_WIND_FILTER_HZ: 1200,
   /** Noise buffer length for wind loop (seconds). */
   AUDIO_WIND_NOISE_SEC: 2,
   AUDIO_DRAFT_GAIN: 0.1,
@@ -551,10 +551,10 @@ export const CONFIG = {
 
   // ── Background music (external audio file) ──
   /** Loop an external track from `public/` without resetting on retry. */
-  AUDIO_BG_MUSIC_ENABLED: true,
+  AUDIO_BG_MUSIC_ENABLED: false,
   AUDIO_BG_MUSIC_FILE: "thousandsuns.mp3",
   /** 0–1. Requested: 50%. */
-  AUDIO_BG_MUSIC_VOLUME: 0.25,
+  AUDIO_BG_MUSIC_VOLUME: 0,
   /** Inner mix trim (post-gain) before music bus. */
   AUDIO_MUSIC_MIX_INNER: 1.0,
   AUDIO_MUSIC_BASS_HZ: 65.41,

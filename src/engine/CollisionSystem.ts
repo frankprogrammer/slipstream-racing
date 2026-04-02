@@ -18,19 +18,24 @@ function aabbOverlap2D(
   );
 }
 
+export interface CollisionHit {
+  hitX: number;
+  hitZ: number;
+}
+
 /**
  * CollisionSystem — XZ AABB overlap between player taxi and active traffic.
  */
 export class CollisionSystem {
-  check(player: PlayerTaxi, traffic: TrafficSpawner): boolean {
+  check(player: PlayerTaxi, traffic: TrafficSpawner): CollisionHit | null {
     const p = player.getCollisionBounds();
     const phz = p.hz * CONFIG.TAXI_COLLISION_Z_HALF_SCALE;
     const list = traffic.getAllActiveCollisionBounds();
     for (const t of list) {
       if (aabbOverlap2D(p.cx, p.cz, p.hx, phz, t.cx, t.cz, t.hx, t.hz)) {
-        return true;
+        return { hitX: t.cx, hitZ: t.cz };
       }
     }
-    return false;
+    return null;
   }
 }

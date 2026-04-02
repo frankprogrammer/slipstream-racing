@@ -5,7 +5,7 @@ import { LaneSystem } from "./engine/LaneSystem";
 import { RoadManager } from "./engine/RoadManager";
 import { PlayerTaxi } from "./engine/PlayerTaxi";
 import { TrafficSpawner } from "./engine/TrafficSpawner";
-import { CollisionSystem } from "./engine/CollisionSystem";
+import { CollisionSystem, type CollisionHit } from "./engine/CollisionSystem";
 import { CameraController } from "./engine/CameraController";
 import { SlipstreamWindSystem } from "./engine/SlipstreamWindSystem";
 import { SlingshotTrailSystem } from "./engine/SlingshotTrailSystem";
@@ -16,6 +16,8 @@ import { ScoreManager } from "./engine/ScoreManager";
 import { GameOverScreen } from "./ui/GameOverScreen";
 import { HUD } from "./ui/HUD";
 import { GameAudio } from "./engine/GameAudio";
+import { TireMarkSystem } from "./engine/TireMarkSystem";
+import { VehicleExhaustSystem } from "./engine/VehicleExhaustSystem";
 
 function easeInCubic(t: number): number {
   return t ** 3;
@@ -131,6 +133,8 @@ const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const slipstreamActivateBurst = new SlipstreamActivateBurst();
 const gameAudio = new GameAudio();
+const tireMarks = new TireMarkSystem();
+const vehicleExhaust = new VehicleExhaustSystem();
 const milestoneAnchorWorld = new THREE.Vector3();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
@@ -138,6 +142,8 @@ const touchHintRightWorld = new THREE.Vector3();
 container.addEventListener("pointerdown", () => gameAudio.unlock(), {
   once: true,
 });
+
+laneSystem.onSwitch(() => gameAudio.playLaneSwitch());
 
 let appFocused = document.visibilityState === "visible";
 let needsDeltaReset = false;
@@ -168,7 +174,25 @@ let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
 let introElapsedMs = 0;
 
+const CRASH_DURATION_MS = 800;
+let crashActive = false;
+let crashElapsedMs = 0;
+let crashSpinDir = 1;
+let crashLateralDir = 1;
+let crashStartX = 0;
+let crashStartZ = 0;
+let crashHitCarGroup: THREE.Group | null = null;
+let crashHitCarStartX = 0;
+let crashHitCarStartZ = 0;
+
 function resetGame(): void {
+  if (crashHitCarGroup) {
+    crashHitCarGroup.rotation.set(0, 0, 0);
+    crashHitCarGroup.position.y = 0;
+    crashHitCarGroup = null;
+  }
+  crashActive = false;
+  crashElapsedMs = 0;
   gameState.reset();
   laneSystem.reset();
   laneSystem.enabled = false;
@@ -181,6 +205,8 @@ function resetGame(): void {
   roadManager?.reset();
   trafficSpawner.reset();
   slipstreamWind.reset();
+  tireMarks.reset();
+  vehicleExhaust.reset();
   playerTaxi.reset();
   slingshotTrail.reset();
   slipstreamActivateBurst.reset();
@@ -210,7 +236,6 @@ gameState.onChange((state) => {
   if (state === "gameover") {
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
-    gameAudio.playCrash();
     const score = scoreManager.currentScore;
     gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits);
   }
@@ -319,6 +344,10 @@ function animate(): void {
 
       roadManager?.update(scrollDz);
       trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
+      const pX = playerTaxi.group.position.x;
+      const pZ = playerTaxi.group.position.z;
+      tireMarks.update(delta, scrollDz, trafficSpawner, pX, pZ);
+      vehicleExhaust.update(delta, scrollDz, trafficSpawner, pX, pZ);
       const laneX = laneSystem.getLaneX(nowMs);
       const roll = laneSystem.getBodyRollRad(nowMs);
       const steer = laneSystem.getWheelSteerRad(nowMs);
@@ -364,8 +393,21 @@ function animate(): void {
 
       cameraController.update(playerTaxi, scrollPerFrame);
 
-      if (collisionSystem.check(playerTaxi, trafficSpawner)) {
-        gameState.transition("gameover");
+      if (!crashActive) {
+        const hit: CollisionHit | null = collisionSystem.check(playerTaxi, trafficSpawner);
+        if (hit) {
+          crashActive = true;
+          crashElapsedMs = 0;
+          crashStartX = playerTaxi.group.position.x;
+          crashStartZ = playerTaxi.group.position.z;
+          crashLateralDir = hit.hitX > playerTaxi.group.position.x ? -1 : 1;
+          crashSpinDir = crashLateralDir;
+          crashHitCarGroup = trafficSpawner.getHitCarGroup(hit.hitX, hit.hitZ);
+          crashHitCarStartX = hit.hitX;
+          crashHitCarStartZ = hit.hitZ;
+          laneSystem.enabled = false;
+          gameAudio.playCrash();
+        }
       }
 
       slipstreamActivateBurst.setBurstWindowActive(burstRemainMs > 0);
@@ -432,6 +474,38 @@ function animate(): void {
     touchHintRightWorld,
   );
 
+  if (crashActive) {
+    crashElapsedMs += delta * 1000;
+    const t = Math.min(1, crashElapsedMs / CRASH_DURATION_MS);
+    const easeOut = 1 - (1 - t) * (1 - t);
+
+    // Player car: spin away from hit
+    playerTaxi.group.rotation.y = crashSpinDir * easeOut * Math.PI * 0.7;
+    playerTaxi.group.rotation.z = crashLateralDir * easeOut * 0.3;
+    playerTaxi.group.rotation.x = easeOut * -0.15;
+    playerTaxi.group.position.x = crashStartX + crashLateralDir * easeOut * 2.0;
+    playerTaxi.group.position.y = Math.sin(easeOut * Math.PI) * 0.35;
+
+    // Traffic car: spin in opposite direction
+    if (crashHitCarGroup) {
+      const oppDir = -crashLateralDir;
+      crashHitCarGroup.rotation.y = oppDir * easeOut * Math.PI * 0.5;
+      crashHitCarGroup.rotation.z = oppDir * easeOut * 0.2;
+      crashHitCarGroup.position.x = crashHitCarStartX + oppDir * easeOut * 1.5;
+      crashHitCarGroup.position.y = Math.sin(easeOut * Math.PI) * 0.2;
+    }
+
+    if (t >= 1) {
+      crashActive = false;
+      if (crashHitCarGroup) {
+        crashHitCarGroup.rotation.set(0, 0, 0);
+        crashHitCarGroup.position.y = 0;
+        crashHitCarGroup = null;
+      }
+      gameState.transition("gameover");
+    }
+  }
+
   if (showFps && fpsEl) {
     fpsAcc += delta;
     fpsFrames += 1;
@@ -451,7 +525,9 @@ void (async () => {
   roadManager = await RoadManager.create(CONFIG.TAXI_POSITION_Z);
   trafficSpawner = await TrafficSpawner.create();
   scene.add(roadManager.group);
+  scene.add(tireMarks.group);
   scene.add(trafficSpawner.group);
+  scene.add(vehicleExhaust.group);
   scene.add(slipstreamWind.group);
   scene.add(playerTaxi.group);
   scene.add(slingshotTrail.group);

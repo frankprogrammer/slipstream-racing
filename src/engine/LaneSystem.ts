@@ -26,12 +26,17 @@ export class LaneSystem {
   private _springStartMs = 0;
   private _springDir: -1 | 1 = 1;
   private _enabled = true;
+  private _onSwitchCb: (() => void) | null = null;
 
   constructor(target: HTMLElement) {
     this.target = target;
     this._fromX = this.laneIndexToX(1);
     this.bindPointer();
     this.bindKeyboard();
+  }
+
+  onSwitch(cb: () => void): void {
+    this._onSwitchCb = cb;
   }
 
   set enabled(enabled: boolean) {
@@ -160,6 +165,7 @@ export class LaneSystem {
     this._switching = true;
     this._switchStartMs = now;
     this._rollSpringing = false;
+    this._onSwitchCb?.();
   }
 
   /**

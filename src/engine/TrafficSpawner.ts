@@ -505,6 +505,23 @@ export class TrafficSpawner {
     return out;
   }
 
+  /** Find the THREE.Group of the traffic car closest to the given XZ position. */
+  getHitCarGroup(cx: number, cz: number): THREE.Group | null {
+    let best: PoolEntry | null = null;
+    let bestSq = Infinity;
+    for (const p of this.pool) {
+      if (!p.active) continue;
+      const dx = p.group.position.x - cx;
+      const dz = p.group.position.z - cz;
+      const sq = dx * dx + dz * dz;
+      if (sq < bestSq) {
+        bestSq = sq;
+        best = p;
+      }
+    }
+    return best?.group ?? null;
+  }
+
   getAllActiveCollisionBounds(): TrafficCollisionBounds[] {
     const { width, length } = CONFIG.TAXI_DIMENSIONS;
     const hx = width / 2;
