@@ -115,14 +115,45 @@ export class TrafficSpawner {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
-  private pickAdjacentLaneForChange(phase: TrafficPhase, fromLane: number): number | null {
+  private laneHasBlockingTraffic(self: PoolEntry, targetLane: number): boolean {
+    const targetX = this.laneIndexToX(targetLane);
+    const hzSelf = this.hzFor();
+    for (const o of this.pool) {
+      if (!o.active || o === self) continue;
+      const hzOther = this.hzFor();
+      if (!this.longFootprintsOverlap(self.group.position.z, hzSelf, o.group.position.z, hzOther)) {
+        continue;
+      }
+      // Use live X so cars mid-lane-change still block entry into that lane corridor.
+      if (Math.abs(o.group.position.x - targetX) <= CONFIG.LANE_WIDTH * 0.55) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private pickAdjacentLaneForChange(
+    self: PoolEntry,
+    phase: TrafficPhase,
+    fromLane: number
+  ): number | null {
     const candidates: number[] = [];
     const left = fromLane - 1;
     const right = fromLane + 1;
-    if (left >= 0 && left < CONFIG.LANE_COUNT && phase.lanes.includes(left)) {
+    if (
+      left >= 0 &&
+      left < CONFIG.LANE_COUNT &&
+      phase.lanes.includes(left) &&
+      !this.laneHasBlockingTraffic(self, left)
+    ) {
       candidates.push(left);
     }
-    if (right >= 0 && right < CONFIG.LANE_COUNT && phase.lanes.includes(right)) {
+    if (
+      right >= 0 &&
+      right < CONFIG.LANE_COUNT &&
+      phase.lanes.includes(right) &&
+      !this.laneHasBlockingTraffic(self, right)
+    ) {
       candidates.push(right);
     }
     if (!candidates.length) return null;
@@ -143,7 +174,7 @@ export class TrafficSpawner {
       p.laneChangeState = 'done';
       return;
     }
-    const targetLane = this.pickAdjacentLaneForChange(phase, p.laneIndex);
+    const targetLane = this.pickAdjacentLaneForChange(p, phase, p.laneIndex);
     if (targetLane === null) {
       p.laneChangeState = 'done';
       return;

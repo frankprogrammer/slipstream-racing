@@ -706,3 +706,9 @@ Right now, the FOV changes based off phases. We're going to change it back so th
 ### 2026-04-01 9:10 PM PDT
 
 Let's implement the lane change functionality for enemy vehicles as defined in the config file for traffic phases. The enemy players should change lanes about Two segments ahead of the player. Let this distance be configurable in world units. Just before churning, the conversation the player car should shift along the x-axis slowly to signal that they are about to change. The whole change process from starting to signal to actually changing over to the next lane should take about one second and should be also configurable.
+
+---
+
+### 2026-04-01 9:30 PM PDT
+
+Right now you can lane change into a lane that has a car or slipstream zone in it. we should not allow the change to happen if this is the case.
