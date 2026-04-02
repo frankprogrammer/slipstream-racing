@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import { CONFIG } from "../config";
 
 function easeOutBack(t: number): number {
@@ -10,12 +9,12 @@ function easeOutBack(t: number): number {
 /**
  * LaneSystem — 3-lane grid + touch + keyboard.
  * Lane centers: -LANE_WIDTH, 0, +LANE_WIDTH for indices 0,1,2.
- * Touch: pointerdown left/right of player position = one lane step; pointermove maps X to three lane columns.
+ * Touch: each pointerdown is a tap — left of screen center steps one lane toward screen-left,
+ * right of center toward screen-right (matches ArrowLeft / ArrowRight). Center dead zone ignores taps.
+ * Multiple simultaneous contacts are independent (no single-pointer capture).
  */
 export class LaneSystem {
   private readonly target: HTMLElement;
-  private readonly camera: THREE.PerspectiveCamera;
-  private readonly _tmpWorld = new THREE.Vector3();
   private _laneIndex = 1;
   private _fromLane = 1;
   private _fromX = 0;
@@ -26,12 +25,10 @@ export class LaneSystem {
   private _rollSpringing = false;
   private _springStartMs = 0;
   private _springDir: -1 | 1 = 1;
-  private _pointerId: number | null = null;
   private _enabled = true;
 
-  constructor(target: HTMLElement, camera: THREE.PerspectiveCamera) {
+  constructor(target: HTMLElement) {
     this.target = target;
-    this.camera = camera;
     this._fromX = this.laneIndexToX(1);
     this.bindPointer();
     this.bindKeyboard();
@@ -52,7 +49,6 @@ export class LaneSystem {
     this._toLane = 1;
     this._switching = false;
     this._rollSpringing = false;
-    this._pointerId = null;
   }
 
   laneIndexToX(index: number): number {
@@ -166,82 +162,31 @@ export class LaneSystem {
     this._rollSpringing = false;
   }
 
-  /** Map client X to lane index using equal-width columns across `target`. */
-  private clientXToLaneIndex(clientX: number): number {
-    const projected = this.pickLaneFromProjectedScreenX(clientX);
-    if (projected !== null) return projected;
-
-    const rect = this.target.getBoundingClientRect();
-    const w = Math.max(1e-6, rect.width);
-    const u = (clientX - rect.left) / w;
-    return this.laneIndexFromRoadU(u);
-  }
-
-  /** Project a world-space lane center (at taxi Z) to screen X pixels. */
-  private worldXToScreenX(worldX: number): number | null {
-    this.camera.updateMatrixWorld();
-    this._tmpWorld.set(worldX, 0, CONFIG.TAXI_POSITION_Z).project(this.camera);
-    if (!Number.isFinite(this._tmpWorld.x) || !Number.isFinite(this._tmpWorld.z)) {
-      return null;
-    }
-    if (this._tmpWorld.z < -1 || this._tmpWorld.z > 1) return null;
-    const rect = this.target.getBoundingClientRect();
-    const u = this._tmpWorld.x * 0.5 + 0.5;
-    return rect.left + u * rect.width;
-  }
-
-  /** Pick nearest lane by projected screen X, so lane taps follow active camera/FOV. */
-  private pickLaneFromProjectedScreenX(clientX: number): number | null {
-    let bestLane = -1;
-    let bestDist = Infinity;
-    for (let i = 0; i < CONFIG.LANE_COUNT; i++) {
-      const sx = this.worldXToScreenX(this.laneIndexToX(i));
-      if (sx === null) continue;
-      const d = Math.abs(clientX - sx);
-      if (d < bestDist) {
-        bestDist = d;
-        bestLane = i;
-      }
-    }
-    return bestLane >= 0 ? bestLane : null;
-  }
-
   /**
-   * Pointerdown: compare touch X to current player X → one lane step.
-   * Phaser/chase mapping: touch left of player moves lane +1 (screen-right), touch right moves lane -1.
+   * Tap left of horizontal center → same as ArrowLeft; right of center → ArrowRight.
+   * Ignored in the center strip (`TOUCH_CENTER_DEAD_ZONE_PX`). Each pointer is handled on pointerdown only.
    */
-  private onTouchRelativeToPlayer(clientX: number): void {
-    const laneNow = this.laneIndexFromRoadX(this.getLaneX(performance.now()));
-    this._laneIndex = laneNow;
-    const playerScreenX = this.worldXToScreenX(this.getLaneX(performance.now()));
-    const px = playerScreenX ?? clientX;
-    if (clientX < px) {
+  private onHalfScreenTap(clientX: number): void {
+    if (!this._enabled) return;
+    const rect = this.target.getBoundingClientRect();
+    const cx = rect.left + rect.width * 0.5;
+    const d = clientX - cx;
+    if (Math.abs(d) <= CONFIG.TOUCH_CENTER_DEAD_ZONE_PX) return;
+
+    const now = performance.now();
+    const laneNow = this.laneIndexFromRoadX(this.getLaneX(now));
+
+    if (d < 0) {
       this.switchToLane(laneNow + 1);
-    } else if (clientX > px) {
+    } else {
       this.switchToLane(laneNow - 1);
     }
   }
 
   private bindPointer(): void {
     this.target.addEventListener("pointerdown", (e: PointerEvent) => {
-      if (!this._enabled || this._pointerId !== null) return;
-      if (e.button === 2) return;
-      this._pointerId = e.pointerId;
-      this.target.setPointerCapture(e.pointerId);
-      this.onTouchRelativeToPlayer(e.clientX);
-    });
-    this.target.addEventListener("pointermove", (e: PointerEvent) => {
-      if (e.pointerId !== this._pointerId) return;
-      this.switchToLane(this.clientXToLaneIndex(e.clientX));
-    });
-    this.target.addEventListener("pointerup", (e: PointerEvent) => {
-      if (e.pointerId !== this._pointerId) return;
-      this.target.releasePointerCapture(e.pointerId);
-      this._pointerId = null;
-    });
-    this.target.addEventListener("pointercancel", (e: PointerEvent) => {
-      if (e.pointerId !== this._pointerId) return;
-      this._pointerId = null;
+      if (!this._enabled || e.button === 2) return;
+      this.onHalfScreenTap(e.clientX);
     });
   }
 

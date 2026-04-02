@@ -742,3 +742,9 @@ The two flashing buttons for the arrows at the start of the game Should... be al
 ### 2026-04-02 1:21 PM PDT
 
 Right now the arrows are flipped onto which side they are being shown. Please change that.
+
+---
+
+### 2026-04-02 1:36 PM PDT
+
+Let's remove the dragging Touch input functionality. It should be that if you tap on the left side of the screen, Anywhere left of the middle? It moves the character to the left and maybe tap on the right side of the screen anywhere. uh, to the right of the middle and move it to the right. Also, is it possible to use to support multi-touch so that if I'm currently holding my right thumb finger down and then I tap on the left Side, it will act properly detect it. as a left tap.

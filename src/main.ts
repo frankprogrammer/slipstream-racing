@@ -116,7 +116,7 @@ window.addEventListener("resize", () => {
 });
 
 const gameState = new GameState();
-const laneSystem = new LaneSystem(container, camera);
+const laneSystem = new LaneSystem(container);
 let playerTaxi!: PlayerTaxi;
 let roadManager: RoadManager | undefined;
 let trafficSpawner!: TrafficSpawner;
