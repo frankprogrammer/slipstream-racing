@@ -540,10 +540,10 @@ export const CONFIG = {
 
   // ── Music (Phase 4 step 33 — procedural synthwave + chain layers) ──
   /** When false, music bus is silent (SFX unchanged). */
-  AUDIO_MUSIC_ENABLED: false,
-  /** Gain into master for music bus (SFX use separate bus). Was ~0.14 — too quiet vs engine. */
-  AUDIO_MUSIC_MASTER: 0.78,
-  AUDIO_MUSIC_BPM: 82,
+  AUDIO_MUSIC_ENABLED: true,
+  /** Gain into master for music bus (SFX use separate bus). */
+  AUDIO_MUSIC_MASTER: 3.5,
+  AUDIO_MUSIC_BPM: 110,
   /** Layer crossfade smoothing (higher = faster). */
   AUDIO_MUSIC_LAYER_SMOOTH: 8,
   /** Fade play/pause on the music mix (higher = reach full level faster). */

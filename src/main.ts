@@ -174,7 +174,8 @@ let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
 let introElapsedMs = 0;
 
-const CRASH_DURATION_MS = 800;
+const CRASH_SPIN_MS = 800;
+const POST_CRASH_SLIDE_MS = 1800;
 let crashActive = false;
 let crashElapsedMs = 0;
 let crashSpinDir = 1;
@@ -184,6 +185,9 @@ let crashStartZ = 0;
 let crashHitCarGroup: THREE.Group | null = null;
 let crashHitCarStartX = 0;
 let crashHitCarStartZ = 0;
+let crashScrollSpeed = 0;
+let postCrashSlide = false;
+let postCrashSlideMs = 0;
 
 function resetGame(): void {
   if (crashHitCarGroup) {
@@ -193,6 +197,9 @@ function resetGame(): void {
   }
   crashActive = false;
   crashElapsedMs = 0;
+  postCrashSlide = false;
+  postCrashSlideMs = 0;
+  crashScrollSpeed = 0;
   gameState.reset();
   laneSystem.reset();
   laneSystem.enabled = false;
@@ -339,7 +346,11 @@ function animate(): void {
       slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
       const baseScroll = Math.min(base + slingshotBaseBonus, maxScroll);
       // Slingshot now contributes only to persistent base bonus; no temporary speed burst.
-      const scrollPerFrame = baseScroll;
+      let scrollPerFrame = baseScroll;
+      if (crashActive) {
+        const spinT = Math.min(1, crashElapsedMs / CRASH_SPIN_MS);
+        scrollPerFrame = crashScrollSpeed * (1 - spinT * 0.5);
+      }
       const scrollDz = scrollPerFrame * 60 * delta;
 
       roadManager?.update(scrollDz);
@@ -405,6 +416,7 @@ function animate(): void {
           crashHitCarGroup = trafficSpawner.getHitCarGroup(hit.hitX, hit.hitZ);
           crashHitCarStartX = hit.hitX;
           crashHitCarStartZ = hit.hitZ;
+          crashScrollSpeed = scrollPerFrame;
           laneSystem.enabled = false;
           gameAudio.playCrash();
         }
@@ -422,6 +434,49 @@ function animate(): void {
   } else {
     slipstreamActivateBurst.setBurstWindowActive(false);
     slingshotTrail.setBoostActive(false);
+
+    const idleScroll = CONFIG.BASE_SCROLL_SPEED * 0.3;
+    let gameoverScroll = idleScroll;
+
+    if (postCrashSlide) {
+      postCrashSlideMs += delta * 1000;
+      const slideT = Math.min(1, postCrashSlideMs / POST_CRASH_SLIDE_MS);
+      const decay = (1 - slideT) ** 2;
+      gameoverScroll = idleScroll + (crashScrollSpeed * 0.5 - idleScroll) * decay;
+
+      const settle = 1 - slideT;
+      playerTaxi.group.rotation.y = crashSpinDir * (Math.PI * 0.7 + slideT * 0.3);
+      playerTaxi.group.rotation.z = crashLateralDir * 0.3 * settle;
+      playerTaxi.group.rotation.x = -0.15 * settle;
+      playerTaxi.group.position.x = crashStartX + crashLateralDir * (2.0 + slideT * 1.5);
+      playerTaxi.group.position.y = settle * 0.08;
+
+      if (crashHitCarGroup) {
+        const oppDir = -crashLateralDir;
+        crashHitCarGroup.rotation.y = oppDir * (Math.PI * 0.5 + slideT * 0.2);
+        crashHitCarGroup.rotation.z = oppDir * 0.2 * settle;
+        crashHitCarGroup.position.x = crashHitCarStartX + oppDir * (1.5 + slideT * 1.0);
+        crashHitCarGroup.position.y = settle * 0.05;
+      }
+
+      if (slideT >= 1) {
+        postCrashSlide = false;
+        if (crashHitCarGroup) {
+          crashHitCarGroup.rotation.set(0, 0, 0);
+          crashHitCarGroup.position.y = 0;
+          crashHitCarGroup = null;
+        }
+      }
+    }
+
+    const gameoverDz = gameoverScroll * 60 * delta;
+    roadManager?.update(gameoverDz);
+    trafficSpawner.update(delta, runTimeMs, gameoverScroll);
+    const pX = playerTaxi.group.position.x;
+    const pZ = playerTaxi.group.position.z;
+    tireMarks.update(delta, gameoverDz, trafficSpawner, pX, pZ);
+    vehicleExhaust.update(delta, gameoverDz, trafficSpawner, pX, pZ);
+
     slingshotTrail.update(delta, 0, playerTaxi);
     cameraController.update(playerTaxi, CONFIG.BASE_SCROLL_SPEED);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
@@ -476,17 +531,15 @@ function animate(): void {
 
   if (crashActive) {
     crashElapsedMs += delta * 1000;
-    const t = Math.min(1, crashElapsedMs / CRASH_DURATION_MS);
+    const t = Math.min(1, crashElapsedMs / CRASH_SPIN_MS);
     const easeOut = 1 - (1 - t) * (1 - t);
 
-    // Player car: spin away from hit
     playerTaxi.group.rotation.y = crashSpinDir * easeOut * Math.PI * 0.7;
     playerTaxi.group.rotation.z = crashLateralDir * easeOut * 0.3;
     playerTaxi.group.rotation.x = easeOut * -0.15;
     playerTaxi.group.position.x = crashStartX + crashLateralDir * easeOut * 2.0;
     playerTaxi.group.position.y = Math.sin(easeOut * Math.PI) * 0.35;
 
-    // Traffic car: spin in opposite direction
     if (crashHitCarGroup) {
       const oppDir = -crashLateralDir;
       crashHitCarGroup.rotation.y = oppDir * easeOut * Math.PI * 0.5;
@@ -497,11 +550,8 @@ function animate(): void {
 
     if (t >= 1) {
       crashActive = false;
-      if (crashHitCarGroup) {
-        crashHitCarGroup.rotation.set(0, 0, 0);
-        crashHitCarGroup.position.y = 0;
-        crashHitCarGroup = null;
-      }
+      postCrashSlide = true;
+      postCrashSlideMs = 0;
       gameState.transition("gameover");
     }
   }

@@ -1,5 +1,5 @@
 import { CONFIG } from '../config';
-import { SynthwaveMusic } from './SynthwaveMusic';
+import { RacingMusic } from './RacingMusic';
 
 /**
  * Procedural Web Audio (Step 32): engine + wind loops, draft tone, one-shot slingshot / milestones / crash.
@@ -20,7 +20,7 @@ export class GameAudio {
   private master: GainNode | null = null;
   private sfxBus: GainNode | null = null;
   private musicBus: GainNode | null = null;
-  private music: SynthwaveMusic | null = null;
+  private music: RacingMusic | null = null;
   private loopsBuilt = false;
   private bgMusicEl: HTMLAudioElement | null = null;
   private bgMusicSource: MediaElementAudioSourceNode | null = null;
@@ -204,7 +204,7 @@ export class GameAudio {
     this.draftOsc.start(0);
     this.windSrc.start(0);
 
-    this.music = new SynthwaveMusic(ctx, this.musicBus);
+    this.music = new RacingMusic(ctx, this.musicBus);
     this.music.build();
   }
 
@@ -238,7 +238,15 @@ export class GameAudio {
         this.bgMusicEl.muted = !CONFIG.AUDIO_BG_MUSIC_ENABLED;
       }
     }
-    this.music?.update(delta, u.playing, u.chain);
+    const base = CONFIG.BASE_SCROLL_SPEED;
+    const max = CONFIG.MAX_SCROLL_SPEED;
+    const span = Math.max(1e-6, max - base);
+    const t = Math.max(
+      0,
+      Math.min(1, (u.scrollPerFrame - base) / span)
+    );
+
+    this.music?.update(delta, u.playing, t);
     if (this.musicBus) {
       this.musicBus.gain.value = CONFIG.AUDIO_MUSIC_ENABLED
         ? CONFIG.AUDIO_MUSIC_MASTER
@@ -254,14 +262,6 @@ export class GameAudio {
     ) {
       return;
     }
-
-    const base = CONFIG.BASE_SCROLL_SPEED;
-    const max = CONFIG.MAX_SCROLL_SPEED;
-    const span = Math.max(1e-6, max - base);
-    const t = Math.max(
-      0,
-      Math.min(1, (u.scrollPerFrame - base) / span)
-    );
 
     const now = this.ctx.currentTime;
     if (CONFIG.AUDIO_ENGINE_ENABLED) {
