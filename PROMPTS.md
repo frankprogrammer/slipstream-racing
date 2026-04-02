@@ -718,3 +718,9 @@ Right now you can lane change into a lane that has a car or slipstream zone in i
 ### 2026-04-01 9:45 PM PDT
 
 Right now I am using GitHub and GitHub pages to publish my code and to build it out. For every tag it builds a new subdirectory. So like my V1 tag builds a folder. Uh, V1 underneath my GitHub pages. Instead of using tags, I want to use branches. So every time I push to a branch, it'll... you create a new it'll make a build under that folder Uh, Any code pushed to the main branch will Uh, make a build at the root directory of my GitHub page.
+
+---
+
+### 2026-04-01 10:05 PM PDT
+
+I committed this change and then created a test branch and pushed it to GitHub, but nothing is happening.
