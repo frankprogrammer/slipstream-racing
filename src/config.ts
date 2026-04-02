@@ -48,7 +48,7 @@ export const GAME_PALETTE = {
   TAIL_LIGHT: 0xc40000,
   HEADLIGHT: 0xfff8f0,
   LANE_MARKING: 0xffffff,
-  UI_TEXT: 0xff0000,
+  UI_TEXT: 0xf8fafc,
   /** Muted stats / secondary copy. */
   UI_DIM: 0x9ca3af,
   /** App chrome behind canvas. */
