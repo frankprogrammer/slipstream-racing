@@ -282,11 +282,11 @@ export const CONFIG = {
    * Per second: slipstream-only bonus (above `BASE_SCROLL_SPEED`) decays toward 0.
    * Speed no longer ramps up over time; only successful slipstreams add bonus.
    */
-  BASE_SPEED_BONUS_DECAY_PER_SECOND: 0.013,
+  BASE_SPEED_BONUS_DECAY_PER_SECOND: 0.035,
   SLINGSHOT_SPEED_BURST: 0.0,
   SLINGSHOT_BURST_DURATION: 750,
   /** Added to base scroll on each successful slipstream release (same units as BASE_SCROLL_SPEED). */
-  SLINGSHOT_BASE_SPEED_INCREMENT: 0.03,
+  SLINGSHOT_BASE_SPEED_INCREMENT: 0.07,
 
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,

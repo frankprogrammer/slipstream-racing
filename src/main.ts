@@ -309,8 +309,7 @@ function animate(): void {
       const headroom = Math.max(0, maxScroll - base);
       slingshotBaseBonus = Math.max(
         0,
-        slingshotBaseBonus -
-          CONFIG.BASE_SPEED_BONUS_DECAY_PER_SECOND * delta,
+        slingshotBaseBonus - CONFIG.BASE_SPEED_BONUS_DECAY_PER_SECOND * delta,
       );
       slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
       const baseScroll = Math.min(base + slingshotBaseBonus, maxScroll);
