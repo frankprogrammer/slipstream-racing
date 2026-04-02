@@ -63,8 +63,18 @@ jobs:
 
       - name: Compute branch slug
         run: |
-          slug="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -c 'a-z0-9._-' '-')"
+          # Use printf (not echo) so we don't accidentally slugify a trailing newline.
+          slug="$(printf '%s' "${GITHUB_REF_NAME}" \
+            | tr '[:upper:]' '[:lower:]' \
+            | tr '/' '-' \
+            | tr -c 'a-z0-9._-' '-' \
+            | sed -E 's/-+/-/g; s/^-+//; s/-+$//')"
+          if [ -z "${slug}" ]; then
+            slug="branch"
+          fi
           echo "BRANCH_SLUG=${slug}" >> "$GITHUB_ENV"
+          echo "Branch '${GITHUB_REF_NAME}' -> folder '${slug}'"
+          echo "Branch URL: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/${slug}/"
 
       - name: Install and build
         env:

@@ -724,3 +724,9 @@ Right now I am using GitHub and GitHub pages to publish my code and to build it 
 ### 2026-04-01 10:05 PM PDT
 
 I committed this change and then created a test branch and pushed it to GitHub, but nothing is happening.
+
+---
+
+### 2026-04-01 10:20 PM PDT
+
+This still seems to be making builds for the main branch, but it does not make new builds. Or at least the URLs don't work for the child branches.
