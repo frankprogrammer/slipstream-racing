@@ -5,6 +5,8 @@ import { CONFIG, rgbaFromHex } from '../config';
  * HUD — HTML/CSS overlay: milestone copy + screen flash only.
  * Score and chain render on the taxi (`TaxiWorldHud`).
  */
+const TOUCH_HINT_BUTTON_PX = 72;
+
 export class HUD {
   private milestoneEl: HTMLElement;
   private flashEl: HTMLElement;
@@ -26,14 +28,14 @@ export class HUD {
 
   private buildTouchHint(direction: 'left' | 'right'): HTMLElement {
     const el = document.createElement('div');
-    const arrow = direction === 'left' ? '\u27a1' : '\u2b05';
+    const arrow = direction === 'left' ? '\u2b05' : '\u27a1';
     el.textContent = arrow;
     el.style.cssText = [
       'position:absolute',
       'left:0',
       'top:0',
-      'width:72px',
-      'height:72px',
+      `width:${TOUCH_HINT_BUTTON_PX}px`,
+      `height:${TOUCH_HINT_BUTTON_PX}px`,
       'border-radius:9999px',
       'display:flex',
       'align-items:center',
@@ -143,17 +145,20 @@ export class HUD {
     }
 
     const rect = container.getBoundingClientRect();
-    const left = this.tmpProj.copy(leftWorldPoint).project(camera);
-    const leftPx = (left.x * 0.5 + 0.5) * rect.width;
-    const leftPy = (-left.y * 0.5 + 0.5) * rect.height;
-    this.touchHintLeftEl.style.left = `${leftPx.toFixed(1)}px`;
-    this.touchHintLeftEl.style.top = `${leftPy.toFixed(1)}px`;
+    const half = TOUCH_HINT_BUTTON_PX * 0.5;
+    const leftPx = half;
+    const rightPx = rect.width - half;
 
+    const left = this.tmpProj.copy(leftWorldPoint).project(camera);
+    const leftPy = (-left.y * 0.5 + 0.5) * rect.height;
     const right = this.tmpProj.copy(rightWorldPoint).project(camera);
-    const rightPx = (right.x * 0.5 + 0.5) * rect.width;
     const rightPy = (-right.y * 0.5 + 0.5) * rect.height;
+    const midPy = (leftPy + rightPy) * 0.5;
+
+    this.touchHintLeftEl.style.left = `${leftPx.toFixed(1)}px`;
+    this.touchHintLeftEl.style.top = `${midPy.toFixed(1)}px`;
     this.touchHintRightEl.style.left = `${rightPx.toFixed(1)}px`;
-    this.touchHintRightEl.style.top = `${rightPy.toFixed(1)}px`;
+    this.touchHintRightEl.style.top = `${midPy.toFixed(1)}px`;
 
     const step = Math.floor(runTimeMs / 380) % 2;
     this.touchHintLeftEl.style.opacity = step === 0 ? '1' : '0';

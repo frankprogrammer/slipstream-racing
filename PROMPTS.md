@@ -730,3 +730,15 @@ I committed this change and then created a test branch and pushed it to GitHub, 
 ### 2026-04-01 10:20 PM PDT
 
 This still seems to be making builds for the main branch, but it does not make new builds. Or at least the URLs don't work for the child branches.
+
+---
+
+### 2026-04-02 1:20 PM PDT
+
+The two flashing buttons for the arrows at the start of the game Should... be aligned to the left and right edges of the screen respectively.
+
+---
+
+### 2026-04-02 1:21 PM PDT
+
+Right now the arrows are flipped onto which side they are being shown. Please change that.
