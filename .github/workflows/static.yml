@@ -1,5 +1,5 @@
 # GitHub Pages: main → https://<user>.github.io/<repo>/
-# Tags matching v* → https://<user>.github.io/<repo>/<tag>/ (e.g. v1) without removing the root site or other tags.
+# Any other branch → https://<user>.github.io/<repo>/<branch>/ without removing the root site or other branches.
 #
 # Requires: Repo → Settings → Pages → Build and deployment → Source: **Deploy from a branch**
 # Branch: **gh-pages** / **/** (root). (Not "GitHub Actions" — this workflow pushes the gh-pages branch.)
@@ -7,8 +7,11 @@ name: Deploy static content to Pages
 
 on:
   push:
-    branches: [main]
-    tags: ['v*']
+    branches:
+      - main
+      - '**'
+    branches-ignore:
+      - gh-pages
 
   workflow_dispatch:
 
@@ -47,8 +50,8 @@ jobs:
           publish_dir: ./dist
           keep_files: true
 
-  deploy-tag:
-    if: startsWith(github.ref, 'refs/tags/v')
+  deploy-branch:
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -60,17 +63,22 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Compute branch slug
+        run: |
+          slug="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -c 'a-z0-9._-' '-')"
+          echo "BRANCH_SLUG=${slug}" >> "$GITHUB_ENV"
+
       - name: Install and build
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/${{ github.ref_name }}/
+          VITE_BASE: /${{ github.event.repository.name }}/${{ env.BRANCH_SLUG }}/
         run: |
           npm ci
           npm run build
 
-      - name: Deploy to gh-pages (subfolder named like the tag)
+      - name: Deploy to gh-pages (subfolder named like branch)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          destination_dir: ${{ github.ref_name }}
+          destination_dir: ${{ env.BRANCH_SLUG }}
           keep_files: true
