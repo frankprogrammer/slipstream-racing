@@ -124,6 +124,11 @@ export class TrafficSpawner {
       if (!this.longFootprintsOverlap(self.group.position.z, hzSelf, o.group.position.z, hzOther)) {
         continue;
       }
+      // Another car already merging into this lane — block even before their X reaches it
+      // (prevents left + right outer lanes both committing into center at the same Z).
+      if (o.laneChangeState === 'active' && o.laneChangeToLane === targetLane) {
+        return true;
+      }
       // Use live X so cars mid-lane-change still block entry into that lane corridor.
       if (Math.abs(o.group.position.x - targetX) <= CONFIG.LANE_WIDTH * 0.55) {
         return true;

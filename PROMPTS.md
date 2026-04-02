@@ -748,3 +748,9 @@ Right now the arrows are flipped onto which side they are being shown. Please ch
 ### 2026-04-02 1:36 PM PDT
 
 Let's remove the dragging Touch input functionality. It should be that if you tap on the left side of the screen, Anywhere left of the middle? It moves the character to the left and maybe tap on the right side of the screen anywhere. uh, to the right of the middle and move it to the right. Also, is it possible to use to support multi-touch so that if I'm currently holding my right thumb finger down and then I tap on the left Side, it will act properly detect it. as a left tap.
+
+---
+
+### 2026-04-02 1:41 PM PDT
+
+Right now, if there is a car in the left lane and a car in the right lane, there is a chance that they both may change lanes into the middle lane at the same time. We want to prevent this from ever happening.
