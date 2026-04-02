@@ -343,8 +343,20 @@ export const CONFIG = {
 
   // ── Traffic ──
   TRAFFIC_PHASES: [
-    { startTime: 0, spawnRate: 2000, lanes: [1], speedVariance: 0 },
-    { startTime: 20000, spawnRate: 1200, lanes: [0, 1, 2], speedVariance: 0.2 },
+    {
+      startTime: 0,
+      spawnRate: 2000,
+      lanes: [1],
+      speedVariance: 0,
+      laneChange: true,
+    },
+    {
+      startTime: 20000,
+      spawnRate: 1200,
+      lanes: [0, 1, 2],
+      speedVariance: 0.2,
+      laneChange: true,
+    },
     {
       startTime: 60000,
       spawnRate: 800,
@@ -362,7 +374,19 @@ export const CONFIG = {
   ] as readonly TrafficPhase[],
   /** Single pooled mesh type (playerCar.glb clones); kept for design-doc parity. */
   VEHICLE_TYPES: 1,
-  VEHICLE_LANE_CHANGE_TELEGRAPH: 1500,
+  /**
+   * Start lane-change behavior when traffic reaches this world +Z ahead of the player.
+   * ~2 segments ahead with default segment length (20).
+   */
+  VEHICLE_LANE_CHANGE_TRIGGER_AHEAD_Z: 40,
+  /** Probability (0..1) that an eligible car performs a lane change when it reaches trigger distance. */
+  VEHICLE_LANE_CHANGE_CHANCE: 0.25,
+  /** Total lane-change sequence duration (telegraph + crossing), in milliseconds. */
+  VEHICLE_LANE_CHANGE_TOTAL_MS: 500,
+  /** Portion of total duration spent in pre-change lateral telegraph (0..1). */
+  VEHICLE_LANE_CHANGE_SIGNAL_PORTION: 0.5,
+  /** Telegraph drift as a fraction of lane width before full lane crossing begins. */
+  VEHICLE_LANE_CHANGE_SIGNAL_OFFSET_FRAC: 0.18,
   /**
    * World +Z speed (same units as BASE_SCROLL_SPEED). Traffic moves forward with the road flow
    * but slower than the player; net approach = BASE_SCROLL_SPEED − this (× speed variance).
@@ -374,7 +398,7 @@ export const CONFIG = {
   /**
    * World +Z ahead of player for new spawns. Higher = farther up the road / nearer screen top (horizon).
    */
-  TRAFFIC_SPAWN_AHEAD_Z: 70,
+  TRAFFIC_SPAWN_AHEAD_Z: 100,
   /** Extra random +Z spread (0..this) on each spawn. */
   TRAFFIC_SPAWN_AHEAD_Z_JITTER: 12,
   /**

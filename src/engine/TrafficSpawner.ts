@@ -26,6 +26,10 @@ type PoolEntry = {
   slipstreamConsumed: boolean;
   laneIndex: number;
   speedMul: number;
+  laneChangeState: 'idle' | 'active' | 'done';
+  laneChangeFromLane: number;
+  laneChangeToLane: number;
+  laneChangeStartMs: number;
 };
 
 /**
@@ -81,6 +85,10 @@ export class TrafficSpawner {
       slipstreamConsumed: false,
       laneIndex: 1,
       speedMul: 1,
+      laneChangeState: 'idle',
+      laneChangeFromLane: 1,
+      laneChangeToLane: 1,
+      laneChangeStartMs: 0,
     };
   }
 
@@ -94,7 +102,91 @@ export class TrafficSpawner {
       p.active = false;
       p.slipstreamConsumed = false;
       p.group.visible = false;
+      p.laneChangeState = 'idle';
+      p.laneChangeFromLane = p.laneIndex;
+      p.laneChangeToLane = p.laneIndex;
+      p.laneChangeStartMs = 0;
     }
+  }
+
+  private easeInOutCubic(t: number): number {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  private pickAdjacentLaneForChange(phase: TrafficPhase, fromLane: number): number | null {
+    const candidates: number[] = [];
+    const left = fromLane - 1;
+    const right = fromLane + 1;
+    if (left >= 0 && left < CONFIG.LANE_COUNT && phase.lanes.includes(left)) {
+      candidates.push(left);
+    }
+    if (right >= 0 && right < CONFIG.LANE_COUNT && phase.lanes.includes(right)) {
+      candidates.push(right);
+    }
+    if (!candidates.length) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)]!;
+  }
+
+  private maybeStartLaneChange(p: PoolEntry, phase: TrafficPhase, elapsedMs: number): void {
+    if (p.laneChangeState !== 'idle') return;
+    if (!phase.laneChange) return;
+    if (phase.lanes.length < 2) {
+      p.laneChangeState = 'done';
+      return;
+    }
+    const triggerZ = CONFIG.TAXI_POSITION_Z + CONFIG.VEHICLE_LANE_CHANGE_TRIGGER_AHEAD_Z;
+    if (p.group.position.z > triggerZ) return;
+
+    if (Math.random() > CONFIG.VEHICLE_LANE_CHANGE_CHANCE) {
+      p.laneChangeState = 'done';
+      return;
+    }
+    const targetLane = this.pickAdjacentLaneForChange(phase, p.laneIndex);
+    if (targetLane === null) {
+      p.laneChangeState = 'done';
+      return;
+    }
+
+    p.laneChangeState = 'active';
+    p.laneChangeFromLane = p.laneIndex;
+    p.laneChangeToLane = targetLane;
+    p.laneChangeStartMs = elapsedMs;
+  }
+
+  private updateLaneChange(p: PoolEntry, elapsedMs: number): void {
+    if (p.laneChangeState !== 'active') return;
+    const total = Math.max(1, CONFIG.VEHICLE_LANE_CHANGE_TOTAL_MS);
+    const signalPortion = THREE.MathUtils.clamp(
+      CONFIG.VEHICLE_LANE_CHANGE_SIGNAL_PORTION,
+      0.05,
+      0.95
+    );
+    const tRaw = (elapsedMs - p.laneChangeStartMs) / total;
+    const t = THREE.MathUtils.clamp(tRaw, 0, 1);
+    const fromX = this.laneIndexToX(p.laneChangeFromLane);
+    const toX = this.laneIndexToX(p.laneChangeToLane);
+    const dir = Math.sign(toX - fromX) || 1;
+    const signalOffset =
+      CONFIG.LANE_WIDTH * CONFIG.VEHICLE_LANE_CHANGE_SIGNAL_OFFSET_FRAC * dir;
+
+    if (t >= 1) {
+      p.group.position.x = toX;
+      p.laneIndex = p.laneChangeToLane;
+      p.laneChangeState = 'done';
+      return;
+    }
+
+    let x = fromX;
+    if (t < signalPortion) {
+      const u = this.easeInOutCubic(t / signalPortion);
+      x = THREE.MathUtils.lerp(fromX, fromX + signalOffset, u);
+    } else {
+      const u = this.easeInOutCubic((t - signalPortion) / (1 - signalPortion));
+      x = THREE.MathUtils.lerp(fromX + signalOffset, toX, u);
+    }
+    p.group.position.x = x;
   }
 
   private getPhase(elapsedMs: number): TrafficPhase {
@@ -259,6 +351,10 @@ export class TrafficSpawner {
     idle.active = true;
     idle.slipstreamConsumed = false;
     idle.group.visible = true;
+    idle.laneChangeState = 'idle';
+    idle.laneChangeFromLane = lane;
+    idle.laneChangeToLane = lane;
+    idle.laneChangeStartMs = 0;
 
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
     let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
@@ -299,9 +395,12 @@ export class TrafficSpawner {
         CONFIG.VEHICLE_TRAFFIC_FORWARD_SPEED * 60 * deltaSec * p.speedMul;
       const net = scroll - forward;
       p.group.position.z -= Math.max(CONFIG.VEHICLE_TRAFFIC_MIN_APPROACH, net);
+      this.maybeStartLaneChange(p, phase, elapsedMs);
+      this.updateLaneChange(p, elapsedMs);
       if (p.group.position.z < CONFIG.TAXI_POSITION_Z - this.despawnBehindZ) {
         p.active = false;
         p.group.visible = false;
+        p.laneChangeState = 'idle';
       }
     }
 
