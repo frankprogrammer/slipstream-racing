@@ -291,8 +291,16 @@ function animate(): void {
       const laneX = laneSystem.getLaneX(nowMs);
       const roll = laneSystem.getBodyRollRad(nowMs);
       const steer = laneSystem.getWheelSteerRad(nowMs);
-      playerTaxi.applyLaneVisuals(laneX, roll, steer);
-      milestoneAnchorWorld.set(laneX, 1.1, playerTaxi.group.position.z + 2.2);
+      const roadFrame = roadManager?.sampleFrameAtZ(playerTaxi.group.position.z) ?? null;
+      const laneWorldX = roadFrame
+        ? roadFrame.centerX + roadFrame.rightX * laneX
+        : laneX;
+      const laneWorldZ = roadFrame
+        ? roadFrame.centerZ + roadFrame.rightZ * laneX
+        : playerTaxi.group.position.z;
+      playerTaxi.group.position.z = laneWorldZ;
+      playerTaxi.applyLaneVisuals(laneWorldX, roll, steer, roadFrame?.yaw ?? 0);
+      milestoneAnchorWorld.set(playerTaxi.group.position.x, 1.1, playerTaxi.group.position.z + 2.2);
       hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
 
       slingshotTrail.setBoostActive(false);
@@ -320,11 +328,21 @@ function animate(): void {
 
       roadManager?.update(scrollDz);
       trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
+      trafficSpawner.conformToRoad(roadManager ?? null);
       const laneX = laneSystem.getLaneX(nowMs);
       const roll = laneSystem.getBodyRollRad(nowMs);
       const steer = laneSystem.getWheelSteerRad(nowMs);
-      playerTaxi.applyLaneVisuals(laneX, roll, steer);
-      milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
+      const roadFrame = roadManager?.sampleFrameAtZ(CONFIG.TAXI_POSITION_Z) ?? null;
+      const laneWorldX = roadFrame
+        ? roadFrame.centerX + roadFrame.rightX * laneX
+        : laneX;
+      const laneWorldZ = roadFrame
+        ? roadFrame.centerZ + roadFrame.rightZ * laneX
+        : CONFIG.TAXI_POSITION_Z;
+      const laneWorldYaw = roadFrame ? roadFrame.yaw : 0;
+      playerTaxi.group.position.z = laneWorldZ;
+      playerTaxi.applyLaneVisuals(laneWorldX, roll, steer, laneWorldYaw);
+      milestoneAnchorWorld.set(playerTaxi.group.position.x, 1.1, playerTaxi.group.position.z + 2.2);
       hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
 
       const slip = slipstreamZone.update(
@@ -363,7 +381,17 @@ function animate(): void {
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
-      cameraController.update(playerTaxi, scrollPerFrame);
+      cameraController.update(
+        playerTaxi,
+        scrollPerFrame,
+        roadFrame
+          ? {
+              centerX: roadFrame.centerX,
+              centerZ: roadFrame.centerZ,
+              yaw: roadFrame.yaw,
+            }
+          : null,
+      );
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
         gameState.transition("gameover");
@@ -382,10 +410,30 @@ function animate(): void {
     slipstreamActivateBurst.setBurstWindowActive(false);
     slingshotTrail.setBoostActive(false);
     slingshotTrail.update(delta, 0, playerTaxi);
-    cameraController.update(playerTaxi, CONFIG.BASE_SCROLL_SPEED);
-    playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
     const laneX = laneSystem.getLaneX(nowMs);
-    milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
+    const roadFrame = roadManager?.sampleFrameAtZ(CONFIG.TAXI_POSITION_Z) ?? null;
+    cameraController.update(
+      playerTaxi,
+      CONFIG.BASE_SCROLL_SPEED,
+      roadFrame
+        ? {
+            centerX: roadFrame.centerX,
+            centerZ: roadFrame.centerZ,
+            yaw: roadFrame.yaw,
+          }
+        : null,
+    );
+    playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
+    const laneWorldX = roadFrame
+      ? roadFrame.centerX + roadFrame.rightX * laneX
+      : laneX;
+    const laneWorldZ = roadFrame
+      ? roadFrame.centerZ + roadFrame.rightZ * laneX
+      : CONFIG.TAXI_POSITION_Z;
+    playerTaxi.group.position.z = laneWorldZ;
+    playerTaxi.group.position.x = laneWorldX;
+    playerTaxi.group.rotation.y = roadFrame?.yaw ?? 0;
+    milestoneAnchorWorld.set(playerTaxi.group.position.x, 1.1, playerTaxi.group.position.z + 2.2);
     hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
 

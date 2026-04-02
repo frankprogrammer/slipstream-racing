@@ -108,28 +108,94 @@ function publicAssetUrl(file: string): string {
   return `${import.meta.env.BASE_URL}${file}`;
 }
 
-function pickEnvFilename(segmentIndex: number): string | null {
-  const phases = CONFIG.ROAD_ENVIRONMENTS;
-  const K = CONFIG.ROAD_ENV_SEGMENTS_PER_PHASE;
-  if (!phases.length || K <= 0) return null;
-  const phase = Math.floor(segmentIndex / K) % phases.length;
-  const variants = phases[phase];
+type MarkerPose = {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+};
+
+type RoadPieceTemplate = {
+  root: THREE.Group;
+  startMarker: MarkerPose | null;
+  endMarker: MarkerPose | null;
+};
+
+type RoadPiecePick = {
+  kind: 'env' | 'curve';
+  file: string | null;
+};
+
+type RoadSegmentSlot = {
+  root: THREE.Group;
+  segmentIndex: number;
+  envHolder: THREE.Group | null;
+  pieceTemplate: RoadPieceTemplate | null;
+  pieceKind: 'env' | 'curve';
+};
+
+export type RoadFrameSample = {
+  centerX: number;
+  centerZ: number;
+  rightX: number;
+  rightZ: number;
+  yaw: number;
+};
+
+function pickVariant(variants: readonly string[], seed: number): string | null {
   if (!variants.length) return null;
-  const pick =
-    Math.floor(hash01(segmentIndex * 7919 + phase * 17) * variants.length) %
-    variants.length;
+  const pick = Math.floor(hash01(seed) * variants.length) % variants.length;
   return variants[pick] ?? null;
 }
 
-async function loadEnvTemplates(
-  loader: GLTFLoader
-): Promise<Map<string, THREE.Group>> {
-  const map = new Map<string, THREE.Group>();
+function pickRoadPiece(segmentIndex: number): RoadPiecePick {
   const phases = CONFIG.ROAD_ENVIRONMENTS;
-  if (!phases.length) return map;
+  const curves = CONFIG.ROAD_ENV_CURVE_SEGMENTS;
+  const K = Math.max(1, CONFIG.ROAD_ENV_SEGMENTS_PER_PHASE);
+  const C = Math.max(0, CONFIG.ROAD_ENV_CURVE_CONNECTIONS_PER_PHASE);
+  if (!phases.length || K <= 0) return { kind: 'env', file: null };
+  const blockLen = K + C;
+  const phase = Math.floor(segmentIndex / blockLen) % phases.length;
+  const local = segmentIndex % blockLen;
+
+  if (local < K || C <= 0) {
+    return {
+      kind: 'env',
+      file: pickVariant(phases[phase] ?? [], segmentIndex * 7919 + phase * 17),
+    };
+  }
+
+  return {
+    kind: 'curve',
+    file: pickVariant(curves[phase] ?? [], segmentIndex * 9157 + phase * 23),
+  };
+}
+
+function readMarkerPose(root: THREE.Object3D, namePrefix: string): MarkerPose | null {
+  let found: THREE.Object3D | undefined;
+  root.traverse((obj) => {
+    if (found) return;
+    if (obj.name.startsWith(namePrefix)) found = obj;
+  });
+  if (!found) return null;
+  const marker = found;
+  marker.updateMatrixWorld(true);
+  const p = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  marker.getWorldPosition(p);
+  marker.getWorldQuaternion(q);
+  return { position: p, quaternion: q };
+}
+
+async function loadRoadPieceTemplates(
+  loader: GLTFLoader
+): Promise<Map<string, RoadPieceTemplate>> {
+  const map = new Map<string, RoadPieceTemplate>();
+  if (!CONFIG.ROAD_ENVIRONMENTS.length) return map;
 
   const unique = new Set<string>();
-  for (const row of phases) {
+  for (const row of CONFIG.ROAD_ENVIRONMENTS) {
+    for (const f of row) unique.add(f);
+  }
+  for (const row of CONFIG.ROAD_ENV_CURVE_SEGMENTS) {
     for (const f of row) unique.add(f);
   }
 
@@ -137,9 +203,15 @@ async function loadEnvTemplates(
     [...unique].map(async (file) => {
       try {
         const gltf = await loader.loadAsync(publicAssetUrl(file));
-        map.set(file, fitEnvGltfToSegment(gltf));
+        const fitted = fitEnvGltfToSegment(gltf);
+        fitted.updateMatrixWorld(true);
+        map.set(file, {
+          root: fitted,
+          startMarker: readMarkerPose(fitted, 'Marker_Start'),
+          endMarker: readMarkerPose(fitted, 'Marker_End'),
+        });
       } catch (e) {
-        console.warn(`RoadManager: failed to load environment GLB "${file}"`, e);
+        console.warn(`RoadManager: failed to load road GLB "${file}"`, e);
       }
     })
   );
@@ -150,13 +222,6 @@ async function loadEnvTemplates(
  * RoadManager — Infinite corridor from recycling segment roots.
  * Draws only `CONFIG.ROAD_ENVIRONMENTS` GLBs (no procedural plane, lane lines, or `ROAD_SEGMENT_GLB`).
  */
-type RoadSegmentSlot = {
-  root: THREE.Group;
-  zCenter: number;
-  segmentIndex: number;
-  envHolder: THREE.Group | null;
-};
-
 export class RoadManager {
   readonly group = new THREE.Group();
 
@@ -165,12 +230,14 @@ export class RoadManager {
   private readonly playerZ: number;
   private readonly recycleBehind = 40;
   private nextSegmentIndex: number;
-  private readonly envTemplates: Map<string, THREE.Group> | null;
+  private readonly roadPieceTemplates: Map<string, RoadPieceTemplate> | null;
+  private readonly tmpStart = new THREE.Vector3();
+  private readonly tmpEnd = new THREE.Vector3();
 
-  private constructor(playerZ: number, envTemplates: Map<string, THREE.Group>) {
+  private constructor(playerZ: number, roadPieceTemplates: Map<string, RoadPieceTemplate>) {
     this.playerZ = playerZ;
     this.group.name = 'RoadGroup';
-    this.envTemplates = envTemplates.size > 0 ? envTemplates : null;
+    this.roadPieceTemplates = roadPieceTemplates.size > 0 ? roadPieceTemplates : null;
     this.nextSegmentIndex = CONFIG.ROAD_VISIBLE_SEGMENTS;
 
     this.buildSegments();
@@ -178,30 +245,35 @@ export class RoadManager {
 
   static async create(playerZ: number): Promise<RoadManager> {
     const loader = new GLTFLoader();
-    const envTemplates = await loadEnvTemplates(loader);
-    return new RoadManager(playerZ, envTemplates);
+    const roadPieceTemplates = await loadRoadPieceTemplates(loader);
+    return new RoadManager(playerZ, roadPieceTemplates);
   }
 
   private makeEnvHolder(): THREE.Group | null {
-    if (!this.envTemplates) return null;
+    if (!this.roadPieceTemplates) return null;
     const g = new THREE.Group();
     g.name = 'RoadEnvHolder';
     return g;
   }
 
-  private applyEnvironmentToSegment(seg: RoadSegmentSlot): void {
-    if (!seg.envHolder || !this.envTemplates) return;
+  private applyRoadPieceToSegment(seg: RoadSegmentSlot): void {
+    seg.pieceTemplate = null;
+    seg.pieceKind = 'env';
+    if (!seg.envHolder || !this.roadPieceTemplates) return;
     while (seg.envHolder.children.length > 0) {
       seg.envHolder.remove(seg.envHolder.children[0]!);
     }
-    const file = pickEnvFilename(seg.segmentIndex);
+    const selected = pickRoadPiece(seg.segmentIndex);
+    seg.pieceKind = selected.kind;
+    const file = selected?.file ?? null;
     if (!file) return;
-    const tmpl = this.envTemplates.get(file);
+    const tmpl = this.roadPieceTemplates.get(file);
     if (!tmpl) return;
-    seg.envHolder.add(tmpl.clone(true));
+    seg.envHolder.add(tmpl.root.clone(true));
+    seg.pieceTemplate = tmpl;
   }
 
-  private pushSegment(root: THREE.Group, zCenter: number, segmentIndex: number): void {
+  private pushSegment(root: THREE.Group, segmentIndex: number): void {
     const envHolder = this.makeEnvHolder();
     if (envHolder) {
       root.add(envHolder);
@@ -209,14 +281,51 @@ export class RoadManager {
     this.group.add(root);
     const seg: RoadSegmentSlot = {
       root,
-      zCenter,
       segmentIndex,
       envHolder,
+      pieceTemplate: null,
+      pieceKind: 'env',
     };
-    if (envHolder) {
-      this.applyEnvironmentToSegment(seg);
-    }
     this.segments.push(seg);
+  }
+
+  private placeFirstSegment(seg: RoadSegmentSlot, zCenter: number): void {
+    seg.root.position.set(0, 0, zCenter);
+    seg.root.quaternion.identity();
+  }
+
+  private getStartMarkerPoseOrFallback(tmpl: RoadPieceTemplate | null): MarkerPose {
+    if (tmpl?.startMarker) return tmpl.startMarker;
+    return {
+      position: new THREE.Vector3(0, 0, -CONFIG.ROAD_SEGMENT_LENGTH * 0.5),
+      quaternion: new THREE.Quaternion(),
+    };
+  }
+
+  private getEndMarkerPoseOrFallback(tmpl: RoadPieceTemplate | null): MarkerPose {
+    if (tmpl?.endMarker) return tmpl.endMarker;
+    return {
+      position: new THREE.Vector3(0, 0, CONFIG.ROAD_SEGMENT_LENGTH * 0.5),
+      quaternion: new THREE.Quaternion(),
+    };
+  }
+
+  private placeAfterPrevious(seg: RoadSegmentSlot, prev: RoadSegmentSlot): void {
+    const prevEnd = this.getEndMarkerPoseOrFallback(prev.pieceTemplate);
+    const nextStart = this.getStartMarkerPoseOrFallback(seg.pieceTemplate);
+
+    // Solve so: world(nextStart) == world(prevEnd), and next start tangent matches prev end tangent.
+    const rootQ = prev.root.quaternion
+      .clone()
+      .multiply(prevEnd.quaternion)
+      .multiply(nextStart.quaternion.clone().invert());
+    const startWorldOffset = nextStart.position.clone().applyQuaternion(rootQ);
+    const prevEndPos = prevEnd.position
+      .clone()
+      .applyQuaternion(prev.root.quaternion)
+      .add(prev.root.position);
+    seg.root.quaternion.copy(rootQ);
+    seg.root.position.copy(prevEndPos.sub(startWorldOffset));
   }
 
   /** Segment roots + `ROAD_ENVIRONMENTS` clones only (no separate road mesh). */
@@ -227,10 +336,14 @@ export class RoadManager {
 
     for (let i = 0; i < N; i++) {
       const root = new THREE.Group();
-      const zCenter = firstCenter + i * L;
-      root.position.z = zCenter;
-
-      this.pushSegment(root, zCenter, i);
+      this.pushSegment(root, i);
+      const seg = this.segments[i]!;
+      this.applyRoadPieceToSegment(seg);
+      if (i === 0) {
+        this.placeFirstSegment(seg, firstCenter);
+      } else {
+        this.placeAfterPrevious(seg, this.segments[i - 1]!);
+      }
     }
   }
 
@@ -239,13 +352,16 @@ export class RoadManager {
     const N = CONFIG.ROAD_VISIBLE_SEGMENTS;
     const firstCenter = this.playerZ - this.recycleBehind + L * 0.5;
     this.nextSegmentIndex = N;
+
     for (let i = 0; i < N; i++) {
-      const zCenter = firstCenter + i * L;
       const s = this.segments[i]!;
-      s.zCenter = zCenter;
-      s.root.position.z = zCenter;
       s.segmentIndex = i;
-      this.applyEnvironmentToSegment(s);
+      this.applyRoadPieceToSegment(s);
+      if (i === 0) {
+        this.placeFirstSegment(s, firstCenter);
+      } else {
+        this.placeAfterPrevious(s, this.segments[i - 1]!);
+      }
     }
   }
 
@@ -255,21 +371,173 @@ export class RoadManager {
    */
   update(dz: number): void {
     if (dz <= 0) return;
-    const L = CONFIG.ROAD_SEGMENT_LENGTH;
-    let maxZ = -Infinity;
+
     for (const s of this.segments) {
-      s.zCenter -= dz;
-      s.root.position.z = s.zCenter;
-      if (s.zCenter > maxZ) maxZ = s.zCenter;
+      s.root.position.z -= dz;
     }
-    for (const s of this.segments) {
-      if (s.zCenter < this.playerZ - this.recycleBehind) {
-        s.zCenter = maxZ + L;
-        s.root.position.z = s.zCenter;
-        maxZ = s.zCenter;
-        s.segmentIndex = this.nextSegmentIndex++;
-        this.applyEnvironmentToSegment(s);
+
+    while (
+      this.segments.length > 0 &&
+      this.segments[0]!.root.position.z < this.playerZ - this.recycleBehind
+    ) {
+      const recycled = this.segments.shift()!;
+      recycled.segmentIndex = this.nextSegmentIndex++;
+      this.applyRoadPieceToSegment(recycled);
+      const prev = this.segments[this.segments.length - 1];
+      if (prev) {
+        this.placeAfterPrevious(recycled, prev);
+      }
+      this.segments.push(recycled);
+    }
+  }
+
+  private getSegmentStartEndXZ(seg: RoadSegmentSlot, startOut: THREE.Vector3, endOut: THREE.Vector3): void {
+    const tmpl = seg.pieceTemplate;
+    const startMarker = tmpl?.startMarker;
+    const endMarker = tmpl?.endMarker;
+    if (startMarker && endMarker) {
+      startOut
+        .copy(startMarker.position)
+        .applyQuaternion(seg.root.quaternion)
+        .add(seg.root.position);
+      endOut
+        .copy(endMarker.position)
+        .applyQuaternion(seg.root.quaternion)
+        .add(seg.root.position);
+      return;
+    }
+
+    const half = CONFIG.ROAD_SEGMENT_LENGTH * 0.5;
+    startOut
+      .set(0, 0, -half)
+      .applyQuaternion(seg.root.quaternion)
+      .add(seg.root.position);
+    endOut
+      .set(0, 0, half)
+      .applyQuaternion(seg.root.quaternion)
+      .add(seg.root.position);
+  }
+
+  private sampleAlongSegment(seg: RoadSegmentSlot, t: number): RoadFrameSample {
+    const u = THREE.MathUtils.clamp(t, 0, 1);
+    this.getSegmentStartEndXZ(seg, this.tmpStart, this.tmpEnd);
+    const dx = this.tmpEnd.x - this.tmpStart.x;
+    const dz = this.tmpEnd.z - this.tmpStart.z;
+    const chordLen = Math.hypot(dx, dz);
+    const chordTx = chordLen > 1e-5 ? dx / chordLen : 0;
+    const chordTz = chordLen > 1e-5 ? dz / chordLen : 1;
+    const startMarker = this.getStartMarkerPoseOrFallback(seg.pieceTemplate);
+    const endMarker = this.getEndMarkerPoseOrFallback(seg.pieceTemplate);
+    const startTangent = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(seg.root.quaternion.clone().multiply(startMarker.quaternion))
+      .setY(0)
+      .normalize();
+    const endTangent = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(seg.root.quaternion.clone().multiply(endMarker.quaternion))
+      .setY(0)
+      .normalize();
+    const tx0 = Number.isFinite(startTangent.x) ? startTangent.x : chordTx;
+    const tz0 = Number.isFinite(startTangent.z) ? startTangent.z : chordTz;
+
+    if (seg.pieceKind !== 'curve' || chordLen <= 1e-5) {
+      const cx = THREE.MathUtils.lerp(this.tmpStart.x, this.tmpEnd.x, u);
+      const cz = THREE.MathUtils.lerp(this.tmpStart.z, this.tmpEnd.z, u);
+      return {
+        centerX: cx,
+        centerZ: cz,
+        rightX: chordTz,
+        rightZ: -chordTx,
+        yaw: Math.atan2(chordTx, chordTz),
+      };
+    }
+
+    const ex = endTangent.x;
+    const ez = endTangent.z;
+    const dot = THREE.MathUtils.clamp(tx0 * ex + tz0 * ez, -1, 1);
+    const cross = tx0 * ez - tz0 * ex;
+    const delta = Math.atan2(cross, dot);
+
+    // If markers/tangents don't define a meaningful turn, use linear fallback.
+    if (Math.abs(delta) < THREE.MathUtils.degToRad(1)) {
+      const cx = THREE.MathUtils.lerp(this.tmpStart.x, this.tmpEnd.x, u);
+      const cz = THREE.MathUtils.lerp(this.tmpStart.z, this.tmpEnd.z, u);
+      return {
+        centerX: cx,
+        centerZ: cz,
+        rightX: tz0,
+        rightZ: -tx0,
+        yaw: Math.atan2(tx0, tz0),
+      };
+    }
+
+    const radius = chordLen / (2 * Math.sin(Math.abs(delta) * 0.5));
+    if (!Number.isFinite(radius) || radius < 1e-5) {
+      const cx = THREE.MathUtils.lerp(this.tmpStart.x, this.tmpEnd.x, u);
+      const cz = THREE.MathUtils.lerp(this.tmpStart.z, this.tmpEnd.z, u);
+      return {
+        centerX: cx,
+        centerZ: cz,
+        rightX: tz0,
+        rightZ: -tx0,
+        yaw: Math.atan2(tx0, tz0),
+      };
+    }
+
+    const leftNx = -tz0;
+    const leftNz = tx0;
+    const sign = Math.sign(delta);
+    const centerX = this.tmpStart.x + leftNx * radius * sign;
+    const centerZ = this.tmpStart.z + leftNz * radius * sign;
+    const rad0x = this.tmpStart.x - centerX;
+    const rad0z = this.tmpStart.z - centerZ;
+    const a = delta * u;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    const radUx = rad0x * ca - rad0z * sa;
+    const radUz = rad0x * sa + rad0z * ca;
+    const cx = centerX + radUx;
+    const cz = centerZ + radUz;
+    const yaw = Math.atan2(tx0, tz0) + a;
+    const tx = Math.sin(yaw);
+    const tz = Math.cos(yaw);
+    return {
+      centerX: cx,
+      centerZ: cz,
+      rightX: tz,
+      rightZ: -tx,
+      yaw,
+    };
+  }
+
+  sampleFrameAtZ(z: number): RoadFrameSample | null {
+    if (this.segments.length === 0) return null;
+    let best: RoadSegmentSlot | null = null;
+    let bestDist = Infinity;
+    let bestT = 0.5;
+
+    for (const seg of this.segments) {
+      this.getSegmentStartEndXZ(seg, this.tmpStart, this.tmpEnd);
+      const z0 = this.tmpStart.z;
+      const z1 = this.tmpEnd.z;
+      const minZ = Math.min(z0, z1);
+      const maxZ = Math.max(z0, z1);
+      let dist = 0;
+      if (z < minZ) dist = minZ - z;
+      else if (z > maxZ) dist = z - maxZ;
+      const denom = z1 - z0;
+      let t = 0.5;
+      if (Math.abs(denom) > 1e-5) {
+        t = THREE.MathUtils.clamp((z - z0) / denom, 0, 1);
+      }
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = seg;
+        bestT = t;
+        if (dist <= 1e-5) break;
       }
     }
+
+    if (!best) return null;
+    return this.sampleAlongSegment(best, bestT);
   }
 }

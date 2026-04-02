@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CONFIG } from '../config';
 import type { TrafficPhase } from '../config';
+import type { RoadManager } from './RoadManager';
 import {
   applyLiveryColors,
   cloneMeshMaterialsUnique,
@@ -385,5 +386,21 @@ export class TrafficSpawner {
       });
     }
     return out;
+  }
+
+  /**
+   * Project pooled traffic onto current road curvature by sampling centerline at each car's Z.
+   * Keeps lane spacing by offsetting along the local road right vector.
+   */
+  conformToRoad(road: RoadManager | null): void {
+    if (!road) return;
+    for (const p of this.pool) {
+      if (!p.active) continue;
+      const sample = road.sampleFrameAtZ(p.group.position.z);
+      if (!sample) continue;
+      const laneOffset = this.laneIndexToX(p.laneIndex);
+      p.group.position.x = sample.centerX + sample.rightX * laneOffset;
+      p.group.rotation.y = sample.yaw;
+    }
   }
 }

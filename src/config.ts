@@ -212,6 +212,8 @@ export const CONFIG = {
   CAMERA_FOV_MAX: 65,
   /** Per-frame lerp toward speed-mapped target FOV. */
   CAMERA_FOV_LERP: 0.02,
+  /** Per-frame smoothing for road-anchored camera yaw on curves. */
+  CAMERA_ROAD_YAW_LERP: 0.1,
   CAMERA_SHAKE_INTENSITY: 0.03,
   CAMERA_SHAKE_DECAY: 0.9,
 
@@ -249,8 +251,20 @@ export const CONFIG = {
     ["env2-1.glb", "env2-2.glb"],
     ["env3-1.glb", "env3-2.glb"],
   ] as readonly (readonly string[])[],
+  /**
+   * Curved connector variants in `public/` (filenames only), one row per `ROAD_ENVIRONMENTS` phase.
+   * Spawned after each phase for `ROAD_ENV_CURVE_CONNECTIONS_PER_PHASE` segments.
+   * Curve meshes can include marker empties named `Marker_Start*` and `Marker_End*` for exact seam alignment.
+   */
+  ROAD_ENV_CURVE_SEGMENTS: [
+    ["env1-curve1.glb"],
+    ["env2-curve1.glb"],
+    ["env3-curve1.glb"],
+  ] as readonly (readonly string[])[],
   /** How many recycled road segments before advancing to the next environment phase. */
   ROAD_ENV_SEGMENTS_PER_PHASE: 20,
+  /** How many curved connector segments to inject after each environment phase block. */
+  ROAD_ENV_CURVE_CONNECTIONS_PER_PHASE: 1,
   /**
    * Environment GLB scale refs (Blender units). Use `0` for both so each file is fit from its **bounding box**
    * to `ROAD_SEGMENT_VISUAL_WIDTH` × `ROAD_SEGMENT_LENGTH` — fixes seams when env2/env3 aren’t the same size as env1.

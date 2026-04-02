@@ -126,8 +126,14 @@ export class PlayerTaxi {
     this.worldHud.reset();
   }
 
-  applyLaneVisuals(laneX: number, rollRad: number, wheelSteerRad = 0): void {
+  applyLaneVisuals(
+    laneX: number,
+    rollRad: number,
+    wheelSteerRad = 0,
+    yawRad = 0,
+  ): void {
     this.group.position.x = laneX;
+    this.group.rotation.y = yawRad;
     this.chassisGroup.rotation.z = rollRad;
     void wheelSteerRad;
   }

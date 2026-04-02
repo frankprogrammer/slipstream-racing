@@ -700,3 +700,45 @@ Let's actually undo that change.
 ### 2026-04-01 6:05 PM PDT
 
 Right now, the FOV changes based off phases. We're going to change it back so there is a base FOV and a max FOV. And that should be tied to the min speed and the max speed of the car.
+
+---
+
+### 2026-04-01 6:40 PM PDT
+
+I want to author curved segments in Blender. How can I prompt Blender MCP linked to Claude Code to generate be a segment that curves 15 degrees. I would then expect this project to then take that asset and properly allow lane changing and vehicle movement on it
+
+---
+
+### 2026-04-01 7:10 PM PDT
+
+how can i debug peformance of this game in chrome. chrome task manager shows 120 cpu usage but when i run the perfomance tab, it doesnt look like much is being used
+
+---
+
+### 2026-04-01 7:35 PM PDT
+
+I have added a curved piece within the public folder for each environment. The piece follows the current segment rules, but it curves at a constant 15 degree arc to the right.  the object mesh has a markers that start with Marker_Start and Marker_End which represent where the road should connect to previous segments. Make it so that these curved pieces can be spawned in After each environment, for a certain amount of connections.
+
+---
+
+### 2026-04-01 8:05 PM PDT
+
+- I actually want the road... The cars to curve along this road. So it will connect. The straight piece will connect to the curved piece so that they are connected perfectly to each other. When the cars go on it, the camera should churn with the road and the car should follow all follow the curve as well
+
+---
+
+### 2026-04-01 8:20 PM PDT
+
+Now the camera is always behind the car. The camera should always be Um, Anchored to the middle of the road. Along the x-axis.
+
+---
+
+### 2026-04-01 8:35 PM PDT
+
+Right now curved pieces are themselves curved at 15 degrees. They should... be at the same rotation as the piece that they are connected from The next piece that exits should then be rotated to match the and marker of the road. so that they connect
+
+---
+
+### 2026-04-01 8:50 PM PDT
+
+We are no longer using the curved pieces in the current build and I need to start using them again. When the camera enters the curve, it should follow the middle of the curve and rotate smoothly to match the exit. 15 degrees.
