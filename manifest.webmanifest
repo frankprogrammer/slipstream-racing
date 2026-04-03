@@ -1,0 +1,10 @@
+{
+  "name": "Slipstream: Grand Prix",
+  "short_name": "Slipstream",
+  "description": "Portrait endless racer — slipstream for speed.",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": ".",
+  "background_color": "#15151e",
+  "theme_color": "#15151e"
+}
