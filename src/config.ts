@@ -228,7 +228,7 @@ export const CONFIG = {
   RACE_TIME_BONUS_FLOAT_DURATION_MS: 880,
 
   // ── Camera (road-centered: fixed X=0, chase down centerline) ──
-  CAMERA_HEIGHT: 3.5,
+  CAMERA_HEIGHT: 3.6,
   CAMERA_DISTANCE: 10.5,
   /** Aim at a point this far ahead on the road (small = steeper look-down at the taxi). */
   CAMERA_LOOK_AHEAD: 7.5,
@@ -237,7 +237,7 @@ export const CONFIG = {
    */
   CAMERA_LOOK_AT_Y: 1,
   /** Screen Y of taxi rear: 0 = bottom, 1 = top (NDC). Solved by dolly (distance) only. */
-  CAMERA_FRAMING_BOTTOM_PCT: 0.2,
+  CAMERA_FRAMING_BOTTOM_PCT: 0.35,
   /** How fast to converge distance so rear hits CAMERA_FRAMING_BOTTOM_PCT (NDC error → Δdistance). */
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
@@ -683,9 +683,9 @@ export const CONFIG = {
   SLIPSTREAM_ACTIVATE_BURST_EMIT_Z_INSET: 0.02,
   SLIPSTREAM_ACTIVATE_BURST_SPREAD_X: 0.32,
   SLIPSTREAM_ACTIVATE_BURST_SPREAD_Y: 0.14,
-  /** Initial speed along −Z (world units / second). */
-  SLIPSTREAM_ACTIVATE_BURST_SPEED_MIN: 24,
-  SLIPSTREAM_ACTIVATE_BURST_SPEED_MAX: 42,
+  /** Initial speed along −Z (world units / second). Higher = particles travel farther before expiry. */
+  SLIPSTREAM_ACTIVATE_BURST_SPEED_MIN: 48,
+  SLIPSTREAM_ACTIVATE_BURST_SPEED_MAX: 84,
   /** Lateral velocity as fraction of |vz|. */
   SLIPSTREAM_ACTIVATE_BURST_LATERAL_SCALE: 0.32,
   /** Extra −Y per unit speed (screen-down pull in chase view). */

@@ -910,3 +910,9 @@ If the Player crashes? The game over screen text should say "GAME OVER" at the t
 ### 2026-04-02 4:00 PM PDT
 
 the +1 sec and +2 sec and countdown timer should use the same cyan color as the slipstream zone meter
+
+---
+
+### 2026-04-02 4:30 PM PDT
+
+the slipstream activated particles should shoot out twice as far
