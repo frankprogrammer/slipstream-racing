@@ -89,6 +89,8 @@ export const GAME_PALETTE = {
   DRAFT_BAR_TRACK: 0x0f1a26,
   /** Slipstream wake particles (same family as telemetry cyan). */
   SLIPSTREAM_WIND: 0x00d2be,
+  /** Top timer, +N sec float, hood draft fill when Super Slipstream is off (no glow — flat fill). */
+  RACE_TELEMETRY_RED: 0xff1a1a,
   SLIPSTREAM_OUTLINE: 0xe10600,
   /** Roof lamp while drafting. */
   TAXI_ROOF_DRAFT_AMBER: 0xffaa00,
@@ -232,6 +234,8 @@ export const CONFIG = {
   RACE_TIME_BONUS_FLOAT_DURATION_MS: 880,
   /** Opacity stays at 1 until this fraction of the float (0–1); then fades out. Higher = nearer the timer. */
   RACE_TIME_BONUS_FLOAT_FADE_START: 0.88,
+  /** “+N sec” float starts at this fraction of container height from the top (0 = top edge). */
+  RACE_TIME_BONUS_FLOAT_START_Y_FRAC: 0.3,
   /** Full-screen 3–2–1–GO! before intro + gameplay; each step duration (ms). */
   PRE_RACE_COUNTDOWN_STEP_MS: 250,
 

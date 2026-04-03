@@ -1018,3 +1018,57 @@ Right now the plus one sec and plus two sec text labels, appear on two on two li
 ### 2026-04-02 9:45 PM PDT
 
 Right now the plus one sec and plus two sec seems to ease from fast to slow. I actually want it to start off slow. and get faster as it goes towards the top of the screen.
+
+---
+
+### 2026-04-02 10:00 PM PDT
+
+Let's make it so that when Super Slipstream mode is active, the timer text at the top of the screen, the plus one sec text label, and the slipstream zone meter are active. Cyan. And for the other times... It is, they are all bright red.
+
+---
+
+### 2026-04-02 10:15 PM PDT
+
+For this last change, instead of using bright red during normal time, let's use white.
+
+---
+
+### 2026-04-02 10:30 PM PDT
+
+Let's remove the glow around the timer text and the plus one sec text.
+
+---
+
+### 2026-04-02 10:45 PM PDT
+
+Let's make the timer text, the plus one sec, and the slipstream zone meter fill bright red again when not in super slipstream mode. but with no glow.
+
+---
+
+### 2026-04-02 11:00 PM PDT
+
+Let's spawn the +1 Sec Text. 25% from the top of the screen and still have it animated towards the timer text.
+
+---
+
+### 2026-04-02 11:15 PM PDT
+
+The +1 sec text should also spawn Horizontally evenly spaced based on what lane you're in. So if you were in the middle lane it spawns in the middle of screen. If you were in the right lane it spawns closer to the right side. If you're in the left lane, closer to the left. But let's still keep them grouped within the inner 50% of the screen. Horizontally.
+
+---
+
+### 2026-04-02 11:30 PM PDT
+
+Let's change it so that the horizontal spawn of the plus one sec is at the same X position as the Player car is on screen
+
+---
+
+### 2026-04-02 11:45 PM PDT
+
+you It seems that the exposition is based off the lane that the car... transitions into i want to use the same x position of the vehicle that the Player activated the slipstream on.
+
+---
+
+### 2026-04-03 12:00 AM PDT
+
+And then let's spawn the plus one text 35% from the top of the screen

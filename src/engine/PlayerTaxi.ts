@@ -138,6 +138,7 @@ export class PlayerTaxi {
     this.group.rotation.set(0, 0, 0);
     this.chassisGroup.rotation.set(0, 0, 0);
     this.setDraftMeter(0, false);
+    this.setDraftTelemetrySuperActive(false);
     this.worldHud.reset();
   }
 
@@ -169,6 +170,16 @@ export class PlayerTaxi {
     const t = Math.max(0, Math.min(1, fill01));
     this.draftBarGroup.visible = visible;
     this.draftFill.scale.set(t, 1, 1);
+  }
+
+  /** Cyan when Super Slipstream is active (`setDraftMeter` fill); otherwise bright red (no glow). */
+  setDraftTelemetrySuperActive(superActive: boolean): void {
+    const m = this.draftFill.material as THREE.MeshBasicMaterial;
+    m.color.setHex(
+      superActive
+        ? CONFIG.PALETTE.SLIPSTREAM_WIND
+        : CONFIG.PALETTE.RACE_TELEMETRY_RED,
+    );
   }
 
   getCollisionBounds(): { cx: number; cz: number; hx: number; hz: number } {

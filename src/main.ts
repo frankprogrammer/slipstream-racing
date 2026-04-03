@@ -37,6 +37,13 @@ function easeInCubic(t: number): number {
  * Phase 2+: slipstream, chain, score, HUD, game over. Direct render (no bloom) — daytime F1 look.
  */
 
+function applyRaceTelemetryCss(superActive: boolean): void {
+  const p = CONFIG.PALETTE;
+  const r = document.documentElement;
+  const c = superActive ? p.SLIPSTREAM_WIND : p.RACE_TELEMETRY_RED;
+  r.style.setProperty("--f1-race-timer-color", hexToCss(c));
+}
+
 function applyF1CssVariables(): void {
   const p = CONFIG.PALETTE;
   const r = document.documentElement;
@@ -78,6 +85,7 @@ function applyF1CssVariables(): void {
     "--f1-perfect-inset",
     rgbaFromHex(p.SLIPSTREAM_WIND, 0.1),
   );
+  applyRaceTelemetryCss(false);
 }
 applyF1CssVariables();
 
@@ -202,6 +210,9 @@ let runTimeMs = 0;
 let distanceUnits = 0;
 /** Successful slipstream (slingshot) count this run — used for score + game-over stats. */
 let slipstreamsActivated = 0;
+/** Player world X when the current draft started (entered slipstream) — “+N sec” float spawn X. */
+let slipstreamBonusSpawnWorldX: number | null = null;
+let prevSlipInZone = false;
 let burstRemainMs = 0;
 /** Extra base scroll from successful slipstreams this run (before burst). */
 let slingshotBaseBonus = 0;
@@ -252,6 +263,8 @@ function resetGame(): void {
   overtakeSlipstreamActivateBurst.reset();
   slipstreamZone.reset();
   chainManager.reset();
+  slipstreamBonusSpawnWorldX = null;
+  prevSlipInZone = false;
   hud.reset();
   prevSpeedHudVisible = false;
   const nowMs = performance.now();
@@ -493,18 +506,18 @@ function animate(): void {
       );
       chainManager.tick(nowMs, slip.inZone);
 
+      if (slip.inZone && !prevSlipInZone) {
+        slipstreamBonusSpawnWorldX = playerTaxi.group.position.x;
+      }
+      if (!slip.inZone && prevSlipInZone && !slip.slingshotFired) {
+        slipstreamBonusSpawnWorldX = null;
+      }
+
       if (slip.slingshotFired) {
         const wasSuperActive = superSlipstreamRemainMs > 0;
         raceRemainMs += wasSuperActive
           ? CONFIG.RACE_SLIPSTREAM_TIME_BONUS_MS_SUPER
           : CONFIG.RACE_SLIPSTREAM_TIME_BONUS_MS_NORMAL;
-        hud.spawnRaceTimeBonusFloat(
-          wasSuperActive ? 2 : 1,
-          camera,
-          container,
-          playerTaxi,
-          speedHudEl,
-        );
         slipstreamsActivated += 1;
         trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
@@ -540,6 +553,19 @@ function animate(): void {
         if (milestone === 10) {
           hud.flashScreenPerfect();
         }
+
+        const bonusSpawnX =
+          slipstreamBonusSpawnWorldX ?? playerTaxi.group.position.x;
+        slipstreamBonusSpawnWorldX = null;
+        hud.spawnRaceTimeBonusFloat(
+          wasSuperActive ? 2 : 1,
+          camera,
+          container,
+          speedHudEl,
+          superSlipstreamRemainMs > 0,
+          playerTaxi,
+          bonusSpawnX,
+        );
       }
 
       playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
@@ -570,6 +596,7 @@ function animate(): void {
       slipInZone = slip.inZone;
       slipMeter = slip.meterDisplay;
       audioBurst = burstRemainMs > 0;
+      prevSlipInZone = slip.inZone;
       }
     }
   } else {
@@ -580,13 +607,18 @@ function animate(): void {
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
   }
 
+  const telemetrySuper =
+    gameState.isPlaying && runGameplayReady && superSlipstreamRemainMs > 0;
+  applyRaceTelemetryCss(telemetrySuper);
+  playerTaxi.setDraftTelemetrySuperActive(telemetrySuper);
+
   hud.updateSuperSlipstreamMeter(
     superSlipstreamMeter,
     superSlipstreamRemainMs > 0,
     gameState.isPlaying && runGameplayReady,
   );
 
-  hud.updateRaceTimeBonusFloats();
+  hud.updateRaceTimeBonusFloats(telemetrySuper);
 
   if (speedHudEl && speedTextEl) {
     const visible = gameState.isPlaying && runGameplayReady;

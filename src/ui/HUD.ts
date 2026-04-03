@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CONFIG, rgbaFromHex } from "../config";
+import { CONFIG, hexToCss, rgbaFromHex } from "../config";
 import type { PlayerTaxi } from "../engine/PlayerTaxi";
 
 /**
@@ -193,27 +193,31 @@ export class HUD {
   }
 
   /**
-   * Spawns “+1 sec” / “+2 sec” at the car front; tweens with ease-in toward the race timer HUD.
+   * Spawns “+1 sec” / “+2 sec” at the on-screen X from `spawnWorldX` (player world X when draft
+   * started), with Y at `RACE_TIME_BONUS_FLOAT_START_Y_FRAC` from the top; tweens toward the timer.
    */
   spawnRaceTimeBonusFloat(
     seconds: 1 | 2,
     camera: THREE.PerspectiveCamera,
     container: HTMLElement,
-    playerTaxi: PlayerTaxi,
     timerHudEl: HTMLElement | null,
+    telemetrySuperActive: boolean,
+    playerTaxi: PlayerTaxi,
+    spawnWorldX: number,
   ): void {
-    playerTaxi.getFrontBonusWorldPosition(this.tmpWorld);
     const rect = container.getBoundingClientRect();
+    playerTaxi.getFrontBonusWorldPosition(this.tmpWorld);
+    this.tmpWorld.x = spawnWorldX;
     const ndc = this.tmpProj.copy(this.tmpWorld).project(camera);
+    let x0 = rect.width * 0.5;
     if (
-      !Number.isFinite(ndc.x) ||
-      !Number.isFinite(ndc.y) ||
-      !Number.isFinite(ndc.z)
+      Number.isFinite(ndc.x) &&
+      Number.isFinite(ndc.y) &&
+      Number.isFinite(ndc.z)
     ) {
-      return;
+      x0 = (ndc.x * 0.5 + 0.5) * rect.width;
     }
-    const x0 = (ndc.x * 0.5 + 0.5) * rect.width;
-    const y0 = (-ndc.y * 0.5 + 0.5) * rect.height;
+    const y0 = rect.height * CONFIG.RACE_TIME_BONUS_FLOAT_START_Y_FRAC;
 
     let x1 = rect.width * 0.5;
     let y1 = 36;
@@ -226,9 +230,6 @@ export class HUD {
 
     const el = document.createElement("div");
     el.textContent = seconds === 2 ? "+2 sec" : "+1 sec";
-    const cyan = CONFIG.PALETTE.SLIPSTREAM_WIND;
-    const cyanHex = `#${cyan.toString(16).padStart(6, "0")}`;
-    /** Same cyan as hood draft bar + `#speed-text` countdown (palette `SLIPSTREAM_WIND`). */
     el.style.cssText = [
       "position:absolute",
       "left:0",
@@ -241,11 +242,10 @@ export class HUD {
       "font-weight:800",
       "font-size:37.125px",
       "letter-spacing:0.12em",
-      `color:${cyanHex}`,
-      `text-shadow:0 0 12px ${rgbaFromHex(cyan, 0.55)},0 0 22px ${rgbaFromHex(cyan, 0.35)}`,
       "transform:translate(-50%,-50%)",
       "will-change:left,top,opacity",
     ].join(";");
+    this.applyTelemetryFloatStyle(el, telemetrySuperActive);
     if (seconds === 2) {
       el.style.fontSize = "40.5px";
     }
@@ -262,7 +262,14 @@ export class HUD {
     });
   }
 
-  updateRaceTimeBonusFloats(): void {
+  private applyTelemetryFloatStyle(el: HTMLElement, telemetrySuperActive: boolean): void {
+    const c = telemetrySuperActive
+      ? CONFIG.PALETTE.SLIPSTREAM_WIND
+      : CONFIG.PALETTE.RACE_TELEMETRY_RED;
+    el.style.color = hexToCss(c);
+  }
+
+  updateRaceTimeBonusFloats(telemetrySuperActive: boolean): void {
     const now = performance.now();
     for (let i = this.raceTimeBonusFloats.length - 1; i >= 0; i--) {
       const f = this.raceTimeBonusFloats[i]!;
@@ -277,6 +284,7 @@ export class HUD {
       const y = f.y0 + (f.y1 - f.y0) * e;
       f.el.style.left = `${x.toFixed(2)}px`;
       f.el.style.top = `${y.toFixed(2)}px`;
+      this.applyTelemetryFloatStyle(f.el, telemetrySuperActive);
       const fadeStart = CONFIG.RACE_TIME_BONUS_FLOAT_FADE_START;
       f.el.style.opacity =
         t < fadeStart ? "1" : `${Math.max(0, 1 - (t - fadeStart) / (1 - fadeStart))}`;
