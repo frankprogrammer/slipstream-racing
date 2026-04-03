@@ -233,12 +233,14 @@ export class HUD {
       "position:absolute",
       "left:0",
       "top:0",
+      "display:inline-block",
+      "white-space:nowrap",
       "pointer-events:none",
       "z-index:125",
       'font-family:"Exo 2",system-ui,sans-serif',
       "font-weight:800",
       "font-size:37.125px",
-      "letter-spacing:0.16em",
+      "letter-spacing:0.12em",
       `color:${cyanHex}`,
       `text-shadow:0 0 12px ${rgbaFromHex(cyan, 0.55)},0 0 22px ${rgbaFromHex(cyan, 0.35)}`,
       "transform:translate(-50%,-50%)",
@@ -275,7 +277,7 @@ export class HUD {
       const y = f.y0 + (f.y1 - f.y0) * e;
       f.el.style.left = `${x.toFixed(2)}px`;
       f.el.style.top = `${y.toFixed(2)}px`;
-      const fadeStart = 0.72;
+      const fadeStart = CONFIG.RACE_TIME_BONUS_FLOAT_FADE_START;
       f.el.style.opacity =
         t < fadeStart ? "1" : `${Math.max(0, 1 - (t - fadeStart) / (1 - fadeStart))}`;
     }

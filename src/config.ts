@@ -228,8 +228,10 @@ export const CONFIG = {
   RACE_SLIPSTREAM_TIME_BONUS_MS_NORMAL: 1000,
   /** Same while Super Slipstream is active. */
   RACE_SLIPSTREAM_TIME_BONUS_MS_SUPER: 2000,
-  /** “+N sec” float travel time (ease-in: accelerates toward the timer). */
+  /** “+N sec” float travel time (ease-in: slow at car, accelerates toward the timer). */
   RACE_TIME_BONUS_FLOAT_DURATION_MS: 880,
+  /** Opacity stays at 1 until this fraction of the float (0–1); then fades out. Higher = nearer the timer. */
+  RACE_TIME_BONUS_FLOAT_FADE_START: 0.88,
   /** Full-screen 3–2–1–GO! before intro + gameplay; each step duration (ms). */
   PRE_RACE_COUNTDOWN_STEP_MS: 250,
 

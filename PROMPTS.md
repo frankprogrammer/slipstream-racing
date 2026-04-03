@@ -1006,3 +1006,15 @@ I want the slipstream activate burst particle system to shoot out further
 ### 2026-04-02 9:15 PM PDT
 
 The particles do not seem to be going out further. They still seem to cut off at the same time. Distance from where they spawned.
+
+---
+
+### 2026-04-02 9:30 PM PDT
+
+Right now the plus one sec and plus two sec text labels, appear on two on two lines instead of one on mobile. As they move towards the top of the screen, the font size gets smaller and so it readjusts to a single line. I want it to always be on a single line. Additionally, it doesn't seem to reach, it seems to fade out before it reaches the top. I want it to get closer to the top. where the timer is before It fades out.
+
+---
+
+### 2026-04-02 9:45 PM PDT
+
+Right now the plus one sec and plus two sec seems to ease from fast to slow. I actually want it to start off slow. and get faster as it goes towards the top of the screen.
