@@ -347,9 +347,12 @@ export const CONFIG = {
   SUPER_SLIPSTREAM_CAMERA_SHAKE_INTENSITY_MUL: 1.25,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
   DRAFT_BAR_WIDTH: 1.55,
-  DRAFT_BAR_DEPTH: 0.1,
+  /** Strip “height” on the hood plane (world units) — was 0.1; ×2 for readability. */
+  DRAFT_BAR_DEPTH: 0.2,
   DRAFT_BAR_OFFSET_Y: 0.035,
   DRAFT_BAR_INSET_FROM_FRONT: 0.38,
+  /** Black outline: extra half-width on each side of the bar (world units). */
+  DRAFT_BAR_OUTLINE_THICKNESS: 0.014,
   /** Tail light color multiplier while player is in that vehicle's slipstream (HDR-friendly). */
   DRAFT_TAIL_BRIGHTNESS_MUL: 4.0,
 

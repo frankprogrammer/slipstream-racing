@@ -904,3 +904,9 @@ the game over screen should display the score, distance traveled, time played in
 ### 2026-04-03 1:35 AM PDT
 
 If the Player crashes? The game over screen text should say "GAME OVER" at the top, like it currently does. But if time runs out, The game over screen should say "TIME'S UP". at the top. instead of game over.
+
+---
+
+### 2026-04-02 4:00 PM PDT
+
+the +1 sec and +2 sec and countdown timer should use the same cyan color as the slipstream zone meter

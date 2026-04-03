@@ -33,12 +33,29 @@ export class PlayerTaxi {
 
     const wBar = CONFIG.DRAFT_BAR_WIDTH;
     const dBar = CONFIG.DRAFT_BAR_DEPTH;
+    const o = CONFIG.DRAFT_BAR_OUTLINE_THICKNESS;
     this.draftBarGroup = new THREE.Group();
     this.draftBarGroup.name = "DraftMeterBar";
     this.draftBarGroup.visible = false;
     const barY = H + CONFIG.DRAFT_BAR_OFFSET_Y;
     const barZ = zFront - CONFIG.DRAFT_BAR_INSET_FROM_FRONT;
     this.draftBarGroup.position.set(0, barY, barZ);
+
+    const outlineMat = new THREE.MeshBasicMaterial({
+      color: CONFIG.PALETTE.UI_OUTLINE,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+      polygonOffset: true,
+      polygonOffsetFactor: 2,
+      polygonOffsetUnits: 1,
+    });
+    const outline = new THREE.Mesh(
+      new THREE.PlaneGeometry(wBar + o * 2, dBar + o * 2),
+      outlineMat,
+    );
+    outline.rotation.x = -Math.PI / 2;
+    outline.position.y = -0.004;
+    this.draftBarGroup.add(outline);
 
     const trackMat = new THREE.MeshBasicMaterial({
       color: CONFIG.PALETTE.DRAFT_BAR_TRACK,
@@ -55,7 +72,7 @@ export class PlayerTaxi {
     this.draftBarGroup.add(track);
 
     const fillMat = new THREE.MeshBasicMaterial({
-      color: CONFIG.PALETTE.NEON_BLUE,
+      color: CONFIG.PALETTE.SLIPSTREAM_WIND,
       side: THREE.DoubleSide,
       polygonOffset: true,
       polygonOffsetFactor: -1,

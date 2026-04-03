@@ -226,7 +226,9 @@ export class HUD {
 
     const el = document.createElement("div");
     el.textContent = seconds === 2 ? "+2 sec" : "+1 sec";
-    /** Same stack as `TaxiWorldHud` speed + `#speed-text` in `index.html`. */
+    const cyan = CONFIG.PALETTE.SLIPSTREAM_WIND;
+    const cyanHex = `#${cyan.toString(16).padStart(6, "0")}`;
+    /** Same cyan as hood draft bar + `#speed-text` countdown (palette `SLIPSTREAM_WIND`). */
     el.style.cssText = [
       "position:absolute",
       "left:0",
@@ -237,7 +239,8 @@ export class HUD {
       "font-weight:800",
       "font-size:49.5px",
       "letter-spacing:0.16em",
-      "color:#ffffff",
+      `color:${cyanHex}`,
+      `text-shadow:0 0 12px ${rgbaFromHex(cyan, 0.55)},0 0 22px ${rgbaFromHex(cyan, 0.35)}`,
       "transform:translate(-50%,-50%)",
       "will-change:left,top,opacity",
     ].join(";");

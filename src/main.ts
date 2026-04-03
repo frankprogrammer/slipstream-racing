@@ -40,7 +40,12 @@ function applyF1CssVariables(): void {
   const p = CONFIG.PALETTE;
   const r = document.documentElement;
   r.style.setProperty("--f1-primary", hexToCss(p.NEON_PINK));
-  r.style.setProperty("--f1-cyan", hexToCss(p.NEON_BLUE));
+  /** Same telemetry cyan as slipstream draft bar (`PlayerTaxi` fill). */
+  r.style.setProperty("--f1-cyan", hexToCss(p.SLIPSTREAM_WIND));
+  r.style.setProperty(
+    "--f1-countdown-glow",
+    rgbaFromHex(p.SLIPSTREAM_WIND, 0.55),
+  );
   r.style.setProperty("--f1-blue", hexToCss(p.NEON_PURPLE));
   r.style.setProperty("--f1-warm", hexToCss(p.NEON_ORANGE));
   r.style.setProperty("--f1-ui-text", hexToCss(p.UI_TEXT));
@@ -58,11 +63,20 @@ function applyF1CssVariables(): void {
   r.style.setProperty("--f1-retry-hover", rgbaFromHex(p.NEON_PINK, 0.12));
   r.style.setProperty("--f1-retry-glow", rgbaFromHex(p.NEON_PINK, 0.35));
   r.style.setProperty("--f1-milestone-glow", rgbaFromHex(p.NEON_PINK, 0.55));
-  r.style.setProperty("--f1-milestone-cyan", rgbaFromHex(p.NEON_BLUE, 0.2));
+  r.style.setProperty(
+    "--f1-milestone-cyan",
+    rgbaFromHex(p.SLIPSTREAM_WIND, 0.2),
+  );
   r.style.setProperty("--f1-perfect-glow-1", rgbaFromHex(p.NEON_PINK, 0.9));
   r.style.setProperty("--f1-perfect-glow-2", rgbaFromHex(p.NEON_PINK, 0.45));
-  r.style.setProperty("--f1-perfect-cyan", rgbaFromHex(p.NEON_BLUE, 0.25));
-  r.style.setProperty("--f1-perfect-inset", rgbaFromHex(p.NEON_BLUE, 0.1));
+  r.style.setProperty(
+    "--f1-perfect-cyan",
+    rgbaFromHex(p.SLIPSTREAM_WIND, 0.25),
+  );
+  r.style.setProperty(
+    "--f1-perfect-inset",
+    rgbaFromHex(p.SLIPSTREAM_WIND, 0.1),
+  );
 }
 applyF1CssVariables();
 
