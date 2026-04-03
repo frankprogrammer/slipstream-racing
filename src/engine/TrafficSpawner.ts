@@ -467,7 +467,7 @@ export class TrafficSpawner {
     idle.speedMul = 1;
     idle.passKind = "overtake";
     idle.overtakeOriginZ =
-      CONFIG.TAXI_POSITION_Z + CONFIG.TAXI_INTRO_START_Z_OFFSET;
+      CONFIG.TAXI_POSITION_Z + CONFIG.OVERTAKE_PASS_START_Z_OFFSET;
     idle.slipstreamConsumed = false;
     idle.laneChangeState = "idle";
     idle.laneChangeFromLane = targetLane;

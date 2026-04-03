@@ -490,6 +490,7 @@ export const CONFIG = {
    * after `OVERTAKE_PASS_TRAVEL_Z` traveled along +Z.
    */
   OVERTAKE_PASS_ENABLED: true,
+  OVERTAKE_PASS_START_Z_OFFSET: -7,
   /** World −Δz traveled from spawn before the pass car despawns. */
   OVERTAKE_PASS_TRAVEL_Z: 110,
   /** How often to roll for a pass spawn while eligible (ms). */
