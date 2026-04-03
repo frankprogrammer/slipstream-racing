@@ -846,6 +846,11 @@ function animate(): void {
     } else {
       speedTextEl.textContent = formatRaceCountdownMs(raceRemainMs);
       speedHudEl.style.opacity = "1";
+      speedTextEl.style.color = hexToCss(
+        telemetrySuper
+          ? CONFIG.PALETTE.SLIPSTREAM_WIND
+          : CONFIG.PALETTE.RACE_TELEMETRY_RED,
+      );
       if (!prevSpeedHudVisible) {
         requestAnimationFrame(() => fitSpeedHudText());
       }
