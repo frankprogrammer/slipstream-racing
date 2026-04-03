@@ -597,6 +597,31 @@ export class TrafficSpawner {
     this.separateOverlappingTraffic();
   }
 
+  /** All pool slots — for attaching per-slot VFX (e.g. burst anchor) to each car group. */
+  forEachPoolCarGroup(
+    cb: (slotIndex: number, carGroup: THREE.Group) => void,
+  ): void {
+    for (let i = 0; i < this.pool.length; i++) {
+      cb(i, this.pool[i]!.group);
+    }
+  }
+
+  /** Active overtake pass cars only — for VFX parented to each car `group`. */
+  forEachOvertakeSlot(
+    cb: (slotIndex: number, carGroup: THREE.Group) => void,
+  ): void {
+    for (let i = 0; i < this.pool.length; i++) {
+      const p = this.pool[i]!;
+      if (!p.active || p.passKind !== "overtake") continue;
+      cb(i, p.group);
+    }
+  }
+
+  isOvertakeSlotActive(slotIndex: number): boolean {
+    const p = this.pool[slotIndex];
+    return !!(p && p.active && p.passKind === "overtake");
+  }
+
   /** Expose each pool slot's active state, position, and speed multiplier for audio / VFX. */
   forEachPoolSlot(
     cb: (

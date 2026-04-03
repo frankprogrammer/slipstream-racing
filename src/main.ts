@@ -16,6 +16,7 @@ import { CameraController } from "./engine/CameraController";
 import { SlipstreamWindSystem } from "./engine/SlipstreamWindSystem";
 import { SlingshotTrailSystem } from "./engine/SlingshotTrailSystem";
 import { SlipstreamActivateBurst } from "./engine/SlipstreamActivateBurst";
+import { OvertakeSlipstreamActivateBurstPool } from "./engine/OvertakeSlipstreamActivateBurstPool";
 import { SlipstreamZone } from "./engine/SlipstreamZone";
 import { ChainManager } from "./engine/ChainManager";
 import { computeRunScore } from "./engine/ScoreManager";
@@ -169,6 +170,7 @@ const gameOverScreen = new GameOverScreen();
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const slipstreamActivateBurst = new SlipstreamActivateBurst();
+const overtakeSlipstreamActivateBurst = new OvertakeSlipstreamActivateBurstPool();
 const gameAudio = new GameAudio();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
@@ -247,6 +249,7 @@ function resetGame(): void {
   playerTaxi.reset();
   slingshotTrail.reset();
   slipstreamActivateBurst.reset();
+  overtakeSlipstreamActivateBurst.reset();
   slipstreamZone.reset();
   chainManager.reset();
   hud.reset();
@@ -605,6 +608,11 @@ function animate(): void {
     trafficSpawner,
   );
   slipstreamActivateBurst.update(delta);
+  overtakeSlipstreamActivateBurst.update(
+    delta,
+    gameState.isPlaying && runGameplayReady,
+    trafficSpawner,
+  );
 
   gameAudio.update(delta, {
     playing: gameState.isPlaying && runGameplayReady,
@@ -669,6 +677,7 @@ void (async () => {
   playerTaxi = await PlayerTaxi.create();
   roadManager = await RoadManager.create(CONFIG.TAXI_POSITION_Z);
   trafficSpawner = await TrafficSpawner.create();
+  overtakeSlipstreamActivateBurst.attachToTraffic(trafficSpawner);
   scene.add(roadManager.group);
   scene.add(trafficSpawner.group);
   scene.add(slipstreamWind.group);

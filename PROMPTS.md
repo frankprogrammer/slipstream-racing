@@ -988,3 +988,9 @@ Let's also update the font in the game over screen for the distance, time and sl
 ### 2026-04-02 8:15 PM PDT
 
 Add the word score above the score in the game over screen.
+
+---
+
+### 2026-04-02 8:45 PM PDT
+
+Overtake cars should play the same slipstream activate burst particle system that the player has the entire time that they are active.

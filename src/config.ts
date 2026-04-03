@@ -364,7 +364,7 @@ export const CONFIG = {
   /** Tail light color multiplier while player is in that vehicle's slipstream (HDR-friendly). */
   DRAFT_TAIL_BRIGHTNESS_MUL: 4.0,
 
-  /** Points per traffic pool slot; fills the slipstream box behind each active vehicle. */
+  /** Points per traffic pool slot; fills the slipstream box behind each active vehicle. 0 = outline only. */
   SLIPSTREAM_WIND_PARTICLES_PER_VEHICLE: 0,
   SLIPSTREAM_WIND_POINT_SIZE: 0.165,
   SLIPSTREAM_WIND_OPACITY: 0.5,
