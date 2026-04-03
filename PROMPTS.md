@@ -922,3 +922,9 @@ the slipstream activated particles should shoot out twice as far
 ### 2026-04-02 5:00 PM PDT
 
 when super slipstream is activated. the sky and fog color should turn bright red. it should return to the current color otherwise
+
+---
+
+### 2026-04-02 5:30 PM PDT
+
+when a race starts the game should be paused and we should see a 3, 2, 1, GO! countdown at the middle of the screen. the race starts. The font size should be massive. it should cycle between each number every 500ms

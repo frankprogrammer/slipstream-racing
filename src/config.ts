@@ -228,6 +228,8 @@ export const CONFIG = {
   RACE_SLIPSTREAM_TIME_BONUS_MS_SUPER: 2000,
   /** “+N sec” float travel time (ease-in: accelerates toward the timer). */
   RACE_TIME_BONUS_FLOAT_DURATION_MS: 880,
+  /** Full-screen 3–2–1–GO! before intro + gameplay; each step duration (ms). */
+  PRE_RACE_COUNTDOWN_STEP_MS: 250,
 
   // ── Camera (road-centered: fixed X=0, chase down centerline) ──
   CAMERA_HEIGHT: 3.6,
@@ -508,7 +510,7 @@ export const CONFIG = {
   /**
    * Run start: taxi begins at TAXI_POSITION_Z + this (toward camera, below frame) and tweens in.
    */
-  TAXI_INTRO_START_Z_OFFSET: -8,
+  TAXI_INTRO_START_Z_OFFSET: -9,
   TAXI_INTRO_DURATION_MS: 400,
   PLAYER_CAR_GLB: "playerCar.glb",
   /** Vertical offset after fit-to-dimensions (model-specific trim). */

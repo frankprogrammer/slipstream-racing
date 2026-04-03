@@ -213,8 +213,14 @@ let raceRemainMs: number = CONFIG.RACE_COUNTDOWN_START_MS;
 let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
 let introElapsedMs = 0;
+/** Full-screen 3–2–1–GO! before intro; gameplay frozen while true. */
+let preRaceCountdownActive = false;
+let preRaceStep = 0;
+let preRaceStepAccMs = 0;
 /** Set immediately before `transition("gameover")` — read in `onChange` for UI + audio. */
 let pendingGameOverReason: GameOverReason | null = null;
+
+const PRE_RACE_COUNTDOWN_LABELS = ["3", "2", "1", "GO!"] as const;
 
 function resetGame(): void {
   gameState.reset();
@@ -254,6 +260,14 @@ function resetGame(): void {
   cameraController.snap(playerTaxi);
   playerTaxi.group.position.z = introZ;
   gameOverScreen.hide();
+  preRaceCountdownActive = true;
+  preRaceStep = 0;
+  preRaceStepAccMs = 0;
+  if (preRaceCountdownEl) {
+    preRaceCountdownEl.textContent = PRE_RACE_COUNTDOWN_LABELS[0]!;
+    preRaceCountdownEl.classList.add("visible");
+    preRaceCountdownEl.setAttribute("aria-hidden", "false");
+  }
 }
 
 gameOverScreen.onRetry(() => {
@@ -262,6 +276,12 @@ gameOverScreen.onRetry(() => {
 
 gameState.onChange((state) => {
   if (state === "gameover") {
+    preRaceCountdownActive = false;
+    if (preRaceCountdownEl) {
+      preRaceCountdownEl.classList.remove("visible");
+      preRaceCountdownEl.textContent = "";
+      preRaceCountdownEl.setAttribute("aria-hidden", "true");
+    }
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
     const reason = pendingGameOverReason ?? "crash";
@@ -309,6 +329,7 @@ if (showFps) {
 const speedHudEl = document.getElementById("speed-hud");
 const speedTextWrapEl = document.getElementById("speed-text-wrap");
 const speedTextEl = document.getElementById("speed-text");
+const preRaceCountdownEl = document.getElementById("pre-race-countdown");
 
 function fitSpeedHudText(): void {
   if (!speedTextWrapEl || !speedTextEl) return;
@@ -342,7 +363,47 @@ function animate(): void {
   let audioBurst = false;
 
   if (gameState.isPlaying) {
-    if (!runGameplayReady) {
+    if (preRaceCountdownActive) {
+      const stepMs = CONFIG.PRE_RACE_COUNTDOWN_STEP_MS;
+      preRaceStepAccMs += delta * 1000;
+      while (
+        preRaceStepAccMs >= stepMs &&
+        preRaceStep < PRE_RACE_COUNTDOWN_LABELS.length
+      ) {
+        preRaceStepAccMs -= stepMs;
+        preRaceStep += 1;
+        if (preRaceStep < PRE_RACE_COUNTDOWN_LABELS.length && preRaceCountdownEl) {
+          preRaceCountdownEl.textContent =
+            PRE_RACE_COUNTDOWN_LABELS[preRaceStep]!;
+        }
+      }
+      if (preRaceStep >= PRE_RACE_COUNTDOWN_LABELS.length) {
+        preRaceCountdownActive = false;
+        if (preRaceCountdownEl) {
+          preRaceCountdownEl.classList.remove("visible");
+          preRaceCountdownEl.textContent = "";
+          preRaceCountdownEl.setAttribute("aria-hidden", "true");
+        }
+        introElapsedMs = 0;
+      }
+
+      const zIntro =
+        CONFIG.TAXI_POSITION_Z + CONFIG.TAXI_INTRO_START_Z_OFFSET;
+      playerTaxi.group.position.z = zIntro;
+
+      const laneX = laneSystem.getLaneX(nowMs);
+      const roll = laneSystem.getBodyRollRad(nowMs);
+      const steer = laneSystem.getWheelSteerRad(nowMs);
+      playerTaxi.applyLaneVisuals(laneX, roll, steer);
+      slingshotTrail.setBoostActive(false);
+      slingshotTrail.update(delta, 0, playerTaxi);
+      playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
+
+      scrollForAudio = CONFIG.BASE_SCROLL_SPEED;
+      playerTaxi.worldHud.setSpeedKmh(
+        displaySpeedKmhFromScroll(CONFIG.BASE_SCROLL_SPEED),
+      );
+    } else if (!runGameplayReady) {
       const dur = CONFIG.TAXI_INTRO_DURATION_MS;
       introElapsedMs += delta * 1000;
       const t = Math.min(1, introElapsedMs / dur);

@@ -69,6 +69,35 @@
         justify-content: center;
         overflow: hidden;
       }
+      /* Pre-race 3–2–1–GO! (game paused until complete) */
+      #pre-race-countdown {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-family: "Bebas Neue", sans-serif;
+        font-size: min(36vw, 220px);
+        font-weight: 400;
+        line-height: 1;
+        letter-spacing: 0.08em;
+        color: var(--f1-ui-text, #f8fafc);
+        text-shadow:
+          0 0 28px var(--f1-primary, #e10600),
+          0 0 64px rgba(225, 6, 0, 0.45);
+        pointer-events: none;
+        z-index: 130;
+        opacity: 0;
+        transition: opacity 90ms linear;
+        user-select: none;
+        text-align: center;
+        width: 100%;
+        padding: 0 12px;
+        box-sizing: border-box;
+      }
+      #pre-race-countdown.visible {
+        opacity: 1;
+      }
+
       #speed-text {
         font-size: 40px;
         font-weight: 800;
@@ -196,6 +225,7 @@
         </div>
       </div>
       <div id="screen-flash"></div>
+      <div id="pre-race-countdown" aria-hidden="true"></div>
 
       <!-- Game Over -->
       <div id="gameover">
