@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta
+      name="theme-color"
+      content="#15151e"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>Slipstream: Grand Prix</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Exo+2:wght@400;500;600;700;800&display=swap");
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      /* Colors: --f1-* set at runtime from CONFIG.PALETTE in main.ts */
+      html {
+        width: 100%;
+        height: 100%;
+        height: -webkit-fill-available;
+      }
+      body {
+        width: 100%;
+        min-height: 100%;
+        min-height: 100dvh;
+        min-height: -webkit-fill-available;
+        overflow: hidden;
+        background: var(--f1-bg-app, #15151e);
+      }
+      #game-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        touch-action: none;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      /* Race countdown (M:SS) — top center */
+      #speed-hud {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-family: "Exo 2", system-ui, sans-serif;
+        background: rgba(0, 0, 0, 0.18);
+        padding: 8px 12px;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        pointer-events: none;
+        z-index: 12;
+        opacity: 0;
+        transition: opacity 120ms linear;
+        user-select: none;
+        box-sizing: border-box;
+        width: min(calc(100vw - 16px), 420px);
+        max-width: calc(100vw - 16px);
+      }
+      #speed-text-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      /* Pre-race 3–2–1–GO! (game paused until complete) */
+      #pre-race-countdown {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-family: "Bebas Neue", sans-serif;
+        font-size: min(36vw, 220px);
+        font-weight: 400;
+        line-height: 1;
+        letter-spacing: 0.08em;
+        color: var(--f1-ui-text, #f8fafc);
+        text-shadow:
+          0 0 28px var(--f1-primary, #e10600),
+          0 0 64px rgba(225, 6, 0, 0.45);
+        pointer-events: none;
+        z-index: 130;
+        opacity: 0;
+        transition: opacity 90ms linear;
+        user-select: none;
+        text-align: center;
+        width: 100%;
+        padding: 0 12px;
+        box-sizing: border-box;
+      }
+      #pre-race-countdown.visible {
+        opacity: 1;
+      }
+      #speed-text {
+        font-size: 40px;
+        font-weight: 800;
+        /* Tabular figures + tighter tracking: avoids horizontal “jiggle” as digits change. */
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+        letter-spacing: 0.06em;
+        color: var(--f1-race-timer-color, #ff1a1a);
+        white-space: nowrap;
+        display: inline-block;
+        transform-origin: center center;
+        will-change: transform;
+        /* Reserve width for long runs (e.g. 10:00.0) so the block center stays stable. */
+        min-width: 9.5ch;
+        text-align: center;
+      }
+      /* Screen Flash */
+      #screen-flash {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--f1-flash-tint, rgba(225, 6, 0, 0.22));
+        opacity: 0;
+        pointer-events: none;
+        z-index: 5;
+        transition:
+          opacity 0.12s ease-out,
+          background 0.2s ease;
+      }
+      #screen-flash.perfect-hit {
+        background: var(--f1-flash-perfect, rgba(225, 6, 0, 0.4));
+        box-shadow: inset 0 0 120px
+          var(--f1-perfect-inset, rgba(0, 210, 190, 0.1));
+      }
+      /* Game Over Overlay */
+      #gameover {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--f1-gameover-scrim, rgba(21, 21, 30, 0.92));
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: min(36px, 4.5vw);
+        z-index: 20;
+        /* Same stack as race timer (`#speed-hud` / `#speed-text`) */
+        font-family: "Exo 2", system-ui, sans-serif;
+        color: var(--f1-ui-text, #f8fafc);
+      }
+      #gameover.visible {
+        display: flex;
+      }
+      #gameover h2 {
+        font-family: "Exo 2", system-ui, sans-serif;
+        font-size: 34px;
+        letter-spacing: 0.2em;
+        color: var(--f1-primary, #e10600);
+        margin: 0 0 30px 0;
+        font-weight: 800;
+      }
+      .score-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 12px 0;
+        text-align: center;
+      }
+      #final-score {
+        font-family: "Exo 2", system-ui, sans-serif;
+        font-size: 76px;
+        font-weight: 800;
+        line-height: 1.05;
+        margin: 0;
+        letter-spacing: 0.06em;
+        color: var(--f1-ui-text, #f8fafc);
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+      }
+      #new-best {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--f1-cyan, #00d2be);
+        margin: 0 0 36px 0;
+        display: none;
+        letter-spacing: 0.08em;
+      }
+      .stat-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: min(44px, 9vw);
+        margin: 0 0 48px 0;
+        font-family: "Exo 2", system-ui, sans-serif;
+      }
+      .stat-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        min-width: min(140px, 28vw);
+        text-align: center;
+      }
+      .stat-label {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        color: var(--f1-ui-dim, #9ca3af);
+        text-transform: uppercase;
+      }
+      .stat-value {
+        font-family: "Exo 2", system-ui, sans-serif;
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: var(--f1-ui-text, #f8fafc);
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+        line-height: 1.1;
+      }
+      #retry-btn {
+        font-family: "Exo 2", system-ui, sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        color: var(--f1-ui-text, #f8fafc);
+        background: transparent;
+        border: 3px solid var(--f1-primary, #e10600);
+        border-radius: 8px;
+        padding: 22px 64px;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          box-shadow 0.2s;
+        pointer-events: auto;
+        text-transform: uppercase;
+      }
+      #retry-btn:hover,
+      #retry-btn:active {
+        background: var(--f1-retry-hover, rgba(225, 6, 0, 0.12));
+        box-shadow: 0 0 40px var(--f1-retry-glow, rgba(225, 6, 0, 0.35));
+      }
+    </style>
+    <script type="module" crossorigin src="/slipstream-racing/v2/assets/index-WMJy22MA.js"></script>
+  </head>
+  <body>
+    <div id="game-container">
+      <!-- Three.js canvas injected here -->
+
+      <div id="speed-hud">
+        <div id="speed-text-wrap">
+          <span id="speed-text"></span>
+        </div>
+      </div>
+      <div id="screen-flash"></div>
+      <div id="pre-race-countdown" aria-hidden="true"></div>
+
+      <!-- Game Over -->
+      <div id="gameover">
+        <h2 id="gameover-title">GAME OVER</h2>
+        <div class="score-block">
+          <span class="stat-label">SCORE</span>
+          <div id="final-score">0</div>
+        </div>
+        <div id="new-best">⚡ NEW BEST</div>
+        <div class="stat-row">
+          <div class="stat-col">
+            <span class="stat-label">DIST</span>
+            <strong id="stat-distance" class="stat-value">0 km</strong>
+          </div>
+          <div class="stat-col">
+            <span class="stat-label">TIME</span>
+            <strong id="stat-time" class="stat-value">0:00</strong>
+          </div>
+          <div class="stat-col">
+            <span class="stat-label">SLIPSTREAMS</span>
+            <strong id="stat-slipstreams" class="stat-value">0</strong>
+          </div>
+        </div>
+        <button id="retry-btn">RETRY</button>
+      </div>
+    </div>
+
+  </body>
+</html>
