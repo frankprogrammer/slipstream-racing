@@ -275,7 +275,7 @@ export const CONFIG = {
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
   /** Minimum base scroll (floor when slipstream bonus has decayed to 0). */
-  BASE_SCROLL_SPEED: 0.3,
+  BASE_SCROLL_SPEED: 0.4,
   /** Hard cap on base scroll (slipstream bonus included). */
   MAX_SCROLL_SPEED: 0.75,
   /**
@@ -291,8 +291,11 @@ export const CONFIG = {
   // ── Slipstream ──
   SLIPSTREAM_ZONE_WIDTH: 2.0,
   SLIPSTREAM_ZONE_DEPTH: 10,
-  /** Per-frame @ 60Hz base fill; actual fill × (current scrollPerFrame / BASE_SCROLL_SPEED). */
-  DRAFT_FILL_RATE: 0.05,
+  /**
+   * Draft completes after accumulating this fraction of `SLIPSTREAM_ZONE_DEPTH` in world units
+   * (relative motion along Z vs the lead vehicle while overlapping its slipstream).
+   */
+  DRAFT_ACTIVATE_DEPTH_FRACTION: 0.25,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
   DRAFT_BAR_WIDTH: 1.55,
   DRAFT_BAR_DEPTH: 0.1,

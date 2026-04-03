@@ -15,6 +15,8 @@ export type TrafficCollisionBounds = {
   cz: number;
   hx: number;
   hz: number;
+  /** Pool index — stable while this vehicle uses the slot. */
+  slotIndex: number;
 };
 
 type PoolEntry = {
@@ -493,13 +495,15 @@ export class TrafficSpawner {
     const hx = width / 2;
     const hz = length / 2;
     const out: TrafficCollisionBounds[] = [];
-    for (const p of this.pool) {
+    for (let i = 0; i < this.pool.length; i++) {
+      const p = this.pool[i]!;
       if (!p.active || p.slipstreamConsumed) continue;
       out.push({
         cx: p.group.position.x,
         cz: p.group.position.z,
         hx,
         hz,
+        slotIndex: i,
       });
     }
     return out;
@@ -510,13 +514,15 @@ export class TrafficSpawner {
     const hx = width / 2;
     const hz = length / 2;
     const out: TrafficCollisionBounds[] = [];
-    for (const p of this.pool) {
+    for (let i = 0; i < this.pool.length; i++) {
+      const p = this.pool[i]!;
       if (!p.active) continue;
       out.push({
         cx: p.group.position.x,
         cz: p.group.position.z,
         hx,
         hz,
+        slotIndex: i,
       });
     }
     return out;

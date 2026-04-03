@@ -754,3 +754,9 @@ Let's remove the dragging Touch input functionality. It should be that if you ta
 ### 2026-04-02 1:41 PM PDT
 
 Right now, if there is a car in the left lane and a car in the right lane, there is a chance that they both may change lanes into the middle lane at the same time. We want to prevent this from ever happening.
+
+---
+
+### 2026-04-02 8:14 PM PDT
+
+Right now, successfully activating a slipstream is done by staying within the slipstream zone for a certain amount of time. I instead want to convert this so it is activated by having your car travel a certain amount of depth of the slipstream. Let's start that off with being 15% of the slipstream depth.
