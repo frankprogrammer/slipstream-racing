@@ -16,7 +16,7 @@ export class TaxiWorldHud {
   private readonly chainBaseScale = new THREE.Vector3();
   private readonly scoreBaseScale = new THREE.Vector3();
   private lastChain = 1;
-  private chainPopTimer = 0;
+  private chainPopGen = 0;
 
   constructor(
     chassisGroup: THREE.Group,
@@ -104,40 +104,71 @@ export class TaxiWorldHud {
 
   setChain(chain: number): void {
     const grew = chain > this.lastChain;
+    const isMilestone10 = grew && chain > 1 && chain % 10 === 0;
     this.lastChain = chain;
-    this.drawChain(chain);
+    this.drawChain(chain, isMilestone10);
 
     if (grew && chain > 1) {
-      window.clearTimeout(this.chainPopTimer);
-      this.chainSprite.scale.set(
-        this.chainBaseScale.x * CONFIG.CHAIN_POP_SCALE,
-        this.chainBaseScale.y * CONFIG.CHAIN_POP_SCALE,
-        1
-      );
-      this.chainPopTimer = window.setTimeout(() => {
-        this.chainSprite.scale.copy(this.chainBaseScale);
-      }, CONFIG.CHAIN_POP_DURATION);
+      this.chainPopGen += 1;
+      const gen = this.chainPopGen;
+      const popScale = 1.6 + Math.min(chain, 25) * 0.05;
+
+      if (isMilestone10) {
+        this.applyChainScale(3.2);
+        setTimeout(() => {
+          if (this.chainPopGen !== gen) return;
+          this.applyChainScale(1.6);
+          setTimeout(() => {
+            if (this.chainPopGen !== gen) return;
+            this.applyChainScale(2.6);
+            this.drawChain(chain);
+            setTimeout(() => {
+              if (this.chainPopGen !== gen) return;
+              this.applyChainScale(1.3);
+              setTimeout(() => {
+                if (this.chainPopGen !== gen) return;
+                this.chainSprite.scale.copy(this.chainBaseScale);
+              }, 150);
+            }, 140);
+          }, 130);
+        }, 100);
+      } else {
+        this.applyChainScale(popScale);
+        setTimeout(() => {
+          if (this.chainPopGen !== gen) return;
+          this.chainSprite.scale.copy(this.chainBaseScale);
+        }, CONFIG.CHAIN_POP_DURATION);
+      }
     } else if (chain === 1) {
+      this.chainPopGen += 1;
       this.chainSprite.scale.copy(this.chainBaseScale);
     }
   }
 
+  private applyChainScale(s: number): void {
+    this.chainSprite.scale.set(
+      this.chainBaseScale.x * s,
+      this.chainBaseScale.y * s,
+      1
+    );
+  }
+
   reset(): void {
-    window.clearTimeout(this.chainPopTimer);
+    this.chainPopGen += 1;
     this.lastChain = 1;
     this.chainSprite.scale.copy(this.chainBaseScale);
     this.drawChain(1);
     this.drawScore(0);
   }
 
-  private drawChain(chain: number): void {
+  private drawChain(chain: number, milestoneFlash = false): void {
     const ctx = this.chainCanvas.getContext('2d')!;
     const w = this.chainCanvas.width;
     const h = this.chainCanvas.height;
     ctx.clearRect(0, 0, w, h);
 
     const outline = hexToCss(CONFIG.PALETTE.UI_OUTLINE);
-    const fill = hexToCss(CONFIG.PALETTE.NEON_BLUE);
+    const fill = milestoneFlash ? '#ffffff' : this.chainColor(chain);
     const dim = chain > 1 ? 1 : 0.55;
 
     ctx.textAlign = 'center';
@@ -148,11 +179,42 @@ export class TaxiWorldHud {
     ctx.lineWidth = Math.max(5, Math.round(h * 0.12));
     ctx.strokeStyle = outline;
     ctx.fillStyle = fill;
+
+    if (chain >= 5) {
+      const glowT = Math.min(1, (chain - 5) / 15);
+      ctx.shadowColor = fill;
+      ctx.shadowBlur = 8 + glowT * 24;
+    }
+    if (milestoneFlash) {
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 40;
+    }
+
     ctx.strokeText(`×${chain}`, w / 2, h / 2);
     ctx.fillText(`×${chain}`, w / 2, h / 2);
     ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
 
     this.chainTex.needsUpdate = true;
+  }
+
+  /** Yellow → orange → red gradient as chain grows. */
+  private chainColor(chain: number): string {
+    if (chain <= 1) return hexToCss(CONFIG.PALETTE.NEON_BLUE);
+    const t = Math.min(1, (chain - 1) / 19);
+    let r: number, g: number, b: number;
+    if (t <= 0.5) {
+      const u = t * 2;
+      r = Math.round(253 + (255 - 253) * u);
+      g = Math.round(224 + (135 - 224) * u);
+      b = Math.round(71 * (1 - u));
+    } else {
+      const u = (t - 0.5) * 2;
+      r = Math.round(255 + (225 - 255) * u);
+      g = Math.round(135 * (1 - u));
+      b = 0;
+    }
+    return `rgb(${r},${g},${b})`;
   }
 
   private drawScore(score: number): void {
@@ -177,7 +239,7 @@ export class TaxiWorldHud {
   }
 
   dispose(): void {
-    window.clearTimeout(this.chainPopTimer);
+    this.chainPopGen += 1;
     this.chainTex.dispose();
     this.scoreTex.dispose();
     (this.chainSprite.material as THREE.SpriteMaterial).dispose();

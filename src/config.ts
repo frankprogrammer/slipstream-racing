@@ -538,6 +538,19 @@ export const CONFIG = {
   AUDIO_CRASH_DURATION: 0.38,
   AUDIO_CRASH_LP_HZ: 420,
 
+  // ── Traffic engine sounds (opponent cars — spatial stereo + Doppler) ──
+  AUDIO_TRAFFIC_ENABLED: true,
+  AUDIO_TRAFFIC_VOICES: 6,
+  AUDIO_TRAFFIC_MAX_GAIN: 0.10,
+  AUDIO_TRAFFIC_MAX_DISTANCE: 50,
+  AUDIO_TRAFFIC_HZ_BASE: 155,
+  AUDIO_TRAFFIC_HZ_VARIATION: 35,
+  AUDIO_TRAFFIC_FILTER_HZ: 2800,
+  AUDIO_TRAFFIC_PAN_RANGE: 3.5,
+  AUDIO_TRAFFIC_DOPPLER_STRENGTH: 0.18,
+  AUDIO_TRAFFIC_DOPPLER_REF_DIST: 25,
+  AUDIO_TRAFFIC_SMOOTH: 8,
+
   // ── Music (Phase 4 step 33 — procedural synthwave + chain layers) ──
   /** When false, music bus is silent (SFX unchanged). */
   AUDIO_MUSIC_ENABLED: true,

@@ -5,7 +5,7 @@ import { CONFIG, rgbaFromHex } from '../config';
  * HUD — HTML/CSS overlay: milestone copy + screen flash only.
  * Score and chain render on the taxi (`TaxiWorldHud`).
  */
-const TOUCH_HINT_BUTTON_PX = 72;
+const TOUCH_HINT_BUTTON_PX = 100;
 
 export class HUD {
   private milestoneEl: HTMLElement;
@@ -41,11 +41,11 @@ export class HUD {
       'align-items:center',
       'justify-content:center',
       'font-family:Orbitron, system-ui, sans-serif',
-      'font-size:34px',
+      'font-size:48px',
       'font-weight:900',
       'line-height:1',
       `color:#${CONFIG.PALETTE.UI_TEXT.toString(16).padStart(6, '0')}`,
-      `border:4px solid #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, '0')}`,
+      `border:5px solid #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, '0')}`,
       `background:rgba(${(CONFIG.PALETTE.ROAD_DARK >> 16) & 255},${(CONFIG.PALETTE.ROAD_DARK >> 8) & 255},${CONFIG.PALETTE.ROAD_DARK & 255},0.82)`,
       `box-shadow:0 0 0 2px ${rgbaFromHex(CONFIG.PALETTE.UI_TEXT, 0.18)},0 0 18px #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, '0')},0 0 34px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')}`,
       `text-shadow:0 0 6px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')},0 0 14px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')}`,
@@ -145,9 +145,8 @@ export class HUD {
     }
 
     const rect = container.getBoundingClientRect();
-    const half = TOUCH_HINT_BUTTON_PX * 0.5;
-    const leftPx = half;
-    const rightPx = rect.width - half;
+    const leftPx = rect.width * 0.22;
+    const rightPx = rect.width * 0.78;
 
     const left = this.tmpProj.copy(leftWorldPoint).project(camera);
     const leftPy = (-left.y * 0.5 + 0.5) * rect.height;

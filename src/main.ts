@@ -18,6 +18,12 @@ import { HUD } from "./ui/HUD";
 import { GameAudio } from "./engine/GameAudio";
 import { TireMarkSystem } from "./engine/TireMarkSystem";
 import { VehicleExhaustSystem } from "./engine/VehicleExhaustSystem";
+import {
+  loadPlayerCarGltf,
+  cloneMeshMaterialsUnique,
+  fitCarToDimensions,
+  applyLiveryColors,
+} from "./engine/playerCarGlb";
 
 function easeInCubic(t: number): number {
   return t ** 3;
@@ -135,6 +141,7 @@ const slipstreamActivateBurst = new SlipstreamActivateBurst();
 const gameAudio = new GameAudio();
 const tireMarks = new TireMarkSystem();
 const vehicleExhaust = new VehicleExhaustSystem();
+const trafficAudioBuf: number[] = [];
 const milestoneAnchorWorld = new THREE.Vector3();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
@@ -144,6 +151,39 @@ container.addEventListener("pointerdown", () => gameAudio.unlock(), {
 });
 
 laneSystem.onSwitch(() => gameAudio.playLaneSwitch());
+
+const soundToggle = document.getElementById("sound-toggle")!;
+const soundIconOn = document.getElementById("sound-icon-on")!;
+const soundIconOff = document.getElementById("sound-icon-off")!;
+const musicToggle = document.getElementById("music-toggle")!;
+const musicIconOn = document.getElementById("music-icon-on")!;
+const musicIconOff = document.getElementById("music-icon-off")!;
+
+function syncMusicVisual(muted: boolean): void {
+  musicToggle.classList.toggle("muted", muted);
+  musicIconOn.style.display = muted ? "none" : "";
+  musicIconOff.style.display = muted ? "" : "none";
+}
+
+soundToggle.addEventListener("click", () => {
+  const muted = !gameAudio.isMuted();
+  gameAudio.setMuted(muted);
+  soundToggle.classList.toggle("muted", muted);
+  soundIconOn.style.display = muted ? "none" : "";
+  soundIconOff.style.display = muted ? "" : "none";
+  if (muted) {
+    syncMusicVisual(true);
+  } else {
+    syncMusicVisual(gameAudio.isMusicMuted());
+  }
+});
+
+musicToggle.addEventListener("click", () => {
+  if (gameAudio.isMuted()) return;
+  const muted = !gameAudio.isMusicMuted();
+  gameAudio.setMusicMuted(muted);
+  syncMusicVisual(muted);
+});
 
 let appFocused = document.visibilityState === "visible";
 let needsDeltaReset = false;
@@ -174,8 +214,39 @@ let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
 let introElapsedMs = 0;
 
-const CRASH_SPIN_MS = 800;
-const POST_CRASH_SLIDE_MS = 1800;
+const LIGHTS_PHASE_MS = 280;
+const LIGHTS_GREEN_SHOW_MS = 350;
+let startLightsActive = false;
+let startLightsElapsedMs = 0;
+const startLightsContainer = document.getElementById("start-lights")!;
+const startLightEls = [
+  document.getElementById("light-0")!,
+  document.getElementById("light-1")!,
+  document.getElementById("light-2")!,
+];
+
+const FLYBY_BASE_DELAY = 100;
+const FLYBY_STAGGER = 300;
+const FLYBY_DURATION = 1200;
+
+interface FlybySlot {
+  enabled: boolean;
+  dir: number;
+  triggerMs: number;
+  elapsedMs: number;
+  animating: boolean;
+  soundPlayed: boolean;
+}
+const flybySlots: FlybySlot[] = [
+  { enabled: false, dir: -1, triggerMs: 0, elapsedMs: 0, animating: false, soundPlayed: false },
+  { enabled: false, dir: 1, triggerMs: 0, elapsedMs: 0, animating: false, soundPlayed: false },
+];
+let flybyGroups: THREE.Group[] = [];
+let flybyPending = false;
+let flybyWaitMs = 0;
+
+const CRASH_SPIN_MS = 1400;
+const POST_CRASH_SLIDE_MS = 2200;
 let crashActive = false;
 let crashElapsedMs = 0;
 let crashSpinDir = 1;
@@ -189,6 +260,122 @@ let crashScrollSpeed = 0;
 let postCrashSlide = false;
 let postCrashSlideMs = 0;
 
+// Dramatic crash variation: 0 = front tumble, 1 = barrel roll, 2 = big lateral spin
+let crashType = 0;
+let crashShakeIntensity = 0;
+let crashShakeDecay = 0;
+
+/* ── Crash spark / debris particles ─────────────────────────────── */
+const SPARK_COUNT = 60;
+const SPARK_LIFETIME = 1.2;
+const sparkPositions = new Float32Array(SPARK_COUNT * 3);
+const sparkColors = new Float32Array(SPARK_COUNT * 3);
+const sparkVelocities: THREE.Vector3[] = [];
+const sparkLifetimes = new Float32Array(SPARK_COUNT);
+const sparkSizes = new Float32Array(SPARK_COUNT);
+
+for (let i = 0; i < SPARK_COUNT; i++) {
+  sparkVelocities.push(new THREE.Vector3());
+  sparkLifetimes[i] = 0;
+  sparkSizes[i] = 0;
+}
+
+const sparkGeometry = new THREE.BufferGeometry();
+sparkGeometry.setAttribute("position", new THREE.BufferAttribute(sparkPositions, 3));
+sparkGeometry.setAttribute("color", new THREE.BufferAttribute(sparkColors, 3));
+sparkGeometry.setAttribute("size", new THREE.BufferAttribute(sparkSizes, 1));
+
+const sparkMaterial = new THREE.PointsMaterial({
+  size: 0.12,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.9,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  sizeAttenuation: true,
+});
+const sparkPoints = new THREE.Points(sparkGeometry, sparkMaterial);
+sparkPoints.frustumCulled = false;
+scene.add(sparkPoints);
+
+function spawnCrashSparks(cx: number, cy: number, cz: number): void {
+  const orangeR = [1.0, 1.0, 0.95, 0.9];
+  const orangeG = [0.7, 0.5, 0.3, 0.2];
+  const orangeB = [0.0, 0.0, 0.05, 0.1];
+
+  for (let i = 0; i < SPARK_COUNT; i++) {
+    const i3 = i * 3;
+    sparkPositions[i3] = cx + (Math.random() - 0.5) * 0.3;
+    sparkPositions[i3 + 1] = cy + Math.random() * 0.2;
+    sparkPositions[i3 + 2] = cz + (Math.random() - 0.5) * 0.3;
+
+    const speed = 2 + Math.random() * 6;
+    const angle = Math.random() * Math.PI * 2;
+    const upAngle = Math.random() * Math.PI * 0.5;
+    sparkVelocities[i].set(
+      Math.cos(angle) * Math.cos(upAngle) * speed,
+      Math.sin(upAngle) * speed * 0.8 + Math.random() * 2,
+      Math.sin(angle) * Math.cos(upAngle) * speed,
+    );
+
+    sparkLifetimes[i] = SPARK_LIFETIME * (0.5 + Math.random() * 0.5);
+    sparkSizes[i] = 0.06 + Math.random() * 0.14;
+
+    const ci = Math.floor(Math.random() * orangeR.length);
+    sparkColors[i3] = orangeR[ci];
+    sparkColors[i3 + 1] = orangeG[ci];
+    sparkColors[i3 + 2] = orangeB[ci];
+  }
+
+  sparkGeometry.attributes.position.needsUpdate = true;
+  sparkGeometry.attributes.color.needsUpdate = true;
+  sparkGeometry.attributes.size.needsUpdate = true;
+}
+
+function updateCrashSparks(dt: number): void {
+  let anyAlive = false;
+  for (let i = 0; i < SPARK_COUNT; i++) {
+    if (sparkLifetimes[i] <= 0) continue;
+    sparkLifetimes[i] -= dt;
+    anyAlive = true;
+
+    const i3 = i * 3;
+    const v = sparkVelocities[i];
+    v.y -= 9.8 * dt;
+    sparkPositions[i3] += v.x * dt;
+    sparkPositions[i3 + 1] += v.y * dt;
+    sparkPositions[i3 + 2] += v.z * dt;
+
+    if (sparkPositions[i3 + 1] < 0) {
+      sparkPositions[i3 + 1] = 0;
+      v.y *= -0.3;
+      v.x *= 0.7;
+      v.z *= 0.7;
+    }
+
+    const life01 = Math.max(0, sparkLifetimes[i] / SPARK_LIFETIME);
+    sparkSizes[i] = (0.06 + Math.random() * 0.04) * life01;
+  }
+
+  if (anyAlive) {
+    sparkGeometry.attributes.position.needsUpdate = true;
+    sparkGeometry.attributes.size.needsUpdate = true;
+  }
+}
+
+function resetCrashSparks(): void {
+  for (let i = 0; i < SPARK_COUNT; i++) {
+    sparkLifetimes[i] = 0;
+    sparkSizes[i] = 0;
+    const i3 = i * 3;
+    sparkPositions[i3] = 0;
+    sparkPositions[i3 + 1] = -10;
+    sparkPositions[i3 + 2] = 0;
+  }
+  sparkGeometry.attributes.position.needsUpdate = true;
+  sparkGeometry.attributes.size.needsUpdate = true;
+}
+
 function resetGame(): void {
   if (crashHitCarGroup) {
     crashHitCarGroup.rotation.set(0, 0, 0);
@@ -200,6 +387,34 @@ function resetGame(): void {
   postCrashSlide = false;
   postCrashSlideMs = 0;
   crashScrollSpeed = 0;
+  crashShakeIntensity = 0;
+  crashShakeDecay = 0;
+  resetCrashSparks();
+  flybyPending = true;
+  flybyWaitMs = 0;
+  for (const g of flybyGroups) g.visible = false;
+  const pattern = Math.random();
+  if (pattern < 0.33) {
+    flybySlots[0].enabled = true;  flybySlots[0].dir = -1;
+    flybySlots[0].triggerMs = FLYBY_BASE_DELAY;
+    flybySlots[1].enabled = false;
+  } else if (pattern < 0.66) {
+    flybySlots[0].enabled = true;  flybySlots[0].dir = 1;
+    flybySlots[0].triggerMs = FLYBY_BASE_DELAY;
+    flybySlots[1].enabled = false;
+  } else {
+    flybySlots[0].enabled = true;  flybySlots[0].dir = -1;
+    flybySlots[0].triggerMs = FLYBY_BASE_DELAY;
+    flybySlots[1].enabled = true;  flybySlots[1].dir = 1;
+    flybySlots[1].triggerMs = FLYBY_BASE_DELAY + FLYBY_STAGGER;
+  }
+  for (const s of flybySlots) {
+    s.elapsedMs = 0; s.animating = false; s.soundPlayed = false;
+  }
+  startLightsActive = false;
+  startLightsElapsedMs = 0;
+  startLightsContainer.classList.remove("visible");
+  for (const el of startLightEls) el.classList.remove("red", "green");
   gameState.reset();
   laneSystem.reset();
   laneSystem.enabled = false;
@@ -316,8 +531,13 @@ function animate(): void {
       playerTaxi.group.position.z = z0 + (z1 - z0) * e;
       if (t >= 1) {
         runGameplayReady = true;
-        laneSystem.enabled = true;
         playerTaxi.group.position.z = z1;
+        startLightsActive = true;
+        startLightsElapsedMs = 0;
+        startLightsContainer.classList.add("visible");
+        for (const el of startLightEls) {
+          el.classList.remove("red", "green");
+        }
       }
 
       const laneX = laneSystem.getLaneX(nowMs);
@@ -333,6 +553,31 @@ function animate(): void {
 
       scrollForAudio = CONFIG.BASE_SCROLL_SPEED;
     } else {
+      if (startLightsActive) {
+        startLightsElapsedMs += delta * 1000;
+        const totalRedMs = LIGHTS_PHASE_MS * 3;
+        for (let i = 0; i < 3; i++) {
+          if (startLightsElapsedMs >= LIGHTS_PHASE_MS * (i + 1)) {
+            if (!startLightEls[i].classList.contains("red") && !startLightEls[i].classList.contains("green")) {
+              startLightEls[i].classList.add("red");
+              gameAudio.playLightRed();
+            }
+          }
+        }
+        if (startLightsElapsedMs >= totalRedMs && !startLightEls[0].classList.contains("green")) {
+          for (const el of startLightEls) {
+            el.classList.remove("red");
+            el.classList.add("green");
+          }
+          gameAudio.playLightGreen();
+        }
+        if (startLightsElapsedMs >= totalRedMs + LIGHTS_GREEN_SHOW_MS) {
+          startLightsActive = false;
+          startLightsContainer.classList.remove("visible");
+          laneSystem.enabled = true;
+        }
+      }
+
       runTimeMs += delta * 1000;
       burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
 
@@ -353,7 +598,12 @@ function animate(): void {
       }
       const scrollDz = scrollPerFrame * 60 * delta;
 
-      roadManager?.update(scrollDz);
+      const segPasses = roadManager?.update(scrollDz) ?? 0;
+      if (segPasses > 0 && !crashActive) {
+        const span = Math.max(1e-6, CONFIG.MAX_SCROLL_SPEED - CONFIG.BASE_SCROLL_SPEED);
+        const speedT = Math.max(0, Math.min(1, (scrollPerFrame - CONFIG.BASE_SCROLL_SPEED) / span));
+        gameAudio.playWhoosh(speedT);
+      }
       trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
       const pX = playerTaxi.group.position.x;
       const pZ = playerTaxi.group.position.z;
@@ -387,10 +637,7 @@ function animate(): void {
           gameAudio.playMilestone(milestone);
         }
         scoreManager.addSlingshotBonus(chainManager.chain);
-        hud.showMilestone(`×${chainManager.chain}`, milestone === 10);
-        if (milestone === 10) {
-          hud.flashScreenPerfect();
-        }
+        gameAudio.playChainUp(chainManager.chain);
       }
 
       playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
@@ -404,7 +651,52 @@ function animate(): void {
 
       cameraController.update(playerTaxi, scrollPerFrame);
 
-      if (!crashActive) {
+      if (flybyPending) {
+        flybyWaitMs += delta * 1000;
+        let anyActive = false;
+        for (let i = 0; i < flybySlots.length; i++) {
+          const s = flybySlots[i];
+          const g = flybyGroups[i];
+          if (!s.enabled || !g) continue;
+          anyActive = true;
+
+          if (!s.animating && flybyWaitMs >= s.triggerMs) {
+            s.animating = true;
+            s.elapsedMs = 0;
+          }
+          if (!s.soundPlayed && s.animating) {
+            s.soundPlayed = true;
+            gameAudio.playFlyby();
+          }
+          if (s.animating) {
+            s.elapsedMs += delta * 1000;
+            const ft = Math.min(1, s.elapsedMs / FLYBY_DURATION);
+            const startZ = CONFIG.TAXI_POSITION_Z - 25;
+            const endZ = CONFIG.TAXI_POSITION_Z + 80;
+            const curZ = startZ + (endZ - startZ) * ft;
+            g.visible = true;
+            g.position.set(s.dir * 3.0, 0, curZ);
+            g.rotation.set(0, 0, 0);
+
+            const hw = CONFIG.TAXI_DIMENSIONS.width / 2;
+            const rearZ = curZ - CONFIG.TAXI_DIMENSIONS.length / 2;
+            tireMarks.spawn(g.position.x - hw * 0.55, rearZ);
+            tireMarks.spawn(g.position.x + hw * 0.55, rearZ);
+            const exY = CONFIG.TAXI_DIMENSIONS.height * 0.3;
+            vehicleExhaust.spawn(g.position.x - 0.3, exY, rearZ - 0.1);
+            vehicleExhaust.spawn(g.position.x + 0.3, exY, rearZ - 0.1);
+
+            if (ft >= 1) {
+              s.animating = false;
+              s.enabled = false;
+              g.visible = false;
+            }
+          }
+        }
+        if (!anyActive) flybyPending = false;
+      }
+
+      if (!crashActive && !startLightsActive) {
         const hit: CollisionHit | null = collisionSystem.check(playerTaxi, trafficSpawner);
         if (hit) {
           crashActive = true;
@@ -417,6 +709,14 @@ function animate(): void {
           crashHitCarStartX = hit.hitX;
           crashHitCarStartZ = hit.hitZ;
           crashScrollSpeed = scrollPerFrame;
+          crashType = Math.floor(Math.random() * 3);
+          crashShakeIntensity = 1.0;
+          crashShakeDecay = 0;
+          spawnCrashSparks(
+            (playerTaxi.group.position.x + hit.hitX) / 2,
+            0.4,
+            (playerTaxi.group.position.z + hit.hitZ) / 2,
+          );
           laneSystem.enabled = false;
           gameAudio.playCrash();
         }
@@ -445,18 +745,32 @@ function animate(): void {
       gameoverScroll = idleScroll + (crashScrollSpeed * 0.5 - idleScroll) * decay;
 
       const settle = 1 - slideT;
-      playerTaxi.group.rotation.y = crashSpinDir * (Math.PI * 0.7 + slideT * 0.3);
-      playerTaxi.group.rotation.z = crashLateralDir * 0.3 * settle;
-      playerTaxi.group.rotation.x = -0.15 * settle;
-      playerTaxi.group.position.x = crashStartX + crashLateralDir * (2.0 + slideT * 1.5);
-      playerTaxi.group.position.y = settle * 0.08;
+      const settleEase = settle * settle;
+
+      // Settle from wherever the crash type left the car
+      if (crashType === 0) {
+        playerTaxi.group.rotation.x = -Math.PI * 1.1 * settleEase + (1 - settleEase) * -0.08;
+        playerTaxi.group.rotation.y = crashSpinDir * (Math.PI * 0.5 + slideT * 0.4);
+        playerTaxi.group.rotation.z = crashLateralDir * 0.4 * settleEase;
+      } else if (crashType === 1) {
+        playerTaxi.group.rotation.z = crashLateralDir * Math.PI * 1.5 * settleEase;
+        playerTaxi.group.rotation.y = crashSpinDir * (Math.PI * 0.6 + slideT * 0.3);
+        playerTaxi.group.rotation.x = -0.3 * settleEase;
+      } else {
+        playerTaxi.group.rotation.y = crashSpinDir * (Math.PI * 1.8 + slideT * 0.2);
+        playerTaxi.group.rotation.z = crashLateralDir * 0.6 * settleEase;
+        playerTaxi.group.rotation.x = -0.25 * settleEase;
+      }
+      playerTaxi.group.position.x = crashStartX + crashLateralDir * (3.0 + slideT * 1.5);
+      playerTaxi.group.position.y = settleEase * 0.15;
 
       if (crashHitCarGroup) {
         const oppDir = -crashLateralDir;
-        crashHitCarGroup.rotation.y = oppDir * (Math.PI * 0.5 + slideT * 0.2);
-        crashHitCarGroup.rotation.z = oppDir * 0.2 * settle;
-        crashHitCarGroup.position.x = crashHitCarStartX + oppDir * (1.5 + slideT * 1.0);
-        crashHitCarGroup.position.y = settle * 0.05;
+        crashHitCarGroup.rotation.y = oppDir * (Math.PI * 0.9 + slideT * 0.2);
+        crashHitCarGroup.rotation.z = oppDir * 0.45 * settleEase;
+        crashHitCarGroup.rotation.x = 0.35 * settleEase;
+        crashHitCarGroup.position.x = crashHitCarStartX + oppDir * (3.0 + slideT * 1.0);
+        crashHitCarGroup.position.y = settleEase * 0.1;
       }
 
       if (slideT >= 1) {
@@ -470,7 +784,10 @@ function animate(): void {
     }
 
     const gameoverDz = gameoverScroll * 60 * delta;
-    roadManager?.update(gameoverDz);
+    const idlePasses = roadManager?.update(gameoverDz) ?? 0;
+    if (idlePasses > 0) {
+      gameAudio.playWhoosh(0);
+    }
     trafficSpawner.update(delta, runTimeMs, gameoverScroll);
     const pX = playerTaxi.group.position.x;
     const pZ = playerTaxi.group.position.z;
@@ -515,6 +832,18 @@ function animate(): void {
     chain: chainManager.chain,
   });
 
+  trafficAudioBuf.length = 0;
+  trafficSpawner.forEachPoolWindSlot((_si, active, _sa, cx, cz) => {
+    if (active) { trafficAudioBuf.push(cx, cz); }
+  });
+  gameAudio.updateTrafficEngines(
+    delta,
+    gameState.isPlaying && runGameplayReady,
+    playerTaxi.group.position.x,
+    playerTaxi.group.position.z,
+    trafficAudioBuf,
+  );
+
   const hintZ =
     playerTaxi.group.position.z - CONFIG.TAXI_DIMENSIONS.length * 0.5;
   const hintY = 0.28;
@@ -533,25 +862,50 @@ function animate(): void {
     crashElapsedMs += delta * 1000;
     const t = Math.min(1, crashElapsedMs / CRASH_SPIN_MS);
     const easeOut = 1 - (1 - t) * (1 - t);
+    const bounce = Math.sin(easeOut * Math.PI);
 
-    playerTaxi.group.rotation.y = crashSpinDir * easeOut * Math.PI * 0.7;
-    playerTaxi.group.rotation.z = crashLateralDir * easeOut * 0.3;
-    playerTaxi.group.rotation.x = easeOut * -0.15;
-    playerTaxi.group.position.x = crashStartX + crashLateralDir * easeOut * 2.0;
-    playerTaxi.group.position.y = Math.sin(easeOut * Math.PI) * 0.35;
+    if (crashType === 0) {
+      // Front tumble: car flips forward over its nose
+      playerTaxi.group.rotation.x = easeOut * -Math.PI * 1.1;
+      playerTaxi.group.rotation.y = crashSpinDir * easeOut * Math.PI * 0.5;
+      playerTaxi.group.rotation.z = crashLateralDir * easeOut * 0.4;
+      playerTaxi.group.position.y = bounce * 2.2;
+      playerTaxi.group.position.x = crashStartX + crashLateralDir * easeOut * 3.0;
+    } else if (crashType === 1) {
+      // Barrel roll: car rolls sideways in the air
+      playerTaxi.group.rotation.z = crashLateralDir * easeOut * Math.PI * 1.5;
+      playerTaxi.group.rotation.y = crashSpinDir * easeOut * Math.PI * 0.6;
+      playerTaxi.group.rotation.x = easeOut * -0.3;
+      playerTaxi.group.position.y = bounce * 2.5;
+      playerTaxi.group.position.x = crashStartX + crashLateralDir * easeOut * 3.5;
+    } else {
+      // Big lateral spin: violent yaw + lift
+      playerTaxi.group.rotation.y = crashSpinDir * easeOut * Math.PI * 1.8;
+      playerTaxi.group.rotation.z = crashLateralDir * easeOut * 0.6;
+      playerTaxi.group.rotation.x = easeOut * -0.25;
+      playerTaxi.group.position.y = bounce * 1.5;
+      playerTaxi.group.position.x = crashStartX + crashLateralDir * easeOut * 4.0;
+    }
 
     if (crashHitCarGroup) {
       const oppDir = -crashLateralDir;
-      crashHitCarGroup.rotation.y = oppDir * easeOut * Math.PI * 0.5;
-      crashHitCarGroup.rotation.z = oppDir * easeOut * 0.2;
-      crashHitCarGroup.position.x = crashHitCarStartX + oppDir * easeOut * 1.5;
-      crashHitCarGroup.position.y = Math.sin(easeOut * Math.PI) * 0.2;
+      const hitBounce = Math.sin(easeOut * Math.PI * 0.8);
+      crashHitCarGroup.rotation.y = oppDir * easeOut * Math.PI * 0.9;
+      crashHitCarGroup.rotation.z = oppDir * easeOut * 0.45;
+      crashHitCarGroup.rotation.x = easeOut * 0.35;
+      crashHitCarGroup.position.x = crashHitCarStartX + oppDir * easeOut * 3.0;
+      crashHitCarGroup.position.y = hitBounce * 1.2;
     }
+
+    // Camera shake decays over time
+    crashShakeDecay += delta * 1000;
+    crashShakeIntensity = Math.max(0, 1 - crashShakeDecay / CRASH_SPIN_MS);
 
     if (t >= 1) {
       crashActive = false;
       postCrashSlide = true;
       postCrashSlideMs = 0;
+      crashShakeIntensity = 0;
       gameState.transition("gameover");
     }
   }
@@ -567,6 +921,17 @@ function animate(): void {
     }
   }
 
+  // Camera shake on crash impact
+  if (crashShakeIntensity > 0) {
+    const shakeAmt = crashShakeIntensity * crashShakeIntensity;
+    camera.position.x += (Math.random() - 0.5) * shakeAmt * 0.6;
+    camera.position.y += (Math.random() - 0.5) * shakeAmt * 0.4;
+    camera.rotation.z += (Math.random() - 0.5) * shakeAmt * 0.03;
+  }
+
+  // Update crash spark particles
+  updateCrashSparks(delta);
+
   renderer.render(scene, camera);
 }
 
@@ -574,11 +939,26 @@ void (async () => {
   playerTaxi = await PlayerTaxi.create();
   roadManager = await RoadManager.create(CONFIG.TAXI_POSITION_Z);
   trafficSpawner = await TrafficSpawner.create();
+
+  const flybyGltf = await loadPlayerCarGltf();
+  for (let fi = 0; fi < 2; fi++) {
+    const g = new THREE.Group();
+    const car = flybyGltf.scene.clone(true);
+    cloneMeshMaterialsUnique(car);
+    fitCarToDimensions(car, CONFIG.TAXI_DIMENSIONS, 0);
+    const livIdx = fi < CONFIG.TRAFFIC_LIVERY_VARIANTS.length ? fi : 0;
+    applyLiveryColors(car, CONFIG.TRAFFIC_LIVERY_VARIANTS[livIdx]!);
+    g.add(car);
+    g.visible = false;
+    flybyGroups.push(g);
+  }
+
   scene.add(roadManager.group);
   scene.add(tireMarks.group);
   scene.add(trafficSpawner.group);
   scene.add(vehicleExhaust.group);
   scene.add(slipstreamWind.group);
+  for (const fg of flybyGroups) scene.add(fg);
   scene.add(playerTaxi.group);
   scene.add(slingshotTrail.group);
   playerTaxi.group.add(slipstreamActivateBurst.anchor);

@@ -91,7 +91,7 @@ export class VehicleExhaustSystem {
   }
 
   private nextSlot = 0;
-  private spawn(x: number, y: number, z: number): void {
+  spawn(x: number, y: number, z: number): void {
     const start = this.nextSlot;
     for (let tries = 0; tries < MAX_PARTICLES; tries++) {
       const idx = (start + tries) % MAX_PARTICLES;

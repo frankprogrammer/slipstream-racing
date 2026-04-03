@@ -70,7 +70,7 @@ export class TireMarkSystem {
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
-  private spawn(x: number, z: number): void {
+  spawn(x: number, z: number): void {
     const slot = this.nextSlot;
     this.nextSlot = (this.nextSlot + 1) % MAX_MARKS;
     const m = this.marks[slot];

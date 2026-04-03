@@ -252,15 +252,20 @@ export class RoadManager {
   /**
    * Scroll road toward -Z (world moves past the player).
    * dz is positive distance to subtract from segment z each frame.
+   * Returns the number of segment centers that crossed playerZ this frame.
    */
-  update(dz: number): void {
-    if (dz <= 0) return;
+  update(dz: number): number {
+    if (dz <= 0) return 0;
     const L = CONFIG.ROAD_SEGMENT_LENGTH;
     let maxZ = -Infinity;
+    let passed = 0;
+    const triggerZ = this.playerZ - 3;
     for (const s of this.segments) {
+      const oldZ = s.zCenter;
       s.zCenter -= dz;
       s.root.position.z = s.zCenter;
       if (s.zCenter > maxZ) maxZ = s.zCenter;
+      if (oldZ >= triggerZ && s.zCenter < triggerZ) passed++;
     }
     for (const s of this.segments) {
       if (s.zCenter < this.playerZ - this.recycleBehind) {
@@ -271,5 +276,6 @@ export class RoadManager {
         this.applyEnvironmentToSegment(s);
       }
     }
+    return passed;
   }
 }

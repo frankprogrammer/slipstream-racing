@@ -229,6 +229,85 @@
         background: var(--f1-retry-hover, rgba(225, 6, 0, 0.12));
         box-shadow: 0 0 40px var(--f1-retry-glow, rgba(225, 6, 0, 0.35));
       }
+
+      /* Audio controls */
+      #audio-controls {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        z-index: 30;
+        display: flex;
+        gap: 8px;
+      }
+      .audio-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
+      .audio-btn:hover {
+        background: rgba(0, 0, 0, 0.55);
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+      .audio-btn svg {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.8);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .audio-btn.muted {
+        border-color: rgba(225, 6, 0, 0.5);
+      }
+      .audio-btn.muted svg {
+        stroke: rgba(255, 255, 255, 0.4);
+      }
+
+      /* F1 Starting Lights */
+      #start-lights {
+        position: absolute;
+        top: 30%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 15;
+        display: none;
+        gap: 18px;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      #start-lights.visible {
+        display: flex;
+      }
+      .start-light {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: rgba(60, 60, 60, 0.7);
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        transition: background 0.12s, box-shadow 0.12s, border-color 0.12s;
+      }
+      .start-light.red {
+        background: #e10600;
+        border-color: rgba(225, 6, 0, 0.6);
+        box-shadow: 0 0 24px rgba(225, 6, 0, 0.7), 0 0 48px rgba(225, 6, 0, 0.3);
+      }
+      .start-light.green {
+        background: #00d2be;
+        border-color: rgba(0, 210, 190, 0.6);
+        box-shadow: 0 0 24px rgba(0, 210, 190, 0.7), 0 0 48px rgba(0, 210, 190, 0.3);
+      }
     </style>
   </head>
   <body>
@@ -242,6 +321,42 @@
       </div>
       <div id="milestone-text"></div>
       <div id="screen-flash"></div>
+
+      <div id="start-lights">
+        <div class="start-light" id="light-0"></div>
+        <div class="start-light" id="light-1"></div>
+        <div class="start-light" id="light-2"></div>
+      </div>
+
+      <div id="audio-controls">
+        <!-- Music toggle -->
+        <button id="music-toggle" class="audio-btn" aria-label="Toggle music">
+          <svg id="music-icon-on" viewBox="0 0 24 24">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+          <svg id="music-icon-off" viewBox="0 0 24 24" style="display:none">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+            <line x1="1" y1="1" x2="23" y2="23" stroke-width="2.5"/>
+          </svg>
+        </button>
+        <!-- All sound toggle -->
+        <button id="sound-toggle" class="audio-btn" aria-label="Toggle all sound">
+          <svg id="sound-icon-on" viewBox="0 0 24 24">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="sound-icon-off" viewBox="0 0 24 24" style="display:none">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+      </div>
 
       <!-- Game Over -->
       <div id="gameover">

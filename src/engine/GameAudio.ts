@@ -44,6 +44,16 @@ export class GameAudio {
   private draftOsc: OscillatorNode | null = null;
   private draftGain: GainNode | null = null;
 
+  private trafficVoices: {
+    osc1: OscillatorNode;
+    osc2: OscillatorNode;
+    osc3: OscillatorNode;
+    filter: BiquadFilterNode;
+    gain: GainNode;
+    panner: StereoPannerNode;
+    baseHz: number;
+  }[] = [];
+
   /** Call once from a user gesture so AudioContext can start (autoplay unlock). */
   unlock(): void {
     if (!CONFIG.AUDIO_ENABLED && !CONFIG.AUDIO_BG_MUSIC_ENABLED) return;
@@ -93,6 +103,34 @@ export class GameAudio {
     }
 
     this.applyFocusState();
+  }
+
+  private muted = false;
+  private musicMuted = false;
+
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (this.master) {
+      this.master.gain.value = muted ? 0 : CONFIG.AUDIO_MASTER;
+    }
+    if (this.bgMusicEl) {
+      this.bgMusicEl.muted = muted;
+    }
+  }
+
+  isMuted(): boolean {
+    return this.muted;
+  }
+
+  setMusicMuted(muted: boolean): void {
+    this.musicMuted = muted;
+    if (this.musicBus) {
+      this.musicBus.gain.value = muted ? 0 : CONFIG.AUDIO_MUSIC_MASTER;
+    }
+  }
+
+  isMusicMuted(): boolean {
+    return this.musicMuted;
   }
 
   setAppFocused(focused: boolean): void {
@@ -204,6 +242,61 @@ export class GameAudio {
     this.draftOsc.start(0);
     this.windSrc.start(0);
 
+    if (CONFIG.AUDIO_TRAFFIC_ENABLED) {
+      for (let i = 0; i < CONFIG.AUDIO_TRAFFIC_VOICES; i++) {
+        const hz = CONFIG.AUDIO_TRAFFIC_HZ_BASE +
+          (Math.random() * 2 - 1) * CONFIG.AUDIO_TRAFFIC_HZ_VARIATION;
+
+        const mixer = ctx.createGain();
+        mixer.gain.value = 1;
+
+        const osc1 = ctx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc1.frequency.value = hz;
+        const g1 = ctx.createGain();
+        g1.gain.value = 0.75;
+        osc1.connect(g1);
+        g1.connect(mixer);
+
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'square';
+        osc2.frequency.value = hz * 2;
+        const g2 = ctx.createGain();
+        g2.gain.value = 0.45;
+        osc2.connect(g2);
+        g2.connect(mixer);
+
+        const osc3 = ctx.createOscillator();
+        osc3.type = 'sawtooth';
+        osc3.frequency.value = hz * 3;
+        const g3 = ctx.createGain();
+        g3.gain.value = 0.2;
+        osc3.connect(g3);
+        g3.connect(mixer);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = CONFIG.AUDIO_TRAFFIC_FILTER_HZ;
+        filter.Q.value = 1.5;
+
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+
+        const panner = new StereoPannerNode(ctx);
+
+        mixer.connect(filter);
+        filter.connect(gain);
+        gain.connect(panner);
+        panner.connect(out);
+
+        osc1.start(0);
+        osc2.start(0);
+        osc3.start(0);
+
+        this.trafficVoices.push({ osc1, osc2, osc3, filter, gain, panner, baseHz: hz });
+      }
+    }
+
     this.music = new RacingMusic(ctx, this.musicBus);
     this.music.build();
   }
@@ -247,7 +340,7 @@ export class GameAudio {
     );
 
     this.music?.update(delta, u.playing, t);
-    if (this.musicBus) {
+    if (this.musicBus && !this.musicMuted) {
       this.musicBus.gain.value = CONFIG.AUDIO_MUSIC_ENABLED
         ? CONFIG.AUDIO_MUSIC_MASTER
         : 0;
@@ -309,6 +402,102 @@ export class GameAudio {
     this.engineGain.gain.value += (targetEngine - this.engineGain.gain.value) * k;
     this.windGain.gain.value += (targetWind - this.windGain.gain.value) * k;
     this.draftGain.gain.value += (targetDraft - this.draftGain.gain.value) * k;
+  }
+
+  /** Spatial engine hum for nearby traffic — stereo pan + distance gain + Doppler pitch. */
+  updateTrafficEngines(
+    delta: number,
+    playing: boolean,
+    playerX: number,
+    playerZ: number,
+    carXZ: number[],
+  ): void {
+    const nVoices = this.trafficVoices.length;
+    if (!this.ctx || nVoices === 0) return;
+
+    const active = playing && CONFIG.AUDIO_ENABLED && CONFIG.AUDIO_TRAFFIC_ENABLED;
+    const nCars = carXZ.length >> 1;
+    const maxDist = CONFIG.AUDIO_TRAFFIC_MAX_DISTANCE;
+    const maxGain = CONFIG.AUDIO_TRAFFIC_MAX_GAIN;
+    const panRange = CONFIG.AUDIO_TRAFFIC_PAN_RANGE;
+    const dopStr = CONFIG.AUDIO_TRAFFIC_DOPPLER_STRENGTH;
+    const dopRef = CONFIG.AUDIO_TRAFFIC_DOPPLER_REF_DIST;
+    const k = Math.min(1, CONFIG.AUDIO_TRAFFIC_SMOOTH * delta);
+    const now = this.ctx.currentTime;
+
+    const sorted: { ci: number; dist: number }[] = [];
+    for (let c = 0; c < nCars; c++) {
+      const dx = carXZ[c * 2] - playerX;
+      const dz = carXZ[c * 2 + 1] - playerZ;
+      sorted.push({ ci: c, dist: Math.sqrt(dx * dx + dz * dz) });
+    }
+    sorted.sort((a, b) => a.dist - b.dist);
+
+    for (let v = 0; v < nVoices; v++) {
+      const voice = this.trafficVoices[v];
+      const entry = v < sorted.length ? sorted[v] : null;
+
+      let tGain = 0;
+      let tPan = 0;
+      let tHz = voice.baseHz;
+
+      if (entry && active && entry.dist < maxDist) {
+        const ci = entry.ci;
+        const dx = carXZ[ci * 2] - playerX;
+        const dz = carXZ[ci * 2 + 1] - playerZ;
+
+        const t = Math.max(0, 1 - entry.dist / maxDist);
+        tGain = maxGain * (t ** 1.2);
+        tPan = Math.max(-1, Math.min(1, dx / panRange));
+
+        const dopplerMul = 1 + dopStr * Math.max(-1, Math.min(1, dz / dopRef));
+        tHz = voice.baseHz * dopplerMul;
+      }
+
+      voice.gain.gain.value += (tGain - voice.gain.gain.value) * k;
+      voice.panner.pan.value += (tPan - voice.panner.pan.value) * k;
+      voice.osc1.frequency.setTargetAtTime(tHz, now, 0.05);
+      voice.osc2.frequency.setTargetAtTime(tHz * 2, now, 0.05);
+      voice.osc3.frequency.setTargetAtTime(tHz * 3, now, 0.05);
+    }
+  }
+
+  /** Quick ascending blip on every chain multiplier increase. Pitch rises with chain. */
+  playChainUp(chain: number): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const bus = this.sfxBus;
+    const t0 = ctx.currentTime;
+
+    const baseHz = 440 + Math.min(chain, 25) * 28;
+    const dur = 0.12;
+
+    const o1 = ctx.createOscillator();
+    o1.type = 'sine';
+    o1.frequency.setValueAtTime(baseHz, t0);
+    o1.frequency.exponentialRampToValueAtTime(baseHz * 1.25, t0 + dur * 0.6);
+    const g1 = ctx.createGain();
+    g1.gain.setValueAtTime(0, t0);
+    g1.gain.linearRampToValueAtTime(0.28, t0 + 0.008);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o1.connect(g1);
+    g1.connect(bus);
+    o1.start(t0);
+    o1.stop(t0 + dur + 0.02);
+
+    const o2 = ctx.createOscillator();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(baseHz * 1.5, t0);
+    o2.frequency.exponentialRampToValueAtTime(baseHz * 1.8, t0 + dur * 0.6);
+    const g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0, t0);
+    g2.gain.linearRampToValueAtTime(0.14, t0 + 0.008);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o2.connect(g2);
+    g2.connect(bus);
+    o2.start(t0);
+    o2.stop(t0 + dur + 0.02);
   }
 
   playSlingshot(): void {
@@ -438,6 +627,176 @@ export class GameAudio {
     tg.gain.exponentialRampToValueAtTime(0.0001, t0 + thudDur);
     thudOsc.connect(tg); tg.connect(bus);
     thudOsc.start(t0); thudOsc.stop(t0 + thudDur + 0.02);
+  }
+
+  /** F1 flyby at race start — Doppler engine roar + air displacement. */
+  playFlyby(): void {
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const bus = this.sfxBus;
+    const t0 = ctx.currentTime;
+    const dur = 1.4;
+    const peakAt = 0.35;
+
+    // Layer 1: engine fundamental — sawtooth with Doppler pitch sweep
+    const eng1 = ctx.createOscillator();
+    eng1.type = 'sawtooth';
+    eng1.frequency.setValueAtTime(350, t0);
+    eng1.frequency.exponentialRampToValueAtTime(220, t0 + peakAt);
+    eng1.frequency.exponentialRampToValueAtTime(90, t0 + dur);
+    const engFilt = ctx.createBiquadFilter();
+    engFilt.type = 'lowpass';
+    engFilt.frequency.setValueAtTime(4000, t0);
+    engFilt.frequency.setValueAtTime(6000, t0 + peakAt);
+    engFilt.frequency.exponentialRampToValueAtTime(1500, t0 + dur);
+    engFilt.Q.value = 1.5;
+    const engG = ctx.createGain();
+    engG.gain.setValueAtTime(0.0001, t0);
+    engG.gain.linearRampToValueAtTime(0.35, t0 + peakAt * 0.7);
+    engG.gain.setValueAtTime(0.35, t0 + peakAt);
+    engG.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    eng1.connect(engFilt); engFilt.connect(engG); engG.connect(bus);
+    eng1.start(t0); eng1.stop(t0 + dur + 0.02);
+
+    // Layer 2: 2nd harmonic — adds aggression
+    const eng2 = ctx.createOscillator();
+    eng2.type = 'square';
+    eng2.frequency.setValueAtTime(700, t0);
+    eng2.frequency.exponentialRampToValueAtTime(440, t0 + peakAt);
+    eng2.frequency.exponentialRampToValueAtTime(180, t0 + dur);
+    const eng2Filt = ctx.createBiquadFilter();
+    eng2Filt.type = 'bandpass';
+    eng2Filt.frequency.value = 1200;
+    eng2Filt.Q.value = 2;
+    const eng2G = ctx.createGain();
+    eng2G.gain.setValueAtTime(0.0001, t0);
+    eng2G.gain.linearRampToValueAtTime(0.15, t0 + peakAt * 0.7);
+    eng2G.gain.setValueAtTime(0.15, t0 + peakAt);
+    eng2G.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    eng2.connect(eng2Filt); eng2Filt.connect(eng2G); eng2G.connect(bus);
+    eng2.start(t0); eng2.stop(t0 + dur + 0.02);
+
+    // Layer 3: turbo whine — high pitch sweep
+    const whine = ctx.createOscillator();
+    whine.type = 'sine';
+    whine.frequency.setValueAtTime(5000, t0);
+    whine.frequency.exponentialRampToValueAtTime(3000, t0 + peakAt);
+    whine.frequency.exponentialRampToValueAtTime(1200, t0 + dur);
+    const whineG = ctx.createGain();
+    whineG.gain.setValueAtTime(0.0001, t0);
+    whineG.gain.linearRampToValueAtTime(0.06, t0 + peakAt * 0.7);
+    whineG.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    whine.connect(whineG); whineG.connect(bus);
+    whine.start(t0); whine.stop(t0 + dur + 0.02);
+
+    // Layer 4: air displacement — big noise rush
+    const airDur = 0.8;
+    const airN = Math.floor(ctx.sampleRate * airDur);
+    const airBuf = ctx.createBuffer(1, airN, ctx.sampleRate);
+    const airD = airBuf.getChannelData(0);
+    for (let i = 0; i < airN; i++) {
+      const env = Math.sin((i / airN) * Math.PI);
+      airD[i] = (Math.random() * 2 - 1) * env;
+    }
+    const airSrc = ctx.createBufferSource();
+    airSrc.buffer = airBuf;
+    const airBp = ctx.createBiquadFilter();
+    airBp.type = 'bandpass';
+    airBp.Q.value = 0.8;
+    airBp.frequency.setValueAtTime(3000, t0 + peakAt - 0.15);
+    airBp.frequency.exponentialRampToValueAtTime(400, t0 + peakAt + airDur - 0.15);
+    const airG = ctx.createGain();
+    const airStart = peakAt - 0.15;
+    airG.gain.setValueAtTime(0.0001, t0);
+    airG.gain.linearRampToValueAtTime(0.3, t0 + airStart + airDur * 0.25);
+    airG.gain.exponentialRampToValueAtTime(0.0001, t0 + airStart + airDur);
+    airSrc.connect(airBp); airBp.connect(airG); airG.connect(bus);
+    airSrc.start(t0 + Math.max(0, airStart));
+    airSrc.stop(t0 + airStart + airDur + 0.02);
+  }
+
+  playLightRed(): void {
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const t0 = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, t0);
+    osc.frequency.setValueAtTime(440, t0 + 0.06);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.35, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+    osc.connect(g);
+    g.connect(this.sfxBus);
+    osc.start(t0);
+    osc.stop(t0 + 0.15);
+  }
+
+  playLightGreen(): void {
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const t0 = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, t0);
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1320, t0);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.4, t0);
+    g.gain.linearRampToValueAtTime(0.4, t0 + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.25);
+    osc1.connect(g);
+    osc2.connect(g);
+    g.connect(this.sfxBus);
+    osc1.start(t0);
+    osc2.start(t0);
+    osc1.stop(t0 + 0.28);
+    osc2.stop(t0 + 0.28);
+  }
+
+  /** Doppler-like air rush when an overhead structure flies past the camera. */
+  playWhoosh(speedT: number): void {
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const bus = this.sfxBus;
+    const t0 = ctx.currentTime;
+
+    const intensity = 0.7 + speedT * 0.3;
+    const dur = 0.35 - speedT * 0.12;
+
+    // Layer 1: air rush — bandpass noise with high→low Doppler sweep
+    const nLen = Math.floor(ctx.sampleRate * dur);
+    const nBuf = ctx.createBuffer(1, nLen, ctx.sampleRate);
+    const nD = nBuf.getChannelData(0);
+    for (let i = 0; i < nLen; i++) {
+      const env = Math.sin((i / nLen) * Math.PI);
+      nD[i] = (Math.random() * 2 - 1) * env;
+    }
+    const nSrc = ctx.createBufferSource();
+    nSrc.buffer = nBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(2000 + speedT * 2000, t0);
+    bp.frequency.exponentialRampToValueAtTime(300 + speedT * 200, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.4 * intensity, t0 + dur * 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    nSrc.connect(bp); bp.connect(g); g.connect(bus);
+    nSrc.start(t0); nSrc.stop(t0 + dur + 0.02);
+
+    // Layer 2: air displacement thud (low sine punch)
+    const thud = ctx.createOscillator();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(80, t0);
+    thud.frequency.exponentialRampToValueAtTime(35, t0 + 0.08);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.22 * intensity, t0);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
+    thud.connect(tg); tg.connect(bus);
+    thud.start(t0); thud.stop(t0 + 0.12);
   }
 
   playCrash(): void {
