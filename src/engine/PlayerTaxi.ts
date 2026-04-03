@@ -300,9 +300,9 @@ export class PlayerTaxi {
       0.06 + this.turboIntensity * 0.08;
   }
 
-  setDraftMeter(fill01: number, visible: boolean): void {
+  setDraftMeter(fill01: number, _visible: boolean): void {
     const t = Math.max(0, Math.min(1, fill01));
-    this.draftBarGroup.visible = visible;
+    this.draftBarGroup.visible = false;
     this.draftFill.scale.set(t, 1, 1);
   }
 

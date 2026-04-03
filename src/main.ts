@@ -204,6 +204,167 @@ function spawnChainPopup(chain: number, worldX: number, worldZ: number): void {
 const gameOverScreen = new GameOverScreen();
 const marketScreen = new MarketScreen(unlockManager);
 const slipstreamWind = new SlipstreamWindSystem();
+
+// ── Slipstream Tutorial System ──
+let tutorialDone = false;
+type TutorialPhase = "idle" | "showZone" | "fillBar" | "completed" | "off";
+let tutorialPhase: TutorialPhase = "off";
+let tutorialCompleteTimer = 0;
+
+const tutorialHintEl = document.getElementById("tutorial-hint")!;
+const tutorialCompleteMsg = document.getElementById("tutorial-complete-msg")!;
+
+// Tutorial glow zone (3D plane behind first traffic car)
+const tutorialGlowGeo = new THREE.PlaneGeometry(
+  CONFIG.SLIPSTREAM_ZONE_WIDTH * 1.1,
+  CONFIG.SLIPSTREAM_ZONE_DEPTH,
+);
+tutorialGlowGeo.rotateX(-Math.PI / 2);
+const tutorialGlowMat = new THREE.MeshBasicMaterial({
+  color: 0x00ccff,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  blending: THREE.AdditiveBlending,
+});
+const tutorialGlowMesh = new THREE.Mesh(tutorialGlowGeo, tutorialGlowMat);
+tutorialGlowMesh.renderOrder = 5;
+tutorialGlowMesh.visible = false;
+scene.add(tutorialGlowMesh);
+
+// 3D draft fill bar (follows drafted car)
+const DRAFT_BAR_3D_W = 2.4;
+const DRAFT_BAR_3D_H = 0.18;
+const draftBar3dGroup = new THREE.Group();
+draftBar3dGroup.visible = false;
+
+const draftBarTrackGeo = new THREE.PlaneGeometry(DRAFT_BAR_3D_W, DRAFT_BAR_3D_H);
+const draftBarTrackMat = new THREE.MeshBasicMaterial({
+  color: 0x0a0f1e,
+  transparent: true,
+  opacity: 0.7,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+const draftBarTrack = new THREE.Mesh(draftBarTrackGeo, draftBarTrackMat);
+draftBar3dGroup.add(draftBarTrack);
+
+const draftBarFillGeo = new THREE.PlaneGeometry(DRAFT_BAR_3D_W, DRAFT_BAR_3D_H);
+draftBarFillGeo.translate(DRAFT_BAR_3D_W / 2, 0, 0);
+const draftBarFillMat = new THREE.MeshBasicMaterial({
+  color: 0x00ddff,
+  transparent: true,
+  opacity: 0.9,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+const draftBarFillMesh = new THREE.Mesh(draftBarFillGeo, draftBarFillMat);
+draftBarFillMesh.position.x = -DRAFT_BAR_3D_W / 2;
+draftBarFillMesh.position.z = 0.001;
+draftBar3dGroup.add(draftBarFillMesh);
+
+const draftBarBorderGeo = new THREE.EdgesGeometry(
+  new THREE.PlaneGeometry(DRAFT_BAR_3D_W + 0.04, DRAFT_BAR_3D_H + 0.04),
+);
+const draftBarBorderMat = new THREE.LineBasicMaterial({
+  color: 0x00aaff,
+  transparent: true,
+  opacity: 0.35,
+});
+const draftBarBorder = new THREE.LineSegments(draftBarBorderGeo, draftBarBorderMat);
+draftBarBorder.position.z = 0.002;
+draftBar3dGroup.add(draftBarBorder);
+
+scene.add(draftBar3dGroup);
+
+function tutorialReset(): void {
+  if (tutorialDone) {
+    tutorialPhase = "off";
+  } else {
+    tutorialPhase = "showZone";
+    tutorialCompleteTimer = 0;
+  }
+  tutorialHintEl.style.opacity = "0";
+  tutorialCompleteMsg.classList.remove("show");
+  tutorialGlowMesh.visible = false;
+  draftBar3dGroup.visible = false;
+  draftBarFillMesh.scale.x = 0;
+}
+
+function tutorialUpdate(
+  delta: number, inZone: boolean, meterDisplay: number,
+  slingshotFired: boolean,
+): void {
+  if (tutorialPhase === "off") return;
+
+  if (tutorialPhase === "showZone") {
+    let found = false;
+    let carCx = 0, carCz = 0, carHz = 0;
+    trafficSpawner.forEachPoolWindSlot((_i, active, slipAvail, cx, cz, hz) => {
+      if (found || !active || !slipAvail) return;
+      found = true;
+      carCx = cx; carCz = cz; carHz = hz;
+      const rearZ = cz - hz;
+      tutorialGlowMesh.position.set(cx, 0.06, rearZ - CONFIG.SLIPSTREAM_ZONE_DEPTH / 2);
+      tutorialGlowMesh.visible = true;
+      const pulse = 0.15 + 0.1 * Math.sin(performance.now() * 0.004);
+      tutorialGlowMat.opacity = pulse;
+    });
+    if (!found) tutorialGlowMesh.visible = false;
+
+    if (found) {
+      tutorialHintEl.style.opacity = "1";
+      tmpPopupVec.set(carCx, 1.8, carCz - carHz - 0.5);
+      tmpPopupVec.project(camera);
+      const rect = container.getBoundingClientRect();
+      const sx = (tmpPopupVec.x * 0.5 + 0.5) * rect.width;
+      const sy = (-tmpPopupVec.y * 0.5 + 0.5) * rect.height;
+      tutorialHintEl.style.left = `${sx}px`;
+      tutorialHintEl.style.top = `${sy}px`;
+    } else {
+      tutorialHintEl.style.opacity = "0";
+    }
+
+    if (inZone) {
+      tutorialPhase = "fillBar";
+      tutorialGlowMesh.visible = false;
+      tutorialHintEl.style.opacity = "0";
+    }
+    return;
+  }
+
+  if (tutorialPhase === "fillBar") {
+    // Glow behind car while filling
+    let found = false;
+    trafficSpawner.forEachPoolWindSlot((_i, active, slipAvail, cx, cz, hz) => {
+      if (found || !active || !slipAvail) return;
+      found = true;
+      const rearZ = cz - hz;
+      tutorialGlowMesh.position.set(cx, 0.06, rearZ - CONFIG.SLIPSTREAM_ZONE_DEPTH / 2);
+      tutorialGlowMesh.visible = true;
+      tutorialGlowMat.opacity = 0.08 + meterDisplay * 0.15;
+    });
+    if (!found) tutorialGlowMesh.visible = false;
+
+    if (slingshotFired) {
+      tutorialPhase = "completed";
+      tutorialCompleteTimer = 2.0;
+      tutorialGlowMesh.visible = false;
+      tutorialCompleteMsg.classList.add("show");
+      tutorialDone = true;
+    }
+    return;
+  }
+
+  if (tutorialPhase === "completed") {
+    tutorialCompleteTimer -= delta;
+    if (tutorialCompleteTimer <= 0) {
+      tutorialCompleteMsg.classList.remove("show");
+      tutorialPhase = "off";
+    }
+  }
+}
 const slingshotTrail = new SlingshotTrailSystem();
 const slipstreamActivateBurst = new SlipstreamActivateBurst();
 const gameAudio = new GameAudio();
@@ -504,6 +665,7 @@ function resetGame(): void {
   chainManager.reset();
   scoreManager.reset();
   hud.reset();
+  tutorialReset();
   hudPanel.style.opacity = "1";
   updateHudScore(0);
   updateHudChain(1);
@@ -550,6 +712,9 @@ gameState.onChange((state) => {
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
     hudPanel.style.opacity = "0";
+    tutorialHintEl.style.opacity = "0";
+    tutorialGlowMesh.visible = false;
+    draftBar3dGroup.visible = false;
     const score = scoreManager.currentScore;
     gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits, unlockManager);
   }
@@ -611,6 +776,7 @@ function animate(): void {
   let slipInZone = false;
   let slipMeter = 0;
   let audioBurst = false;
+  let draftFillTickAcc = 0;
 
   if (gameState.isPlaying) {
     if (!runGameplayReady) {
@@ -747,6 +913,29 @@ function animate(): void {
       updateHudScore(scoreManager.currentScore);
       updateHudChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
+
+      // 3D draft bar follows the car being drafted
+      if (slip.inZone && slip.meterDisplay > 0 && slip.draftTarget) {
+        const dt = slip.draftTarget;
+        draftBar3dGroup.visible = true;
+        draftBar3dGroup.position.set(dt.cx, 1.6, dt.cz - dt.hz - 1.2);
+        draftBar3dGroup.lookAt(camera.position);
+        draftBarFillMesh.scale.x = Math.min(1, slip.meterDisplay);
+        draftFillTickAcc += delta;
+        if (draftFillTickAcc >= 0.10) {
+          draftFillTickAcc = 0;
+          gameAudio.playDraftFillTick(slip.meterDisplay);
+        }
+      } else {
+        draftBar3dGroup.visible = false;
+        draftFillTickAcc = 0;
+      }
+      if (slip.slingshotFired) {
+        gameAudio.playDraftComplete();
+        draftBar3dGroup.visible = false;
+      }
+
+      tutorialUpdate(delta, slip.inZone, slip.meterDisplay, slip.slingshotFired);
 
       cameraController.update(playerTaxi, scrollPerFrame);
 

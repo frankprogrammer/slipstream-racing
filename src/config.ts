@@ -319,7 +319,7 @@ export const CONFIG = {
   /** Width of each left/right spawn column inside the zone. */
   SLIPSTREAM_WIND_SIDE_STRIP_WIDTH: 0.24,
   /** Road-projected glow outline for each traffic slipstream zone. */
-  SLIPSTREAM_ZONE_OUTLINE_ENABLED: true,
+  SLIPSTREAM_ZONE_OUTLINE_ENABLED: false,
   SLIPSTREAM_ZONE_OUTLINE_COLOR: GAME_PALETTE.SLIPSTREAM_OUTLINE,
   /** World Y lift above asphalt to avoid z-fighting. */
   SLIPSTREAM_ZONE_OUTLINE_Y: 0.05,
@@ -398,7 +398,7 @@ export const CONFIG = {
   /**
    * World +Z ahead of player for new spawns. Higher = farther up the road / nearer screen top (horizon).
    */
-  TRAFFIC_SPAWN_AHEAD_Z: 100,
+  TRAFFIC_SPAWN_AHEAD_Z: 70,
   /** Extra random +Z spread (0..this) on each spawn. */
   TRAFFIC_SPAWN_AHEAD_Z_JITTER: 12,
   /**

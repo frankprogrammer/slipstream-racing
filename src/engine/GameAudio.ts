@@ -926,4 +926,52 @@ export class GameAudio {
     spSrc.connect(spBp); spBp.connect(spG); spG.connect(bus);
     spSrc.start(t0); spSrc.stop(t0 + spDelay + spDur + 0.02);
   }
+
+  /** Soft rising tick as draft bar fills. fillPct 0..1 controls pitch. */
+  playDraftFillTick(fillPct: number): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const t0 = ctx.currentTime;
+    const hz = 90 + fillPct * 90;
+    const dur = 0.10;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(hz, t0);
+    o.frequency.linearRampToValueAtTime(hz * 1.04, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.06 + fillPct * 0.03, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(this.sfxBus);
+    o.start(t0);
+    o.stop(t0 + dur + 0.01);
+  }
+
+  /** Warm power-up tone when draft bar hits 100%. */
+  playDraftComplete(): void {
+    if (!CONFIG.AUDIO_ENABLED) return;
+    if (!this.ctx || !this.sfxBus) return;
+    const ctx = this.ctx;
+    const bus = this.sfxBus;
+    const t0 = ctx.currentTime;
+
+    const note = (freq: number, delay: number, dur: number): void => {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, t0 + delay);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t0 + delay);
+      g.gain.linearRampToValueAtTime(0.14, t0 + delay + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + dur);
+      o.connect(g);
+      g.connect(bus);
+      o.start(t0 + delay);
+      o.stop(t0 + delay + dur + 0.02);
+    };
+    note(330, 0, 0.18);
+    note(440, 0.1, 0.18);
+    note(550, 0.2, 0.25);
+  }
 }

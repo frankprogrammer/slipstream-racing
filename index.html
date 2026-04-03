@@ -122,6 +122,79 @@
         line-height: 1;
       }
 
+      /* ── Slipstream Tutorial ── */
+      #tutorial-hint {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: translate(-50%, -100%);
+        pointer-events: none;
+        z-index: 160;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        text-align: center;
+      }
+      #tutorial-arrow {
+        display: block;
+        margin: 0 auto;
+        font-size: clamp(36px, 8vw, 56px);
+        color: rgba(0, 210, 255, 0.85);
+        text-shadow: 0 0 14px rgba(0,210,255,0.5), 0 0 28px rgba(0,140,255,0.3);
+        animation: tutorial-arrow-bounce 0.8s ease-in-out infinite;
+      }
+      @keyframes tutorial-arrow-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(6px); }
+      }
+
+      #tutorial-bar-wrap {
+        position: absolute;
+        bottom: 28%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: clamp(120px, 28vw, 220px);
+        height: 10px;
+        border-radius: 5px;
+        background: rgba(10, 15, 30, 0.65);
+        border: 1px solid rgba(0, 210, 255, 0.25);
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 160;
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        box-shadow: 0 0 10px rgba(0, 140, 255, 0.15);
+      }
+      #tutorial-bar-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 5px;
+        background: linear-gradient(90deg, #00aaff, #00e5ff, #80ffea);
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.6), inset 0 1px 2px rgba(255,255,255,0.25);
+        transition: width 0.08s linear;
+      }
+
+      #tutorial-complete-msg {
+        position: absolute;
+        top: 35%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.8);
+        pointer-events: none;
+        z-index: 170;
+        opacity: 0;
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(28px, 7vw, 48px);
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        color: #fff;
+        text-shadow: 0 0 18px rgba(0,210,255,0.8), 0 0 36px rgba(0,140,255,0.5);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        white-space: nowrap;
+      }
+      #tutorial-complete-msg.show {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
       /* ── Floating chain popup between cars ── */
       .chain-popup {
         position: absolute;
@@ -637,6 +710,13 @@
         <div id="hud-chain">×1</div>
         <div id="hud-score">0</div>
       </div>
+      <div id="tutorial-hint">
+        <span id="tutorial-arrow">▼</span>
+      </div>
+      <div id="tutorial-bar-wrap">
+        <div id="tutorial-bar-fill"></div>
+      </div>
+      <div id="tutorial-complete-msg">NICE! YOU GOT IT!</div>
       <div id="milestone-text"></div>
       <div id="screen-flash"></div>
 

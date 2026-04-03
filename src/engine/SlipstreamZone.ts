@@ -37,6 +37,8 @@ export class SlipstreamZone {
     meterDisplay: number;
     /** Vehicle drafted when slingshot released (for traffic VFX). */
     slingshotTarget: TrafficCollisionBounds | null;
+    /** Vehicle currently being drafted (every frame while in zone). */
+    draftTarget: TrafficCollisionBounds | null;
   } {
     const pb = player.getCollisionBounds();
     const vehicles = traffic.getActiveCollisionBounds();
@@ -86,6 +88,7 @@ export class SlipstreamZone {
       slingshotFired,
       meterDisplay,
       slingshotTarget,
+      draftTarget: inZone ? this.lastDraftTarget : null,
     };
   }
 
