@@ -1,5 +1,10 @@
 import * as THREE from "three";
-import { CONFIG, hexToCss, rgbaFromHex } from "./config";
+import {
+  CONFIG,
+  displaySpeedKmhFromScroll,
+  hexToCss,
+  rgbaFromHex,
+} from "./config";
 import { GameState } from "./engine/GameState";
 import { LaneSystem } from "./engine/LaneSystem";
 import { RoadManager } from "./engine/RoadManager";
@@ -306,11 +311,17 @@ function animate(): void {
       playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
 
       scrollForAudio = CONFIG.BASE_SCROLL_SPEED;
+      playerTaxi.worldHud.setSpeedKmh(
+        displaySpeedKmhFromScroll(CONFIG.BASE_SCROLL_SPEED),
+      );
     } else {
       runTimeMs += delta * 1000;
       burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
       if (superSlipstreamRemainMs > 0) {
-        superSlipstreamRemainMs = Math.max(0, superSlipstreamRemainMs - delta * 1000);
+        superSlipstreamRemainMs = Math.max(
+          0,
+          superSlipstreamRemainMs - delta * 1000,
+        );
         superSlipstreamMeter =
           superSlipstreamRemainMs / CONFIG.SUPER_SLIPSTREAM_DURATION_MS;
       }
@@ -391,7 +402,9 @@ function animate(): void {
       scoreManager.addDistance(scrollDz, chainManager.chain);
       distanceUnits += scrollDz;
 
-      playerTaxi.worldHud.setScore(scoreManager.currentScore);
+      playerTaxi.worldHud.setSpeedKmh(
+        displaySpeedKmhFromScroll(scrollPerFrame),
+      );
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
@@ -424,7 +437,7 @@ function animate(): void {
   hud.updateSuperSlipstreamMeter(
     superSlipstreamMeter,
     superSlipstreamRemainMs > 0,
-    gameState.isPlaying && runGameplayReady
+    gameState.isPlaying && runGameplayReady,
   );
 
   if (speedHudEl && speedTextEl) {
@@ -432,10 +445,7 @@ function animate(): void {
     if (!visible) {
       speedHudEl.style.opacity = "0";
     } else {
-      // Treat 1 world unit as 1 meter for display (km/h).
-      const speedMps = scrollForAudio * 60;
-      const speedKmh = speedMps * 3.6 * 2;
-      speedTextEl.textContent = `${Math.round(speedKmh)} KM/H`;
+      speedTextEl.textContent = `${displaySpeedKmhFromScroll(scrollForAudio)} km/h`;
       speedHudEl.style.opacity = "1";
       requestAnimationFrame(() => fitSpeedHudText());
     }

@@ -784,3 +784,21 @@ When Super Slipstream is activated, the meter bar should not reset to zero. It s
 ### 2026-04-02 9:23 PM PDT
 
 There should be a stronger camera shake when super slipstream is activated about 25% stronger than the normal slipstream activation strength.
+
+---
+
+### 2026-04-02 9:32 PM PDT
+
+Right now behind the car we are displaying the current score. Let's keep that font type and size the same, but let's replace it with the current speed. including the kilometer per hour conversion that is used at the top of the screen.
+
+---
+
+### 2026-04-02 9:36 PM PDT
+
+For the speed text that is currently behind the car, let's make it so the actual speed is centered behind the car and then appended to the right of it is km/h in a font size half the size of the speed
+
+---
+
+### 2026-04-02 9:38 PM PDT
+
+Let's make the... Slipstream meter twice the height of what it currently is, Let's also move it up about 15% of the screen from the bottom. Thank you. Let's also make the width of the bar 75% of the total screen width.

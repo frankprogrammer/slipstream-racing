@@ -1,20 +1,25 @@
-import * as THREE from 'three';
-import { CONFIG, hexToCss, rgbaFromHex } from '../config';
+import * as THREE from "three";
+import {
+  CONFIG,
+  displaySpeedKmhFromScroll,
+  hexToCss,
+  rgbaFromHex,
+} from "../config";
 
 /**
- * Score + chain as canvas sprites parented to the taxi chassis (roll with body).
- * Score floats behind the car; chain sits just below the slipstream meter on the hood.
+ * Speed + chain as canvas sprites parented to the taxi chassis (roll with body).
+ * Speed (km/h) floats behind the car; chain sits just below the slipstream meter on the hood.
  */
 export class TaxiWorldHud {
   readonly chainSprite: THREE.Sprite;
-  readonly scoreSprite: THREE.Sprite;
+  readonly speedSprite: THREE.Sprite;
 
   private readonly chainCanvas: HTMLCanvasElement;
-  private readonly scoreCanvas: HTMLCanvasElement;
+  private readonly speedCanvas: HTMLCanvasElement;
   private readonly chainTex: THREE.CanvasTexture;
-  private readonly scoreTex: THREE.CanvasTexture;
+  private readonly speedTex: THREE.CanvasTexture;
   private readonly chainBaseScale = new THREE.Vector3();
-  private readonly scoreBaseScale = new THREE.Vector3();
+  private readonly speedBaseScale = new THREE.Vector3();
   private lastChain = 1;
   private chainPopTimer = 0;
 
@@ -25,11 +30,11 @@ export class TaxiWorldHud {
       scoreZ: number;
       draftBarY: number;
       draftBarZ: number;
-    }
+    },
   ) {
     const { scoreY, scoreZ, draftBarY, draftBarZ } = layout;
 
-    this.chainCanvas = document.createElement('canvas');
+    this.chainCanvas = document.createElement("canvas");
     this.chainCanvas.width = 256;
     this.chainCanvas.height = 128;
     this.chainTex = new THREE.CanvasTexture(this.chainCanvas);
@@ -37,13 +42,13 @@ export class TaxiWorldHud {
     this.chainTex.minFilter = THREE.LinearFilter;
     this.chainTex.magFilter = THREE.LinearFilter;
 
-    this.scoreCanvas = document.createElement('canvas');
-    this.scoreCanvas.width = 512;
-    this.scoreCanvas.height = 160;
-    this.scoreTex = new THREE.CanvasTexture(this.scoreCanvas);
-    this.scoreTex.colorSpace = THREE.SRGBColorSpace;
-    this.scoreTex.minFilter = THREE.LinearFilter;
-    this.scoreTex.magFilter = THREE.LinearFilter;
+    this.speedCanvas = document.createElement("canvas");
+    this.speedCanvas.width = 512;
+    this.speedCanvas.height = 160;
+    this.speedTex = new THREE.CanvasTexture(this.speedCanvas);
+    this.speedTex.colorSpace = THREE.SRGBColorSpace;
+    this.speedTex.minFilter = THREE.LinearFilter;
+    this.speedTex.magFilter = THREE.LinearFilter;
 
     /** Must ignore depth or the lower chain quad sits inside / behind trunk meshes. */
     const chainMat = new THREE.SpriteMaterial({
@@ -52,8 +57,8 @@ export class TaxiWorldHud {
       depthWrite: false,
       depthTest: false,
     });
-    const scoreMat = new THREE.SpriteMaterial({
-      map: this.scoreTex,
+    const speedMat = new THREE.SpriteMaterial({
+      map: this.speedTex,
       transparent: true,
       depthWrite: false,
       depthTest: false,
@@ -63,43 +68,39 @@ export class TaxiWorldHud {
     this.chainSprite.center.set(0.5, 0.5);
     this.chainSprite.renderOrder = 100;
 
-    this.scoreSprite = new THREE.Sprite(scoreMat);
-    this.scoreSprite.center.set(0.5, 0.5);
-    this.scoreSprite.renderOrder = 99;
+    this.speedSprite = new THREE.Sprite(speedMat);
+    this.speedSprite.center.set(0.5, 0.5);
+    this.speedSprite.renderOrder = 99;
 
     this.chainBaseScale.set(
       CONFIG.TAXI_WORLD_HUD_CHAIN_SCALE_X,
       CONFIG.TAXI_WORLD_HUD_CHAIN_SCALE_Y,
-      1
+      1,
     );
-    this.scoreBaseScale.set(
+    this.speedBaseScale.set(
       CONFIG.TAXI_WORLD_HUD_SCORE_SCALE_X,
       CONFIG.TAXI_WORLD_HUD_SCORE_SCALE_Y,
-      1
+      1,
     );
     this.chainSprite.scale.copy(this.chainBaseScale);
-    this.scoreSprite.scale.copy(this.scoreBaseScale);
+    this.speedSprite.scale.copy(this.speedBaseScale);
 
-    this.scoreSprite.position.set(0, scoreY, scoreZ);
+    this.speedSprite.position.set(0, scoreY, scoreZ);
 
     const gap = CONFIG.TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP;
     const dBar = CONFIG.DRAFT_BAR_DEPTH;
-    const chainY =
-      draftBarY -
-      dBar * 0.5 -
-      gap -
-      this.chainBaseScale.y * 0.5;
+    const chainY = draftBarY - dBar * 0.5 - gap - this.chainBaseScale.y * 0.5;
     this.chainSprite.position.set(0, chainY, draftBarZ);
 
-    chassisGroup.add(this.scoreSprite);
+    chassisGroup.add(this.speedSprite);
     chassisGroup.add(this.chainSprite);
 
     this.drawChain(1);
-    this.drawScore(0);
+    this.drawSpeedKmh(displaySpeedKmhFromScroll(CONFIG.BASE_SCROLL_SPEED));
   }
 
-  setScore(score: number): void {
-    this.drawScore(score);
+  setSpeedKmh(kmhRounded: number): void {
+    this.drawSpeedKmh(kmhRounded);
   }
 
   setChain(chain: number): void {
@@ -112,7 +113,7 @@ export class TaxiWorldHud {
       this.chainSprite.scale.set(
         this.chainBaseScale.x * CONFIG.CHAIN_POP_SCALE,
         this.chainBaseScale.y * CONFIG.CHAIN_POP_SCALE,
-        1
+        1,
       );
       this.chainPopTimer = window.setTimeout(() => {
         this.chainSprite.scale.copy(this.chainBaseScale);
@@ -127,11 +128,11 @@ export class TaxiWorldHud {
     this.lastChain = 1;
     this.chainSprite.scale.copy(this.chainBaseScale);
     this.drawChain(1);
-    this.drawScore(0);
+    this.drawSpeedKmh(displaySpeedKmhFromScroll(CONFIG.BASE_SCROLL_SPEED));
   }
 
   private drawChain(chain: number): void {
-    const ctx = this.chainCanvas.getContext('2d')!;
+    const ctx = this.chainCanvas.getContext("2d")!;
     const w = this.chainCanvas.width;
     const h = this.chainCanvas.height;
     ctx.clearRect(0, 0, w, h);
@@ -140,11 +141,11 @@ export class TaxiWorldHud {
     const fill = hexToCss(CONFIG.PALETTE.NEON_BLUE);
     const dim = chain > 1 ? 1 : 0.55;
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.font = `700 ${Math.round(h * 0.5)}px "Exo 2", system-ui, sans-serif`;
     ctx.globalAlpha = dim;
-    ctx.lineJoin = 'round';
+    ctx.lineJoin = "round";
     ctx.lineWidth = Math.max(5, Math.round(h * 0.12));
     ctx.strokeStyle = outline;
     ctx.fillStyle = fill;
@@ -155,32 +156,47 @@ export class TaxiWorldHud {
     this.chainTex.needsUpdate = true;
   }
 
-  private drawScore(score: number): void {
-    const ctx = this.scoreCanvas.getContext('2d')!;
-    const w = this.scoreCanvas.width;
-    const h = this.scoreCanvas.height;
+  private drawSpeedKmh(kmhRounded: number): void {
+    const ctx = this.speedCanvas.getContext("2d")!;
+    const w = this.speedCanvas.width;
+    const h = this.speedCanvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const text = score.toLocaleString();
+    const numStr = `${kmhRounded}`;
+    const unitStr = "km/h";
+    const speedPx = Math.round(h * 0.34);
+    const unitPx = Math.round(speedPx * 0.5);
+    const family = `"Exo 2", system-ui, sans-serif`;
     const ui = hexToCss(CONFIG.PALETTE.UI_TEXT);
+    const y = h / 2;
+    const gap = Math.max(4, Math.round(speedPx * 0.14));
 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `800 ${Math.round(h * 0.34)}px "Exo 2", system-ui, sans-serif`;
+    ctx.textBaseline = "middle";
     ctx.fillStyle = ui;
     ctx.shadowColor = rgbaFromHex(CONFIG.PALETTE.HUD_SCORE_GLOW, 0.35);
     ctx.shadowBlur = 22;
-    ctx.fillText(text, w / 2, h / 2);
+
+    ctx.font = `800 ${speedPx}px ${family}`;
+    const numW = ctx.measureText(numStr).width;
+    const centerX = w / 2;
+
+    ctx.textAlign = "center";
+    ctx.fillText(numStr, centerX, y);
+
+    ctx.font = `800 ${unitPx}px ${family}`;
+    ctx.textAlign = "left";
+    ctx.fillText(unitStr, centerX + numW * 0.5 + gap, y);
+
     ctx.shadowBlur = 0;
 
-    this.scoreTex.needsUpdate = true;
+    this.speedTex.needsUpdate = true;
   }
 
   dispose(): void {
     window.clearTimeout(this.chainPopTimer);
     this.chainTex.dispose();
-    this.scoreTex.dispose();
+    this.speedTex.dispose();
     (this.chainSprite.material as THREE.SpriteMaterial).dispose();
-    (this.scoreSprite.material as THREE.SpriteMaterial).dispose();
+    (this.speedSprite.material as THREE.SpriteMaterial).dispose();
   }
 }

@@ -25,6 +25,15 @@ export function rgbaFromHex(hex: number, alpha: number): string {
 }
 
 /**
+ * Rounded km/h for speed displays — same formula as the top `speed-hud` in `main.ts`.
+ * `scrollPerFrame` is in the same units as `CONFIG.BASE_SCROLL_SPEED`.
+ */
+export function displaySpeedKmhFromScroll(scrollPerFrame: number): number {
+  const speedMps = scrollPerFrame * 60;
+  return Math.round(speedMps * 3.6 * 2);
+}
+
+/**
  * Formula 1 / broadcast — single source for engine materials, particles, and UI.
  * Do not hardcode colors elsewhere; reference `CONFIG.PALETTE` or these keys.
  */
@@ -485,12 +494,13 @@ export const CONFIG = {
   TRAFFIC_LIVERY_VARIANTS,
   /** Gap under draft bar plane to chain sprite (chassis local Y). */
   TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP: 0.65,
-  /** Local −Z offset from rear bumper for score + chain (behind taxi). */
+  /** Local −Z offset from rear bumper for speed readout + chain (behind taxi). */
   TAXI_WORLD_HUD_SCORE_BEHIND_Z: 0.55,
-  /** Score sprite height as fraction of taxi body height (chassis local Y). */
+  /** Speed sprite height as fraction of taxi body height (chassis local Y). */
   TAXI_WORLD_HUD_SCORE_Y_FRAC: 0.52,
   TAXI_WORLD_HUD_CHAIN_SCALE_X: 2.0,
   TAXI_WORLD_HUD_CHAIN_SCALE_Y: 0.85,
+  /** World-space scale of rear speed sprite (Exo 2 canvas). */
   TAXI_WORLD_HUD_SCORE_SCALE_X: 4.0,
   TAXI_WORLD_HUD_SCORE_SCALE_Y: 1.05,
   /**
