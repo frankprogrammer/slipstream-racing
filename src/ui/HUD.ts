@@ -1,26 +1,39 @@
 import * as THREE from "three";
 import { CONFIG, rgbaFromHex } from "../config";
+import type { PlayerTaxi } from "../engine/PlayerTaxi";
 
 /**
- * HUD — HTML/CSS overlay: milestone copy + screen flash only.
- * Score and chain render on the taxi (`TaxiWorldHud`).
+ * HUD — HTML/CSS overlay: screen flash + touch hints + super meter.
+ * Speed and race timer are separate DOM; speed behind car is `TaxiWorldHud`.
  */
 const TOUCH_HINT_BUTTON_PX = 72;
 
+function easeInCubic(t: number): number {
+  return t * t * t;
+}
+
+type RaceTimeBonusFloat = {
+  el: HTMLElement;
+  startMs: number;
+  durationMs: number;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+};
+
 export class HUD {
-  private milestoneEl: HTMLElement;
   private flashEl: HTMLElement;
   private touchHintLeftEl: HTMLElement;
   private touchHintRightEl: HTMLElement;
   private superSlipstreamWrapEl: HTMLElement;
   private superSlipstreamFillEl: HTMLElement;
-  private milestoneTimer = 0;
-  private milestoneClassTimer = 0;
   private perfectFlashTimer = 0;
   private readonly tmpProj = new THREE.Vector3();
+  private readonly tmpWorld = new THREE.Vector3();
+  private readonly raceTimeBonusFloats: RaceTimeBonusFloat[] = [];
 
   constructor() {
-    this.milestoneEl = document.getElementById("milestone-text")!;
     this.flashEl = document.getElementById("screen-flash")!;
     const container = document.getElementById("game-container")!;
     this.touchHintLeftEl = this.buildTouchHint("left");
@@ -103,48 +116,6 @@ export class HUD {
     return { wrap, fill };
   }
 
-  /**
-   * @param isPerfect — ×10: larger "PERFECT" treatment + longer hold (step 28).
-   */
-  showMilestone(text: string, isPerfect = false): void {
-    window.clearTimeout(this.milestoneTimer);
-    window.clearTimeout(this.milestoneClassTimer);
-    this.milestoneEl.textContent = text;
-    this.milestoneEl.classList.toggle("perfect", isPerfect);
-    this.milestoneEl.style.opacity = "1";
-    const hold = isPerfect ? CONFIG.PERFECT_MILESTONE_HOLD_MS : 1000;
-    this.milestoneTimer = window.setTimeout(() => {
-      this.milestoneEl.style.opacity = "0";
-      this.milestoneClassTimer = window.setTimeout(() => {
-        this.milestoneEl.classList.remove("perfect");
-      }, 380);
-    }, hold);
-  }
-
-  /**
-   * Anchor milestone popup to a world-space point projected into the game container.
-   * Keep this in the animation loop so popup stays attached as camera/FOV changes.
-   */
-  updateMilestoneAnchor(
-    camera: THREE.PerspectiveCamera,
-    container: HTMLElement,
-    worldPoint: THREE.Vector3,
-  ): void {
-    const rect = container.getBoundingClientRect();
-    this.tmpProj.copy(worldPoint).project(camera);
-    if (
-      !Number.isFinite(this.tmpProj.x) ||
-      !Number.isFinite(this.tmpProj.y) ||
-      !Number.isFinite(this.tmpProj.z)
-    ) {
-      return;
-    }
-    const left = rect.width * 0.5;
-    const top = (-this.tmpProj.y * 0.5 + 0.5) * rect.height;
-    this.milestoneEl.style.left = `${left.toFixed(1)}px`;
-    this.milestoneEl.style.top = `${top.toFixed(1)}px`;
-  }
-
   /** Default pink flash (other milestones / juice). */
   flashScreen(): void {
     this.flashEl.classList.remove("perfect-hit");
@@ -221,12 +192,98 @@ export class HUD {
     this.superSlipstreamWrapEl.style.opacity = visible ? "1" : "0";
   }
 
+  /**
+   * Spawns “+1 sec” / “+2 sec” at the car front; tweens with ease-in toward the race timer HUD.
+   */
+  spawnRaceTimeBonusFloat(
+    seconds: 1 | 2,
+    camera: THREE.PerspectiveCamera,
+    container: HTMLElement,
+    playerTaxi: PlayerTaxi,
+    timerHudEl: HTMLElement | null,
+  ): void {
+    playerTaxi.getFrontBonusWorldPosition(this.tmpWorld);
+    const rect = container.getBoundingClientRect();
+    const ndc = this.tmpProj.copy(this.tmpWorld).project(camera);
+    if (
+      !Number.isFinite(ndc.x) ||
+      !Number.isFinite(ndc.y) ||
+      !Number.isFinite(ndc.z)
+    ) {
+      return;
+    }
+    const x0 = (ndc.x * 0.5 + 0.5) * rect.width;
+    const y0 = (-ndc.y * 0.5 + 0.5) * rect.height;
+
+    let x1 = rect.width * 0.5;
+    let y1 = 36;
+    if (timerHudEl) {
+      const cr = container.getBoundingClientRect();
+      const hr = timerHudEl.getBoundingClientRect();
+      x1 = hr.left + hr.width * 0.5 - cr.left;
+      y1 = hr.top + hr.height * 0.5 - cr.top;
+    }
+
+    const el = document.createElement("div");
+    el.textContent = seconds === 2 ? "+2 sec" : "+1 sec";
+    /** Same stack as `TaxiWorldHud` speed + `#speed-text` in `index.html`. */
+    el.style.cssText = [
+      "position:absolute",
+      "left:0",
+      "top:0",
+      "pointer-events:none",
+      "z-index:125",
+      'font-family:"Exo 2",system-ui,sans-serif',
+      "font-weight:800",
+      "font-size:49.5px",
+      "letter-spacing:0.16em",
+      "color:#ffffff",
+      "transform:translate(-50%,-50%)",
+      "will-change:left,top,opacity",
+    ].join(";");
+    if (seconds === 2) {
+      el.style.fontSize = "54px";
+    }
+    container.appendChild(el);
+
+    this.raceTimeBonusFloats.push({
+      el,
+      startMs: performance.now(),
+      durationMs: CONFIG.RACE_TIME_BONUS_FLOAT_DURATION_MS,
+      x0,
+      y0,
+      x1,
+      y1,
+    });
+  }
+
+  updateRaceTimeBonusFloats(): void {
+    const now = performance.now();
+    for (let i = this.raceTimeBonusFloats.length - 1; i >= 0; i--) {
+      const f = this.raceTimeBonusFloats[i]!;
+      const t = (now - f.startMs) / f.durationMs;
+      if (t >= 1) {
+        f.el.remove();
+        this.raceTimeBonusFloats.splice(i, 1);
+        continue;
+      }
+      const e = easeInCubic(t);
+      const x = f.x0 + (f.x1 - f.x0) * e;
+      const y = f.y0 + (f.y1 - f.y0) * e;
+      f.el.style.left = `${x.toFixed(2)}px`;
+      f.el.style.top = `${y.toFixed(2)}px`;
+      const fadeStart = 0.72;
+      f.el.style.opacity =
+        t < fadeStart ? "1" : `${Math.max(0, 1 - (t - fadeStart) / (1 - fadeStart))}`;
+    }
+  }
+
   reset(): void {
-    window.clearTimeout(this.milestoneTimer);
-    window.clearTimeout(this.milestoneClassTimer);
+    for (const f of this.raceTimeBonusFloats) {
+      f.el.remove();
+    }
+    this.raceTimeBonusFloats.length = 0;
     window.clearTimeout(this.perfectFlashTimer);
-    this.milestoneEl.classList.remove("perfect");
-    this.milestoneEl.style.opacity = "0";
     this.flashEl.classList.remove("perfect-hit");
     this.flashEl.style.opacity = "0";
     this.touchHintLeftEl.style.opacity = "0";

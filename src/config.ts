@@ -25,12 +25,29 @@ export function rgbaFromHex(hex: number, alpha: number): string {
 }
 
 /**
- * Rounded km/h for speed displays — same formula as the top `speed-hud` in `main.ts`.
+ * Rounded km/h for world-space speed behind the car (`TaxiWorldHud`).
  * `scrollPerFrame` is in the same units as `CONFIG.BASE_SCROLL_SPEED`.
  */
 export function displaySpeedKmhFromScroll(scrollPerFrame: number): number {
   const speedMps = scrollPerFrame * 60;
   return Math.round(speedMps * 3.6 * 2);
+}
+
+/** Top HUD race countdown — `M:SS` from remaining milliseconds. */
+export function formatRaceCountdownMs(ms: number): string {
+  const t = Math.max(0, ms);
+  const totalSec = Math.floor(t / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Game-over “time played” — whole minutes and seconds. */
+export function formatPlayedTimeMs(ms: number): string {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(t / 60);
+  const s = t % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 /**
@@ -201,6 +218,15 @@ export const CONFIG = {
   GAME_WIDTH: 390,
   GAME_HEIGHT: 844,
 
+  /** Race timer: countdown from this (ms); at 0 → game over. */
+  RACE_COUNTDOWN_START_MS: 30_000,
+  /** Successful slipstream (slingshot) adds this to the race clock (ms). */
+  RACE_SLIPSTREAM_TIME_BONUS_MS_NORMAL: 1000,
+  /** Same while Super Slipstream is active. */
+  RACE_SLIPSTREAM_TIME_BONUS_MS_SUPER: 2000,
+  /** “+N sec” float travel time (ease-in: accelerates toward the timer). */
+  RACE_TIME_BONUS_FLOAT_DURATION_MS: 880,
+
   // ── Camera (road-centered: fixed X=0, chase down centerline) ──
   CAMERA_HEIGHT: 3.5,
   CAMERA_DISTANCE: 10.5,
@@ -365,7 +391,6 @@ export const CONFIG = {
   // ── Chain ──
   CHAIN_TIMEOUT: 3000,
   CHAIN_MILESTONES: [5, 10, 15, 20] as readonly number[],
-  CHAIN_SCORE_BASE: 50,
 
   // ── Traffic ──
   TRAFFIC_PHASES: [
@@ -492,14 +517,10 @@ export const CONFIG = {
   TRAFFIC_LIVERY_IGNORE_TEXTURES: true,
   /** Random traffic liveries — `{ red, white, blue }` from `GAME_PALETTE`. */
   TRAFFIC_LIVERY_VARIANTS,
-  /** Gap under draft bar plane to chain sprite (chassis local Y). */
-  TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP: 0.65,
-  /** Local −Z offset from rear bumper for speed readout + chain (behind taxi). */
+  /** Local −Z offset from rear bumper for speed readout (behind taxi). */
   TAXI_WORLD_HUD_SCORE_BEHIND_Z: 0.55,
   /** Speed sprite height as fraction of taxi body height (chassis local Y). */
   TAXI_WORLD_HUD_SCORE_Y_FRAC: 0.52,
-  TAXI_WORLD_HUD_CHAIN_SCALE_X: 2.0,
-  TAXI_WORLD_HUD_CHAIN_SCALE_Y: 0.85,
   /** World-space scale of rear speed sprite (Exo 2 canvas). */
   TAXI_WORLD_HUD_SCORE_SCALE_X: 4.0,
   TAXI_WORLD_HUD_SCORE_SCALE_Y: 1.05,
@@ -518,17 +539,18 @@ export const CONFIG = {
   /** Draft amber pulse: passed as `sin(nowMs * scale)`. */
   TAXI_ROOF_LIGHT_DRAFT_PULSE_SCALE: 0.007,
 
-  // ── Scoring ──
-  DISTANCE_SCORE_RATE: 1,
-  DISTANCE_SCORE_INTERVAL: 5,
+  // ── Scoring (game-over total; see `computeRunScore`) ──
+  /** Points per world distance unit accumulated (`distanceUnits` in main). */
+  GAME_OVER_SCORE_PER_DISTANCE_UNIT: 1,
+  /** Points per second of run time (after intro, gameplay only). */
+  GAME_OVER_SCORE_PER_SECOND: 15,
+  /** Points per successful slipstream (slingshot) activation. */
+  GAME_OVER_SCORE_PER_SLIPSTREAM: 120,
 
   // ── Visual Juice ──
   SCREEN_FLASH_DURATION: 100,
-  /** ×10 "PERFECT" moment: full-screen tint hold + milestone copy. */
+  /** ×10 "PERFECT" moment: full-screen tint. */
   PERFECT_FLASH_DURATION_MS: 280,
-  PERFECT_MILESTONE_HOLD_MS: 1200,
-  CHAIN_POP_SCALE: 1.3,
-  CHAIN_POP_DURATION: 200,
 
   // ── Audio (Phase 4 step 32 — procedural Web Audio; tunable) ──
   /** Global audio kill switch (loops, one-shots, and music). */

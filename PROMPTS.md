@@ -862,3 +862,45 @@ During normal gameplay, the FOV should... be equal to fov base which is currentl
 ### 2026-04-03 12:00 AM PDT
 
 the two red bars that appear at the back of the car during slipstream uh Activation. should now only be shown while the super slipstream is active.
+
+---
+
+### 2026-04-03 12:15 AM PDT
+
+We now want to keep track of a time. starting at 30 seconds. It ticks down to zero. When it hits zero, the game over screen is shown. This time should be displayed at the top of the screen replacing the current Speed Text
+
+---
+
+### 2026-04-03 12:30 AM PDT
+
+Remove the chain multiplier text that appears on the car and at the center of the screen.
+
+---
+
+### 2026-04-03 12:45 AM PDT
+
+activating a normal slipstream should add 1 second back to the clock. activating a slipstream while super slipstream is active should add 2 seconds back to the clock. Text that says "+1 sec" and "+2 sec" should appear at the front of the player car and tween up with easing speeding up towards the timer at the top of the screen
+
+---
+
+### 2026-04-03 1:00 AM PDT
+
+Make this +1 and +2 floating text three times as large. The text should also be white. with a red outline.
+
+---
+
+### 2026-04-03 1:10 AM PDT
+
+Make the text 25% smaller, make it solid white, and use the same font that is used for the speed
+
+---
+
+### 2026-04-03 1:20 AM PDT
+
+the game over screen should display the score, distance traveled, time played in minutes and seconds, amount of slipstreams activated. the score should be calculated by the 3 metrics mentioned
+
+---
+
+### 2026-04-03 1:35 AM PDT
+
+If the Player crashes? The game over screen text should say "GAME OVER" at the top, like it currently does. But if time runs out, The game over screen should say "TIME'S UP". at the top. instead of game over.

@@ -1,3 +1,5 @@
+import { formatPlayedTimeMs } from "../config";
+
 /**
  * GameOverScreen — HTML/CSS overlay for end-of-run results.
  *
@@ -5,28 +7,33 @@
  * - #gameover: container, toggled via .visible class
  * - #final-score: large score number
  * - #new-best: shown only if new high score
- * - #stat-chain: best chain this run
- * - #stat-distance: distance traveled
+ * - #stat-distance, #stat-time, #stat-slipstreams
  * - #retry-btn: tap to restart (MUST be under 1 second to playing)
  *
  * On show: populate stats, check high score, display.
  * On retry: hide overlay, emit restart event.
  */
+export type GameOverReason = "crash" | "timeout";
+
 export class GameOverScreen {
   private container: HTMLElement;
+  private titleEl: HTMLElement;
   private finalScoreEl: HTMLElement;
   private newBestEl: HTMLElement;
-  private chainEl: HTMLElement;
   private distanceEl: HTMLElement;
+  private timeEl: HTMLElement;
+  private slipstreamsEl: HTMLElement;
   private retryBtn: HTMLElement;
   private _onRetry: (() => void) | null = null;
 
   constructor() {
     this.container = document.getElementById('gameover')!;
+    this.titleEl = document.getElementById('gameover-title')!;
     this.finalScoreEl = document.getElementById('final-score')!;
     this.newBestEl = document.getElementById('new-best')!;
-    this.chainEl = document.getElementById('stat-chain')!;
     this.distanceEl = document.getElementById('stat-distance')!;
+    this.timeEl = document.getElementById('stat-time')!;
+    this.slipstreamsEl = document.getElementById('stat-slipstreams')!;
     this.retryBtn = document.getElementById('retry-btn')!;
 
     this.retryBtn.addEventListener('click', () => {
@@ -37,10 +44,19 @@ export class GameOverScreen {
 
   onRetry(cb: () => void): void { this._onRetry = cb; }
 
-  show(score: number, bestChain: number, distance: number): void {
+  show(
+    score: number,
+    distance: number,
+    runTimeMs: number,
+    slipstreamsActivated: number,
+    reason: GameOverReason,
+  ): void {
+    this.titleEl.textContent =
+      reason === "timeout" ? "TIME'S UP" : "GAME OVER";
     this.finalScoreEl.textContent = score.toLocaleString();
-    this.chainEl.textContent = `×${bestChain}`;
-    this.distanceEl.textContent = `${(distance / 100).toFixed(1)}km`;
+    this.distanceEl.textContent = `${(distance / 100).toFixed(1)} km`;
+    this.timeEl.textContent = formatPlayedTimeMs(runTimeMs);
+    this.slipstreamsEl.textContent = String(slipstreamsActivated);
 
     // Check high score
     const highScore = parseInt(localStorage.getItem('slipstream-highscore') || '0', 10);

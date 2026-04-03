@@ -79,8 +79,6 @@ export class PlayerTaxi {
     this.worldHud = new TaxiWorldHud(this.chassisGroup, {
       scoreY,
       scoreZ,
-      draftBarY: barY,
-      draftBarZ: barZ,
     });
 
     this.reset();
@@ -169,6 +167,13 @@ export class PlayerTaxi {
   getRearWorldPosition(out: THREE.Vector3): void {
     const { height, length } = this.dims;
     out.set(0, height * 0.35, -length / 2 - 0.02);
+    this.group.localToWorld(out);
+  }
+
+  /** Front bumper area — HUD “+N sec” float spawn (world space). */
+  getFrontBonusWorldPosition(out: THREE.Vector3): void {
+    const { height, length } = this.dims;
+    out.set(0, height * 0.4, length * 0.5 - 0.2);
     this.group.localToWorld(out);
   }
 

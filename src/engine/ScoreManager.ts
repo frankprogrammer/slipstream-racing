@@ -1,31 +1,17 @@
-import { CONFIG } from '../config';
+import { CONFIG } from "../config";
 
 /**
- * Score: distance ticks (every DISTANCE_SCORE_INTERVAL units) × chain multiplier,
- * plus slipstream bonus per slingshot.
+ * Run score = distance × A + time (seconds) × B + slipstreams × C (all from CONFIG).
  */
-export class ScoreManager {
-  private score = 0;
-  private distanceAcc = 0;
-
-  get currentScore(): number {
-    return Math.floor(this.score);
-  }
-
-  reset(): void {
-    this.score = 0;
-    this.distanceAcc = 0;
-  }
-
-  addDistance(distanceDelta: number, chainMultiplier: number): void {
-    this.distanceAcc += distanceDelta;
-    while (this.distanceAcc >= CONFIG.DISTANCE_SCORE_INTERVAL) {
-      this.distanceAcc -= CONFIG.DISTANCE_SCORE_INTERVAL;
-      this.score += CONFIG.DISTANCE_SCORE_RATE * chainMultiplier;
-    }
-  }
-
-  addSlingshotBonus(chainAfterIncrement: number): void {
-    this.score += CONFIG.CHAIN_SCORE_BASE * chainAfterIncrement;
-  }
+export function computeRunScore(
+  distanceUnits: number,
+  runTimeMs: number,
+  slipstreamsActivated: number,
+): number {
+  const sec = runTimeMs / 1000;
+  return Math.floor(
+    distanceUnits * CONFIG.GAME_OVER_SCORE_PER_DISTANCE_UNIT +
+      sec * CONFIG.GAME_OVER_SCORE_PER_SECOND +
+      slipstreamsActivated * CONFIG.GAME_OVER_SCORE_PER_SLIPSTREAM,
+  );
 }

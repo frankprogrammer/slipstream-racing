@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {
   CONFIG,
   displaySpeedKmhFromScroll,
+  formatRaceCountdownMs,
   hexToCss,
   rgbaFromHex,
 } from "./config";
@@ -17,8 +18,11 @@ import { SlingshotTrailSystem } from "./engine/SlingshotTrailSystem";
 import { SlipstreamActivateBurst } from "./engine/SlipstreamActivateBurst";
 import { SlipstreamZone } from "./engine/SlipstreamZone";
 import { ChainManager } from "./engine/ChainManager";
-import { ScoreManager } from "./engine/ScoreManager";
-import { GameOverScreen } from "./ui/GameOverScreen";
+import { computeRunScore } from "./engine/ScoreManager";
+import {
+  GameOverScreen,
+  type GameOverReason,
+} from "./ui/GameOverScreen";
 import { HUD } from "./ui/HUD";
 import { GameAudio } from "./engine/GameAudio";
 
@@ -129,14 +133,12 @@ const collisionSystem = new CollisionSystem();
 const cameraController = new CameraController(camera);
 const slipstreamZone = new SlipstreamZone();
 const chainManager = new ChainManager();
-const scoreManager = new ScoreManager();
 const hud = new HUD();
 const gameOverScreen = new GameOverScreen();
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const slipstreamActivateBurst = new SlipstreamActivateBurst();
 const gameAudio = new GameAudio();
-const milestoneAnchorWorld = new THREE.Vector3();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
 
@@ -165,6 +167,8 @@ window.addEventListener("blur", refreshAppFocus);
 
 let runTimeMs = 0;
 let distanceUnits = 0;
+/** Successful slipstream (slingshot) count this run — used for score + game-over stats. */
+let slipstreamsActivated = 0;
 let burstRemainMs = 0;
 /** Extra base scroll from successful slipstreams this run (before burst). */
 let slingshotBaseBonus = 0;
@@ -172,10 +176,14 @@ let slingshotBaseBonus = 0;
 let superSlipstreamMeter = 0;
 /** Active super-slipstream boost window (ms). */
 let superSlipstreamRemainMs = 0;
+/** Remaining race time (ms); at 0 → game over. */
+let raceRemainMs: number = CONFIG.RACE_COUNTDOWN_START_MS;
 /** False until intro Z tween finishes; blocks scroll, input, and collision. */
 let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
 let introElapsedMs = 0;
+/** Set immediately before `transition("gameover")` — read in `onChange` for UI + audio. */
+let pendingGameOverReason: GameOverReason | null = null;
 
 function resetGame(): void {
   gameState.reset();
@@ -183,12 +191,15 @@ function resetGame(): void {
   laneSystem.enabled = false;
   runGameplayReady = false;
   introElapsedMs = 0;
+  pendingGameOverReason = null;
   runTimeMs = 0;
   distanceUnits = 0;
+  slipstreamsActivated = 0;
   burstRemainMs = 0;
   slingshotBaseBonus = 0;
   superSlipstreamMeter = 0;
   superSlipstreamRemainMs = 0;
+  raceRemainMs = CONFIG.RACE_COUNTDOWN_START_MS;
   roadManager?.reset();
   trafficSpawner.reset();
   slipstreamWind.reset();
@@ -197,7 +208,6 @@ function resetGame(): void {
   slipstreamActivateBurst.reset();
   slipstreamZone.reset();
   chainManager.reset();
-  scoreManager.reset();
   hud.reset();
   const nowMs = performance.now();
   const x = laneSystem.getLaneX(nowMs);
@@ -221,9 +231,23 @@ gameState.onChange((state) => {
   if (state === "gameover") {
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
-    gameAudio.playCrash();
-    const score = scoreManager.currentScore;
-    gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits);
+    const reason = pendingGameOverReason ?? "crash";
+    pendingGameOverReason = null;
+    if (reason === "crash") {
+      gameAudio.playCrash();
+    }
+    const score = computeRunScore(
+      distanceUnits,
+      runTimeMs,
+      slipstreamsActivated,
+    );
+    gameOverScreen.show(
+      score,
+      distanceUnits,
+      runTimeMs,
+      slipstreamsActivated,
+      reason,
+    );
   }
 });
 
@@ -303,9 +327,6 @@ function animate(): void {
       const roll = laneSystem.getBodyRollRad(nowMs);
       const steer = laneSystem.getWheelSteerRad(nowMs);
       playerTaxi.applyLaneVisuals(laneX, roll, steer);
-      milestoneAnchorWorld.set(laneX, 1.1, playerTaxi.group.position.z + 2.2);
-      hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
-
       slingshotTrail.setBoostActive(false);
       slingshotTrail.update(delta, 0, playerTaxi);
       playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
@@ -326,6 +347,18 @@ function animate(): void {
           superSlipstreamRemainMs / CONFIG.SUPER_SLIPSTREAM_DURATION_MS;
       }
 
+      raceRemainMs = Math.max(0, raceRemainMs - delta * 1000);
+      if (raceRemainMs <= 0) {
+        pendingGameOverReason = "timeout";
+        gameState.transition("gameover");
+      }
+
+      if (!gameState.isPlaying) {
+        scrollForAudio = CONFIG.BASE_SCROLL_SPEED;
+        slipInZone = false;
+        slipMeter = 0;
+        audioBurst = false;
+      } else {
       const base = CONFIG.BASE_SCROLL_SPEED;
       const maxScroll = CONFIG.MAX_SCROLL_SPEED;
       const headroom = Math.max(0, maxScroll - base);
@@ -346,9 +379,6 @@ function animate(): void {
       const roll = laneSystem.getBodyRollRad(nowMs);
       const steer = laneSystem.getWheelSteerRad(nowMs);
       playerTaxi.applyLaneVisuals(laneX, roll, steer);
-      milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
-      hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
-
       const slip = slipstreamZone.update(
         delta,
         scrollPerFrame,
@@ -359,6 +389,17 @@ function animate(): void {
 
       if (slip.slingshotFired) {
         const wasSuperActive = superSlipstreamRemainMs > 0;
+        raceRemainMs += wasSuperActive
+          ? CONFIG.RACE_SLIPSTREAM_TIME_BONUS_MS_SUPER
+          : CONFIG.RACE_SLIPSTREAM_TIME_BONUS_MS_NORMAL;
+        hud.spawnRaceTimeBonusFloat(
+          wasSuperActive ? 2 : 1,
+          camera,
+          container,
+          playerTaxi,
+          speedHudEl,
+        );
+        slipstreamsActivated += 1;
         trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
@@ -390,8 +431,6 @@ function animate(): void {
           playerTaxi.onChainMilestone(milestone, nowMs);
           gameAudio.playMilestone(milestone);
         }
-        scoreManager.addSlingshotBonus(chainManager.chain);
-        hud.showMilestone(`×${chainManager.chain}`, milestone === 10);
         if (milestone === 10) {
           hud.flashScreenPerfect();
         }
@@ -399,13 +438,11 @@ function animate(): void {
 
       playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
 
-      scoreManager.addDistance(scrollDz, chainManager.chain);
       distanceUnits += scrollDz;
 
       playerTaxi.worldHud.setSpeedKmh(
         displaySpeedKmhFromScroll(scrollPerFrame),
       );
-      playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
       cameraController.update(
@@ -415,6 +452,7 @@ function animate(): void {
       );
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
+        pendingGameOverReason = "crash";
         gameState.transition("gameover");
       }
 
@@ -426,6 +464,7 @@ function animate(): void {
       slipInZone = slip.inZone;
       slipMeter = slip.meterDisplay;
       audioBurst = burstRemainMs > 0;
+      }
     }
   } else {
     slipstreamActivateBurst.setBurstWindowActive(false);
@@ -433,9 +472,6 @@ function animate(): void {
     slingshotTrail.update(delta, 0, playerTaxi);
     cameraController.update(playerTaxi, delta, false);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
-    const laneX = laneSystem.getLaneX(nowMs);
-    milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
-    hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
 
   hud.updateSuperSlipstreamMeter(
@@ -444,12 +480,14 @@ function animate(): void {
     gameState.isPlaying && runGameplayReady,
   );
 
+  hud.updateRaceTimeBonusFloats();
+
   if (speedHudEl && speedTextEl) {
     const visible = gameState.isPlaying && runGameplayReady;
     if (!visible) {
       speedHudEl.style.opacity = "0";
     } else {
-      speedTextEl.textContent = `${displaySpeedKmhFromScroll(scrollForAudio)} km/h`;
+      speedTextEl.textContent = formatRaceCountdownMs(raceRemainMs);
       speedHudEl.style.opacity = "1";
       requestAnimationFrame(() => fitSpeedHudText());
     }
