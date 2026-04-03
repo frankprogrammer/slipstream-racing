@@ -850,3 +850,9 @@ I expect that the 3D audio listener should be positioned at the center of the pl
 ### 2026-04-02 11:35 PM PDT
 
 Let's play the Players race car audio in 2D space. and keep the Enemy. Race car audio as is.
+
+---
+
+### 2026-04-02 11:45 PM PDT
+
+During normal gameplay, the FOV should... be equal to fov base which is currently 55. When the super slipstream is active, we should set the FOV to... 70 And it should lerp between those values when the super stream, super sub stream is activated and deactivated.

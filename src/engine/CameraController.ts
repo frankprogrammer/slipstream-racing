@@ -6,8 +6,8 @@ import type { PlayerTaxi } from './PlayerTaxi';
  * Road-centered chase camera: fixed on lane center (X=0).
  * Height + look-at (pitch) come from CONFIG; only **distance behind the taxi** is refined so the
  * rear bumper lands at CAMERA_FRAMING_BOTTOM_PCT from the screen bottom (NDC).
- * FOV interpolates between CAMERA_FOV_BASE and CAMERA_FOV_MAX as scroll speed goes from
- * BASE_SCROLL_SPEED to MAX_SCROLL_SPEED.
+ * FOV is CAMERA_FOV_BASE during normal play and CAMERA_FOV_SUPER_SLIPSTREAM while Super
+ * Slipstream is active, lerped each frame via CAMERA_FOV_LERP.
  */
 export class CameraController {
   private readonly camera: THREE.PerspectiveCamera;
@@ -25,14 +25,16 @@ export class CameraController {
   }
 
   /**
-   * @param scrollPerFrame — current road scroll (same units as `CONFIG.BASE_SCROLL_SPEED`).
+   * @param superSlipstreamActive — when true, FOV lerps toward `CAMERA_FOV_SUPER_SLIPSTREAM`.
    */
   update(
     playerTaxi: PlayerTaxi,
-    scrollPerFrame: number,
     deltaSec: number,
+    superSlipstreamActive: boolean,
   ): void {
-    const targetFov = this.fovFromScrollSpeed(scrollPerFrame);
+    const targetFov = superSlipstreamActive
+      ? CONFIG.CAMERA_FOV_SUPER_SLIPSTREAM
+      : CONFIG.CAMERA_FOV_BASE;
     this.camera.fov = THREE.MathUtils.lerp(
       this.camera.fov,
       targetFov,
@@ -58,18 +60,6 @@ export class CameraController {
     this.camera.fov = CONFIG.CAMERA_FOV_BASE;
     this.camera.updateProjectionMatrix();
     this.applyCamera(playerTaxi);
-  }
-
-  private fovFromScrollSpeed(scrollPerFrame: number): number {
-    const lo = CONFIG.BASE_SCROLL_SPEED;
-    const hi = CONFIG.MAX_SCROLL_SPEED;
-    const s = THREE.MathUtils.clamp(scrollPerFrame, lo, hi);
-    const t = hi > lo ? (s - lo) / (hi - lo) : 0;
-    return THREE.MathUtils.lerp(
-      CONFIG.CAMERA_FOV_BASE,
-      CONFIG.CAMERA_FOV_MAX,
-      t,
-    );
   }
 
   private applyCamera(playerTaxi: PlayerTaxi): void {

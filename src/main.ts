@@ -408,7 +408,11 @@ function animate(): void {
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
-      cameraController.update(playerTaxi, scrollPerFrame, delta);
+      cameraController.update(
+        playerTaxi,
+        delta,
+        superSlipstreamRemainMs > 0,
+      );
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
         gameState.transition("gameover");
@@ -427,7 +431,7 @@ function animate(): void {
     slipstreamActivateBurst.setBurstWindowActive(false);
     slingshotTrail.setBoostActive(false);
     slingshotTrail.update(delta, 0, playerTaxi);
-    cameraController.update(playerTaxi, CONFIG.BASE_SCROLL_SPEED, delta);
+    cameraController.update(playerTaxi, delta, false);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
     const laneX = laneSystem.getLaneX(nowMs);
     milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);

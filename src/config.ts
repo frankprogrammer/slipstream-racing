@@ -215,11 +215,11 @@ export const CONFIG = {
   /** How fast to converge distance so rear hits CAMERA_FRAMING_BOTTOM_PCT (NDC error → Δdistance). */
   CAMERA_FRAMING_DISTANCE_GAIN: 0.65,
   CAMERA_ANGLE: -45,
-  /** FOV at `BASE_SCROLL_SPEED` (degrees). */
+  /** FOV during normal gameplay (degrees). */
   CAMERA_FOV_BASE: 55,
-  /** FOV at `MAX_SCROLL_SPEED` (degrees). */
-  CAMERA_FOV_MAX: 65,
-  /** Per-frame lerp toward speed-mapped target FOV. */
+  /** FOV while Super Slipstream is active (degrees). */
+  CAMERA_FOV_SUPER_SLIPSTREAM: 70,
+  /** Per-frame lerp toward target FOV (base ↔ super). */
   CAMERA_FOV_LERP: 0.02,
   CAMERA_SHAKE_INTENSITY: 0.05,
   CAMERA_SHAKE_DECAY: 0.9,
