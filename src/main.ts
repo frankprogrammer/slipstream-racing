@@ -163,6 +163,10 @@ let distanceUnits = 0;
 let burstRemainMs = 0;
 /** Extra base scroll from successful slipstreams this run (before burst). */
 let slingshotBaseBonus = 0;
+/** Charge/fuel meter (can exceed 1 internally while super is being extended). */
+let superSlipstreamMeter = 0;
+/** Active super-slipstream boost window (ms). */
+let superSlipstreamRemainMs = 0;
 /** False until intro Z tween finishes; blocks scroll, input, and collision. */
 let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
@@ -178,6 +182,8 @@ function resetGame(): void {
   distanceUnits = 0;
   burstRemainMs = 0;
   slingshotBaseBonus = 0;
+  superSlipstreamMeter = 0;
+  superSlipstreamRemainMs = 0;
   roadManager?.reset();
   trafficSpawner.reset();
   slipstreamWind.reset();
@@ -303,6 +309,11 @@ function animate(): void {
     } else {
       runTimeMs += delta * 1000;
       burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
+      if (superSlipstreamRemainMs > 0) {
+        superSlipstreamRemainMs = Math.max(0, superSlipstreamRemainMs - delta * 1000);
+        superSlipstreamMeter =
+          superSlipstreamRemainMs / CONFIG.SUPER_SLIPSTREAM_DURATION_MS;
+      }
 
       const base = CONFIG.BASE_SCROLL_SPEED;
       const maxScroll = CONFIG.MAX_SCROLL_SPEED;
@@ -313,8 +324,9 @@ function animate(): void {
       );
       slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
       const baseScroll = Math.min(base + slingshotBaseBonus, maxScroll);
-      // Slingshot now contributes only to persistent base bonus; no temporary speed burst.
-      const scrollPerFrame = baseScroll;
+      const superSlipstreamBoost =
+        superSlipstreamRemainMs > 0 ? CONFIG.SUPER_SLIPSTREAM_SPEED_BOOST : 0;
+      const scrollPerFrame = baseScroll + superSlipstreamBoost;
       const scrollDz = scrollPerFrame * 60 * delta;
 
       roadManager?.update(scrollDz);
@@ -335,11 +347,31 @@ function animate(): void {
       chainManager.tick(nowMs, slip.inZone);
 
       if (slip.slingshotFired) {
+        const wasSuperActive = superSlipstreamRemainMs > 0;
         trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
+        const superDuration = CONFIG.SUPER_SLIPSTREAM_DURATION_MS;
+        const superAddMs =
+          CONFIG.SUPER_SLIPSTREAM_METER_PER_SLINGSHOT * superDuration;
+        if (superSlipstreamRemainMs > 0) {
+          superSlipstreamRemainMs += superAddMs;
+          superSlipstreamMeter = superSlipstreamRemainMs / superDuration;
+        } else {
+          superSlipstreamMeter += CONFIG.SUPER_SLIPSTREAM_METER_PER_SLINGSHOT;
+          if (superSlipstreamMeter >= 1) {
+            // Activation starts with a full meter and then drains over time.
+            superSlipstreamRemainMs = superSlipstreamMeter * superDuration;
+          }
+        }
+        const superActivatedThisFrame =
+          !wasSuperActive && superSlipstreamRemainMs > 0;
         burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
-        cameraController.triggerSlipstreamShake();
+        cameraController.triggerSlipstreamShake(
+          superActivatedThisFrame
+            ? CONFIG.SUPER_SLIPSTREAM_CAMERA_SHAKE_INTENSITY_MUL
+            : 1,
+        );
         slipstreamActivateBurst.burst();
         gameAudio.playSlingshot();
         const milestone = chainManager.onSlingshot(nowMs);
@@ -388,6 +420,12 @@ function animate(): void {
     milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
     hud.updateMilestoneAnchor(camera, container, milestoneAnchorWorld);
   }
+
+  hud.updateSuperSlipstreamMeter(
+    superSlipstreamMeter,
+    superSlipstreamRemainMs > 0,
+    gameState.isPlaying && runGameplayReady
+  );
 
   if (speedHudEl && speedTextEl) {
     const visible = gameState.isPlaying && runGameplayReady;

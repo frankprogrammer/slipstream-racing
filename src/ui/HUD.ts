@@ -12,6 +12,8 @@ export class HUD {
   private flashEl: HTMLElement;
   private touchHintLeftEl: HTMLElement;
   private touchHintRightEl: HTMLElement;
+  private superSlipstreamWrapEl: HTMLElement;
+  private superSlipstreamFillEl: HTMLElement;
   private milestoneTimer = 0;
   private milestoneClassTimer = 0;
   private perfectFlashTimer = 0;
@@ -23,7 +25,14 @@ export class HUD {
     const container = document.getElementById('game-container')!;
     this.touchHintLeftEl = this.buildTouchHint('left');
     this.touchHintRightEl = this.buildTouchHint('right');
-    container.append(this.touchHintLeftEl, this.touchHintRightEl);
+    const superMeter = this.buildSuperSlipstreamMeter();
+    this.superSlipstreamWrapEl = superMeter.wrap;
+    this.superSlipstreamFillEl = superMeter.fill;
+    container.append(
+      this.touchHintLeftEl,
+      this.touchHintRightEl,
+      this.superSlipstreamWrapEl
+    );
   }
 
   private buildTouchHint(direction: 'left' | 'right'): HTMLElement {
@@ -56,6 +65,39 @@ export class HUD {
       'transform:translate(-50%, -50%)',
     ].join(';');
     return el;
+  }
+
+  private buildSuperSlipstreamMeter(): { wrap: HTMLElement; fill: HTMLElement } {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = [
+      'position:absolute',
+      'left:50%',
+      'bottom:20px',
+      'transform:translateX(-50%)',
+      'width:50vw',
+      'height:18px',
+      'border-radius:9999px',
+      `border:2px solid ${rgbaFromHex(CONFIG.PALETTE.UI_TEXT, 0.5)}`,
+      `background:${rgbaFromHex(CONFIG.PALETTE.UI_BG_APP, 0.62)}`,
+      'box-shadow:0 0 0 2px rgba(0,0,0,0.2), inset 0 0 10px rgba(0,0,0,0.3)',
+      'pointer-events:none',
+      'overflow:hidden',
+      'opacity:0',
+      'z-index:121',
+      'transition:opacity 140ms linear',
+    ].join(';');
+
+    const fill = document.createElement('div');
+    fill.style.cssText = [
+      'width:0%',
+      'height:100%',
+      `background:linear-gradient(90deg, #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, '0')} 0%, #${CONFIG.PALETTE.NEON_PINK.toString(16).padStart(6, '0')} 100%)`,
+      'box-shadow:0 0 12px rgba(255,255,255,0.18), inset 0 0 12px rgba(255,255,255,0.24)',
+      'transition:width 130ms linear, filter 90ms linear',
+      'filter:brightness(1)',
+    ].join(';');
+    wrap.append(fill);
+    return { wrap, fill };
   }
 
   /**
@@ -165,6 +207,19 @@ export class HUD {
     this.touchHintRightEl.style.opacity = step === 1 ? '1' : '0';
   }
 
+  updateSuperSlipstreamMeter(
+    meter01: number,
+    active: boolean,
+    visible: boolean
+  ): void {
+    const meter = THREE.MathUtils.clamp(meter01, 0, 1);
+    this.superSlipstreamFillEl.style.width = `${(meter * 100).toFixed(1)}%`;
+    this.superSlipstreamFillEl.style.filter = active
+      ? 'brightness(1.35) saturate(1.2)'
+      : 'brightness(1)';
+    this.superSlipstreamWrapEl.style.opacity = visible ? '1' : '0';
+  }
+
   reset(): void {
     window.clearTimeout(this.milestoneTimer);
     window.clearTimeout(this.milestoneClassTimer);
@@ -175,5 +230,8 @@ export class HUD {
     this.flashEl.style.opacity = '0';
     this.touchHintLeftEl.style.opacity = '0';
     this.touchHintRightEl.style.opacity = '0';
+    this.superSlipstreamWrapEl.style.opacity = '0';
+    this.superSlipstreamFillEl.style.width = '0%';
+    this.superSlipstreamFillEl.style.filter = 'brightness(1)';
   }
 }

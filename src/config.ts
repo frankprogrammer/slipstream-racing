@@ -298,6 +298,18 @@ export const CONFIG = {
   DRAFT_ACTIVATE_DEPTH_FRACTION: 0.25,
   /** Camera shake duration after a successful slipstream release (slingshot). Uses `CAMERA_SHAKE_INTENSITY`. */
   SLIPSTREAM_CAMERA_SHAKE_MS: 300,
+  /**
+   * Super Slipstream gain per successful slingshot (20%):
+   * - while inactive: adds meter charge
+   * - while active: adds this fraction of `SUPER_SLIPSTREAM_DURATION_MS` to remaining time
+   */
+  SUPER_SLIPSTREAM_METER_PER_SLINGSHOT: 0.2,
+  /** Super Slipstream temporary speed bonus added to scroll while active. */
+  SUPER_SLIPSTREAM_SPEED_BOOST: 0.22,
+  /** Super Slipstream active duration once meter fills. */
+  SUPER_SLIPSTREAM_DURATION_MS: 3000,
+  /** Camera shake intensity multiplier when Super Slipstream activates (vs normal slingshot shake). */
+  SUPER_SLIPSTREAM_CAMERA_SHAKE_INTENSITY_MUL: 1.25,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
   DRAFT_BAR_WIDTH: 1.55,
   DRAFT_BAR_DEPTH: 0.1,

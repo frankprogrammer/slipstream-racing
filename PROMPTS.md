@@ -766,3 +766,21 @@ Right now, successfully activating a slipstream is done by staying within the sl
 ### 2026-04-02 8:16 PM PDT
 
 When successfully activating a slipstream, Give the camera a quick 300 millisecond Shake.
+
+---
+
+### 2026-04-02 9:03 PM PDT
+
+Add a meter bar to the bottom of the screen that takes up about 50% of the width of the screen. This is the slipstream meter. Every time you successfully activate a slipstream, it fillst the bar an extra 20%. when the slip stream meter is full, it will activate a Temporary speed boost that I can define in Code and will last for 5 seconds. We will call this temporary speed boost Super slipstream.
+
+---
+
+### 2026-04-02 9:09 PM PDT
+
+When Super Slipstream is activated, the meter bar should not reset to zero. It should instead drain towards zero over the super slipstream Time. Any slipstreams that are activated During the Super slipstream. will ad 20% of SUPER_SLIPSTREAM_DURATION_MS time to the current super slipstream activation. Once the super slipstream meter decays to zero, The super slipstream will end. And any slip stream collection continues as normal.
+
+---
+
+### 2026-04-02 9:23 PM PDT
+
+There should be a stronger camera shake when super slipstream is activated about 25% stronger than the normal slipstream activation strength.

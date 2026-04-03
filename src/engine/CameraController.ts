@@ -17,6 +17,8 @@ export class CameraController {
   private followDistance: number = CONFIG.CAMERA_DISTANCE;
   /** Remaining slipstream shake time (ms); amplitude scales linearly to 0. */
   private shakeRemainMs = 0;
+  /** Multiplies `CAMERA_SHAKE_INTENSITY` for the current shake window. */
+  private shakeIntensityMul = 1;
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
@@ -41,13 +43,17 @@ export class CameraController {
     this.applyShake(deltaSec);
   }
 
-  /** Call when a slipstream slingshot succeeds (full meter + exit zone). */
-  triggerSlipstreamShake(): void {
+  /**
+   * @param intensityMul — scales shake vs normal (1 = default slipstream release).
+   */
+  triggerSlipstreamShake(intensityMul = 1): void {
     this.shakeRemainMs = CONFIG.SLIPSTREAM_CAMERA_SHAKE_MS;
+    this.shakeIntensityMul = intensityMul;
   }
 
   snap(playerTaxi: PlayerTaxi): void {
     this.shakeRemainMs = 0;
+    this.shakeIntensityMul = 1;
     this.followDistance = CONFIG.CAMERA_DISTANCE;
     this.camera.fov = CONFIG.CAMERA_FOV_BASE;
     this.camera.updateProjectionMatrix();
@@ -103,7 +109,7 @@ export class CameraController {
     if (this.shakeRemainMs <= 0) return;
     const duration = CONFIG.SLIPSTREAM_CAMERA_SHAKE_MS;
     const u = this.shakeRemainMs / duration;
-    const amp = CONFIG.CAMERA_SHAKE_INTENSITY * u;
+    const amp = CONFIG.CAMERA_SHAKE_INTENSITY * u * this.shakeIntensityMul;
     this.camera.position.x += (Math.random() - 0.5) * 2 * amp;
     this.camera.position.y += (Math.random() - 0.5) * 2 * amp;
     this.camera.position.z += (Math.random() - 0.5) * 2 * amp;
