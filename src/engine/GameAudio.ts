@@ -2,6 +2,14 @@ import { CONFIG } from '../config';
 import { SynthwaveMusic } from './SynthwaveMusic';
 
 /**
+ * Game world: +X is left on screen, +Z is forward into the screen.
+ * Web Audio spatial panning assumes +X is to the listener's right — negate X for correct L/R.
+ */
+function audioSpaceX(gameX: number): number {
+  return -gameX;
+}
+
+/**
  * Procedural Web Audio (Step 32): engine + wind loops, draft tone, one-shot slingshot / milestones / crash.
  * Step 33: music bus + chain-reactive synth bed (`SynthwaveMusic`).
  * Unlocks after first pointer (browser autoplay policy). No external files — skin `manifest.audio` can be wired later.
@@ -13,6 +21,25 @@ export type GameAudioUpdate = {
   draftMeter: number;
   burstActive: boolean;
   chain: number;
+  /** AudioListener world position (player car center) — used for 3D traffic engines only. */
+  listenerX: number;
+  listenerY: number;
+  listenerZ: number;
+};
+
+/** Player engine: stereo, non-spatial (no PannerNode). */
+type RacecarPlayerSlot = {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  smoothedRate: number;
+};
+
+/** Traffic engine: 3D positional. */
+type RacecarTrafficSlot = {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  panner: PannerNode;
+  smoothedRate: number;
 };
 
 export class GameAudio {
@@ -37,6 +64,12 @@ export class GameAudio {
 
   private draftOsc: OscillatorNode | null = null;
   private draftGain: GainNode | null = null;
+
+  /** Decoded racecar1.mp3 buffer (shared by all engine sources). */
+  private racecarBuf: AudioBuffer | null = null;
+  private racecarPlayer: RacecarPlayerSlot | null = null;
+  private racecarTraffic: RacecarTrafficSlot[] = [];
+  private racecarLoaded = false;
 
   /** Call once from a user gesture so AudioContext can start (autoplay unlock). */
   unlock(): void {
@@ -86,7 +119,131 @@ export class GameAudio {
       this.bgMusicEl.muted = false;
     }
 
+    if (CONFIG.AUDIO_RACECAR_ENABLED && this.ctx && !this.racecarLoaded) {
+      this.racecarLoaded = true;
+      void this.loadRacecarBuffer();
+    }
+
     this.applyFocusState();
+  }
+
+  private async loadRacecarBuffer(): Promise<void> {
+    if (!this.ctx) return;
+    try {
+      const url = `${import.meta.env.BASE_URL}${CONFIG.AUDIO_RACECAR_FILE}`;
+      const resp = await fetch(url);
+      const ab = await resp.arrayBuffer();
+      this.racecarBuf = await this.ctx.decodeAudioData(ab);
+      this.buildRacecarSources();
+    } catch (err) {
+      console.warn('GameAudio: failed to load racecar engine', err);
+    }
+  }
+
+  private buildRacecarSources(): void {
+    if (!this.ctx || !this.master || !this.racecarBuf) return;
+    const ctx = this.ctx;
+    const buf = this.racecarBuf;
+
+    const makePanner = (): PannerNode => {
+      const p = ctx.createPanner();
+      p.panningModel = 'HRTF';
+      p.distanceModel = 'inverse';
+      p.refDistance = CONFIG.AUDIO_RACECAR_REF_DISTANCE;
+      p.maxDistance = CONFIG.AUDIO_RACECAR_MAX_DISTANCE;
+      p.rolloffFactor = CONFIG.AUDIO_RACECAR_ROLLOFF;
+      p.coneInnerAngle = 360;
+      p.coneOuterAngle = 360;
+      return p;
+    };
+
+    const makePlayerSlot = (vol: number): RacecarPlayerSlot => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.playbackRate.value = 1;
+      const gain = ctx.createGain();
+      gain.gain.value = vol;
+      src.connect(gain);
+      gain.connect(this.master!);
+      src.start(0);
+      return { src, gain, smoothedRate: 1 };
+    };
+
+    const makeTrafficSlot = (vol: number): RacecarTrafficSlot => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.playbackRate.value = 1;
+      const gain = ctx.createGain();
+      gain.gain.value = vol;
+      const panner = makePanner();
+      src.connect(gain);
+      gain.connect(panner);
+      panner.connect(this.master!);
+      src.start(0);
+      return { src, gain, panner, smoothedRate: 1 };
+    };
+
+    this.racecarPlayer = makePlayerSlot(CONFIG.AUDIO_RACECAR_PLAYER_VOLUME);
+
+    for (let i = 0; i < CONFIG.VEHICLE_POOL_SIZE; i++) {
+      this.racecarTraffic.push(makeTrafficSlot(0));
+    }
+  }
+
+  private racecarPlaybackRate(scrollPerFrame: number): number {
+    const base = CONFIG.BASE_SCROLL_SPEED;
+    const max = CONFIG.MAX_SCROLL_SPEED;
+    const span = Math.max(1e-6, max - base);
+    const s = Math.max(0, Math.min(1, (scrollPerFrame - base) / span));
+    const lo = CONFIG.AUDIO_RACECAR_PLAYBACK_RATE_AT_MIN;
+    const hi = CONFIG.AUDIO_RACECAR_PLAYBACK_RATE_AT_MAX;
+    if (s <= 0.5) return lo + (1 - lo) * (s / 0.5);
+    return 1 + (hi - 1) * ((s - 0.5) / 0.5);
+  }
+
+  /**
+   * Set traffic engine source positions & gains. Call each frame from main.ts.
+   * @param slots — one call per pool slot: `(index, active, x, y, z, speedMul)`.
+   */
+  updateTrafficEnginePositions(
+    playing: boolean,
+    cb: (
+      visitSlot: (
+        index: number,
+        active: boolean,
+        x: number,
+        y: number,
+        z: number,
+        speedMul: number,
+      ) => void,
+    ) => void,
+    delta: number,
+  ): void {
+    if (!this.racecarTraffic.length) return;
+    if (!playing) {
+      for (const slot of this.racecarTraffic) slot.gain.gain.value = 0;
+      return;
+    }
+    const smooth = Math.min(1, CONFIG.AUDIO_RACECAR_PLAYBACK_RATE_SMOOTH * delta);
+    const vol = CONFIG.AUDIO_RACECAR_TRAFFIC_VOLUME;
+    const baseRate = this.racecarPlaybackRate(CONFIG.VEHICLE_TRAFFIC_FORWARD_SPEED);
+    cb((index, active, x, y, z, speedMul) => {
+      if (index >= this.racecarTraffic.length) return;
+      const slot = this.racecarTraffic[index]!;
+      if (!active) {
+        slot.gain.gain.value = 0;
+        return;
+      }
+      slot.gain.gain.value = vol;
+      slot.panner.positionX.value = audioSpaceX(x);
+      slot.panner.positionY.value = y;
+      slot.panner.positionZ.value = z;
+      const target = baseRate * Math.max(0.5, speedMul);
+      slot.smoothedRate += (target - slot.smoothedRate) * smooth;
+      slot.src.playbackRate.value = slot.smoothedRate;
+    });
   }
 
   setAppFocused(focused: boolean): void {
@@ -168,12 +325,47 @@ export class GameAudio {
     return buf;
   }
 
+  /**
+   * Positional racecar loops are independent of `AUDIO_ENABLED` (procedural SFX).
+   * Must run every frame so gains mute on game over even when procedural audio is off.
+   */
+  private updateRacecarEngines(delta: number, u: GameAudioUpdate): void {
+    if (!CONFIG.AUDIO_RACECAR_ENABLED || !this.ctx) return;
+
+    const listener = this.ctx.listener;
+    const lx = audioSpaceX(u.listenerX);
+    if (listener.positionX) {
+      listener.positionX.value = lx;
+      listener.positionY.value = u.listenerY;
+      listener.positionZ.value = u.listenerZ;
+    } else {
+      listener.setPosition(lx, u.listenerY, u.listenerZ);
+    }
+
+    if (!this.racecarPlayer) return;
+
+    if (u.playing) {
+      const rate = this.racecarPlaybackRate(u.scrollPerFrame);
+      const sm = Math.min(1, CONFIG.AUDIO_RACECAR_PLAYBACK_RATE_SMOOTH * delta);
+      this.racecarPlayer.smoothedRate +=
+        (rate - this.racecarPlayer.smoothedRate) * sm;
+      this.racecarPlayer.src.playbackRate.value =
+        this.racecarPlayer.smoothedRate;
+      this.racecarPlayer.gain.gain.value = CONFIG.AUDIO_RACECAR_PLAYER_VOLUME;
+    } else {
+      this.racecarPlayer.gain.gain.value = 0;
+    }
+  }
+
   update(delta: number, u: GameAudioUpdate): void {
     if (this.bgMusicGain) {
       this.bgMusicGain.gain.value = CONFIG.AUDIO_BG_MUSIC_ENABLED
         ? CONFIG.AUDIO_BG_MUSIC_VOLUME
         : 0;
     }
+
+    this.updateRacecarEngines(delta, u);
+
     if (!CONFIG.AUDIO_ENABLED) {
       if (this.bgMusicEl) {
         if (!this.bgMusicSource) {

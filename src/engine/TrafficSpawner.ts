@@ -445,6 +445,27 @@ export class TrafficSpawner {
     this.separateOverlappingTraffic();
   }
 
+  /** Expose each pool slot's active state, position, and speed multiplier for audio / VFX. */
+  forEachPoolSlot(
+    cb: (
+      slotIndex: number,
+      active: boolean,
+      cx: number,
+      cy: number,
+      cz: number,
+      speedMul: number
+    ) => void
+  ): void {
+    for (let i = 0; i < this.pool.length; i++) {
+      const p = this.pool[i]!;
+      if (!p.active) {
+        cb(i, false, 0, 0, 0, 0);
+        continue;
+      }
+      cb(i, true, p.group.position.x, p.group.position.y, p.group.position.z, p.speedMul);
+    }
+  }
+
   forEachPoolWindSlot(
     cb: (
       slotIndex: number,

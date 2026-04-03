@@ -373,7 +373,7 @@ export const CONFIG = {
       startTime: 0,
       spawnRate: 2000,
       lanes: [1],
-      speedVariance: 0,
+      speedVariance: 0.1,
       laneChange: true,
     },
     {
@@ -384,14 +384,14 @@ export const CONFIG = {
       laneChange: true,
     },
     {
-      startTime: 60000,
+      startTime: 40000,
       spawnRate: 800,
       lanes: [0, 1, 2],
       speedVariance: 0.4,
       laneChange: true,
     },
     {
-      startTime: 120000,
+      startTime: 80000,
       spawnRate: 500,
       lanes: [0, 1, 2],
       speedVariance: 0.6,
@@ -580,8 +580,30 @@ export const CONFIG = {
   /** Loop an external track from `public/` without resetting on retry. */
   AUDIO_BG_MUSIC_ENABLED: true,
   AUDIO_BG_MUSIC_FILE: "thousandsuns.mp3",
-  /** 0–1. Requested: 50%. */
+  /** 0–1. */
   AUDIO_BG_MUSIC_VOLUME: 0.25,
+
+  // ── Racecar engine loop (3D positional, per car) ──
+  /** Enable positional racecar1.mp3 engine loops for player + traffic. */
+  AUDIO_RACECAR_ENABLED: true,
+  /** File in `public/`. */
+  AUDIO_RACECAR_FILE: "racecar1.mp3",
+  /** Player car engine volume. */
+  AUDIO_RACECAR_PLAYER_VOLUME: 0.4,
+  /** Traffic car engine volume (each). */
+  AUDIO_RACECAR_TRAFFIC_VOLUME: 0.5,
+  /** `playbackRate` at `BASE_SCROLL_SPEED`. */
+  AUDIO_RACECAR_PLAYBACK_RATE_AT_MIN: 0.9,
+  /** `playbackRate` at `MAX_SCROLL_SPEED` (plus super). */
+  AUDIO_RACECAR_PLAYBACK_RATE_AT_MAX: 1.32,
+  /** Per-second smoothing for `playbackRate`. */
+  AUDIO_RACECAR_PLAYBACK_RATE_SMOOTH: 12,
+  /** 3D panner: distance at which volume halves (inverse-distance). */
+  AUDIO_RACECAR_REF_DISTANCE: 5,
+  /** 3D panner: beyond this distance, gain is 0. */
+  AUDIO_RACECAR_MAX_DISTANCE: 80,
+  /** 3D panner: rolloff factor (1 = physically realistic inverse). */
+  AUDIO_RACECAR_ROLLOFF: 1,
   /** Inner mix trim (post-gain) before music bus. */
   AUDIO_MUSIC_MIX_INNER: 1.0,
   AUDIO_MUSIC_BASS_HZ: 65.41,

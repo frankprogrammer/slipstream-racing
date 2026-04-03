@@ -802,3 +802,51 @@ For the speed text that is currently behind the car, let's make it so the actual
 ### 2026-04-02 9:38 PM PDT
 
 Let's make the... Slipstream meter twice the height of what it currently is, Let's also move it up about 15% of the screen from the bottom. Thank you. Let's also make the width of the bar 75% of the total screen width.
+
+---
+
+### 2026-04-02 9:52 PM PDT
+
+When Super Slipstream is activated, the fill meter Color Should change to a cyan gradient. The empty space of the fill meter should Flash Red. quickly. during this time.
+
+---
+
+### 2026-04-02 10:12 PM PDT
+
+I have added racecar.mp3 to the public folder. I want this to play when... At this pitch at the normal pitch when We're at 50%. of between the min speed and the max speed. Pitch the MP3 file down a little bit from the min and then pitch it up all the way to the max.
+
+---
+
+### 2026-04-02 10:45 PM PDT
+
+I still want to play my current background music file of Thousand Suns. I now want to play Racecar1.mp3 at the position of the player car. The... MP3 should loop. We should pitch. The MP3s... For this The single mp3 for this car Up or down? between the min speed and the max speed of the car I also want to play this audio file in 3D space. For all other cars in the game
+
+---
+
+### 2026-04-02 10:55 PM PDT
+
+All race car sound effects should stop playing once the... Game over screen. is shown
+
+---
+
+### 2026-04-02 11:05 PM PDT
+
+The race car sounds are still playing once the game over screen is displayed.
+
+---
+
+### 2026-04-02 11:15 PM PDT
+
+It sounds like the Audio channels are flipped. Remember that the positive x-axis is to the left of the screen and the Positive z-axis is going forward into the screen.
+
+---
+
+### 2026-04-02 11:25 PM PDT
+
+I expect that the 3D audio listener should be positioned at the center of the player car.
+
+---
+
+### 2026-04-02 11:35 PM PDT
+
+Let's play the Players race car audio in 2D space. and keep the Enemy. Race car audio as is.

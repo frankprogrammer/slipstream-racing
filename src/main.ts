@@ -465,7 +465,20 @@ function animate(): void {
     draftMeter: slipMeter,
     burstActive: audioBurst,
     chain: chainManager.chain,
+    listenerX: playerTaxi.group.position.x,
+    listenerY: playerTaxi.group.position.y,
+    listenerZ: playerTaxi.group.position.z,
   });
+
+  gameAudio.updateTrafficEnginePositions(
+    gameState.isPlaying && runGameplayReady,
+    (visit) => {
+      trafficSpawner.forEachPoolSlot((i, active, cx, cy, cz, speedMul) => {
+        visit(i, active, cx, cy, cz, speedMul);
+      });
+    },
+    delta,
+  );
 
   const hintZ =
     playerTaxi.group.position.z - CONFIG.TAXI_DIMENSIONS.length * 0.5;
