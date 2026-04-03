@@ -14,16 +14,13 @@ import { SlipstreamZone } from "./engine/SlipstreamZone";
 import { ChainManager } from "./engine/ChainManager";
 import { ScoreManager } from "./engine/ScoreManager";
 import { GameOverScreen } from "./ui/GameOverScreen";
+import { MarketScreen } from "./ui/MarketScreen";
 import { HUD } from "./ui/HUD";
 import { GameAudio } from "./engine/GameAudio";
 import { TireMarkSystem } from "./engine/TireMarkSystem";
 import { VehicleExhaustSystem } from "./engine/VehicleExhaustSystem";
-import {
-  loadPlayerCarGltf,
-  cloneMeshMaterialsUnique,
-  fitCarToDimensions,
-  applyLiveryColors,
-} from "./engine/playerCarGlb";
+import { UnlockManager } from "./engine/UnlockManager";
+import { buildRandomTrafficCar } from "./engine/ProceduralCars";
 
 function easeInCubic(t: number): number {
   return t ** 3;
@@ -76,6 +73,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = CONFIG.TONE_MAPPING_EXPOSURE;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -112,8 +111,18 @@ dirLight.position.set(
   CONFIG.DIRECTIONAL_LIGHT_POSITION[1],
   CONFIG.DIRECTIONAL_LIGHT_POSITION[2],
 );
-dirLight.castShadow = false;
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.near = 1;
+dirLight.shadow.camera.far = 80;
+dirLight.shadow.camera.left = -20;
+dirLight.shadow.camera.right = 20;
+dirLight.shadow.camera.top = 20;
+dirLight.shadow.camera.bottom = -20;
+dirLight.shadow.bias = -0.001;
 scene.add(dirLight);
+scene.add(dirLight.target);
 
 window.addEventListener("resize", () => {
   const w = window.innerWidth;
@@ -134,7 +143,66 @@ const slipstreamZone = new SlipstreamZone();
 const chainManager = new ChainManager();
 const scoreManager = new ScoreManager();
 const hud = new HUD();
+const unlockManager = new UnlockManager();
+
+// ── HTML score/chain HUD (top-right) ──
+const hudPanel = document.getElementById("hud-score-panel")!;
+const hudScoreEl = document.getElementById("hud-score")!;
+const hudChainEl = document.getElementById("hud-chain")!;
+let lastHudChain = 1;
+let chainPopTimer = 0;
+
+function updateHudScore(score: number): void {
+  hudScoreEl.textContent = score.toLocaleString();
+}
+
+function updateHudChain(chain: number): void {
+  hudChainEl.textContent = `×${chain}`;
+  // Color: blue at 1, yellow 2-5, orange 6-10, red 11+
+  if (chain <= 1) {
+    hudChainEl.style.color = "rgba(0,162,255,0.7)";
+    hudChainEl.style.textShadow = "0 0 8px rgba(0,162,255,0.4)";
+  } else if (chain <= 5) {
+    hudChainEl.style.color = "#fde047";
+    hudChainEl.style.textShadow = "0 0 10px rgba(253,224,71,0.6)";
+  } else if (chain <= 10) {
+    hudChainEl.style.color = "#fb923c";
+    hudChainEl.style.textShadow = "0 0 12px rgba(251,146,60,0.6)";
+  } else {
+    hudChainEl.style.color = "#ef4444";
+    hudChainEl.style.textShadow = "0 0 14px rgba(239,68,68,0.7)";
+  }
+  if (chain > lastHudChain && chain > 1) {
+    const big = chain % 10 === 0;
+    hudChainEl.classList.remove("pop", "big-pop");
+    void hudChainEl.offsetWidth;
+    hudChainEl.classList.add(big ? "big-pop" : "pop");
+    window.clearTimeout(chainPopTimer);
+    chainPopTimer = window.setTimeout(() => {
+      hudChainEl.classList.remove("pop", "big-pop");
+    }, big ? 300 : 150);
+  }
+  lastHudChain = chain;
+}
+
+// ── Chain popup between cars ──
+const tmpPopupVec = new THREE.Vector3();
+function spawnChainPopup(chain: number, worldX: number, worldZ: number): void {
+  tmpPopupVec.set(worldX, 1.2, worldZ);
+  tmpPopupVec.project(camera);
+  const rect = container.getBoundingClientRect();
+  const sx = (tmpPopupVec.x * 0.5 + 0.5) * rect.width;
+  const sy = (-tmpPopupVec.y * 0.5 + 0.5) * rect.height;
+  const el = document.createElement("div");
+  el.className = "chain-popup";
+  el.textContent = `×${chain}`;
+  el.style.left = `${sx}px`;
+  el.style.top = `${sy}px`;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 750);
+}
 const gameOverScreen = new GameOverScreen();
+const marketScreen = new MarketScreen(unlockManager);
 const slipstreamWind = new SlipstreamWindSystem();
 const slingshotTrail = new SlingshotTrailSystem();
 const slipstreamActivateBurst = new SlipstreamActivateBurst();
@@ -436,6 +504,10 @@ function resetGame(): void {
   chainManager.reset();
   scoreManager.reset();
   hud.reset();
+  hudPanel.style.opacity = "1";
+  updateHudScore(0);
+  updateHudChain(1);
+  lastHudChain = 1;
   const nowMs = performance.now();
   const x = laneSystem.getLaneX(nowMs);
   const roll = laneSystem.getBodyRollRad(nowMs);
@@ -451,15 +523,35 @@ function resetGame(): void {
 }
 
 gameOverScreen.onRetry(() => {
+  playerTaxi.applyLoadout(unlockManager.loadout);
   resetGame();
+});
+
+gameOverScreen.onMarket(() => {
+  marketScreen.show();
+});
+
+marketScreen.onApply((loadout) => {
+  playerTaxi.applyLoadout(loadout);
+  resetGame();
+});
+
+marketScreen.onClose(() => {
+  gameOverScreen.show(
+    scoreManager.currentScore,
+    chainManager.maxChainThisRun,
+    distanceUnits,
+    unlockManager,
+  );
 });
 
 gameState.onChange((state) => {
   if (state === "gameover") {
     laneSystem.enabled = false;
     playerTaxi.setDraftMeter(0, false);
+    hudPanel.style.opacity = "0";
     const score = scoreManager.currentScore;
-    gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits);
+    gameOverScreen.show(score, chainManager.maxChainThisRun, distanceUnits, unlockManager);
   }
 });
 
@@ -638,6 +730,13 @@ function animate(): void {
         }
         scoreManager.addSlingshotBonus(chainManager.chain);
         gameAudio.playChainUp(chainManager.chain);
+
+        if (slip.slingshotTarget) {
+          const t = slip.slingshotTarget;
+          const midX = (playerTaxi.group.position.x + t.cx) / 2;
+          const midZ = (playerTaxi.group.position.z + t.cz) / 2;
+          spawnChainPopup(chainManager.chain, midX, midZ);
+        }
       }
 
       playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);
@@ -645,8 +744,8 @@ function animate(): void {
       scoreManager.addDistance(scrollDz, chainManager.chain);
       distanceUnits += scrollDz;
 
-      playerTaxi.worldHud.setScore(scoreManager.currentScore);
-      playerTaxi.worldHud.setChain(chainManager.chain);
+      updateHudScore(scoreManager.currentScore);
+      updateHudChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
       cameraController.update(playerTaxi, scrollPerFrame);
@@ -932,22 +1031,25 @@ function animate(): void {
   // Update crash spark particles
   updateCrashSparks(delta);
 
+  // Shadow camera follows the player so shadows stay visible
+  const pPos = playerTaxi?.group?.position;
+  if (pPos) {
+    dirLight.position.set(pPos.x + 10, 25, pPos.z - 10);
+    dirLight.target.position.set(pPos.x, 0, pPos.z);
+    dirLight.target.updateMatrixWorld();
+  }
+
   renderer.render(scene, camera);
 }
 
 void (async () => {
-  playerTaxi = await PlayerTaxi.create();
+  playerTaxi = await PlayerTaxi.create(unlockManager.loadout);
   roadManager = await RoadManager.create(CONFIG.TAXI_POSITION_Z);
   trafficSpawner = await TrafficSpawner.create();
 
-  const flybyGltf = await loadPlayerCarGltf();
   for (let fi = 0; fi < 2; fi++) {
     const g = new THREE.Group();
-    const car = flybyGltf.scene.clone(true);
-    cloneMeshMaterialsUnique(car);
-    fitCarToDimensions(car, CONFIG.TAXI_DIMENSIONS, 0);
-    const livIdx = fi < CONFIG.TRAFFIC_LIVERY_VARIANTS.length ? fi : 0;
-    applyLiveryColors(car, CONFIG.TRAFFIC_LIVERY_VARIANTS[livIdx]!);
+    const car = buildRandomTrafficCar();
     g.add(car);
     g.visible = false;
     flybyGroups.push(g);
@@ -960,11 +1062,9 @@ void (async () => {
   scene.add(slipstreamWind.group);
   for (const fg of flybyGroups) scene.add(fg);
   scene.add(playerTaxi.group);
-  scene.add(slingshotTrail.group);
+  // Slingshot trail removed — chain particles on car replace it
   playerTaxi.group.add(slipstreamActivateBurst.anchor);
   resetGame();
-  // First `getDelta()` after load would otherwise equal time since `new Clock()` (async gap) and
-  // would instantly complete the intro tween and skew runTime on frame 1.
   clock.getDelta();
   animate();
 })();

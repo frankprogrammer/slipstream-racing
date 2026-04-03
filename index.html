@@ -81,6 +81,70 @@
         will-change: transform;
       }
 
+      /* ── Score & Chain HUD (top-right) ── */
+      #hud-score-panel {
+        position: absolute;
+        top: 16px;
+        right: 18px;
+        z-index: 150;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      #hud-chain {
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(22px, 5vw, 34px);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: rgba(0, 162, 255, 0.7);
+        text-shadow: 0 0 8px rgba(0, 162, 255, 0.4);
+        line-height: 1;
+        transition: transform 0.12s ease-out, color 0.2s ease;
+      }
+      #hud-chain.pop {
+        transform: scale(1.6);
+      }
+      #hud-chain.big-pop {
+        transform: scale(2.2);
+      }
+      #hud-score {
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(36px, 9vw, 62px);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        color: #f8fafc;
+        text-shadow:
+          0 0 10px rgba(225, 6, 0, 0.35),
+          0 2px 6px rgba(0, 0, 0, 0.5);
+        line-height: 1;
+      }
+
+      /* ── Floating chain popup between cars ── */
+      .chain-popup {
+        position: absolute;
+        pointer-events: none;
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(20px, 5vw, 32px);
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: #ffe066;
+        text-shadow: 0 0 12px rgba(255, 200, 0, 0.7), 0 0 24px rgba(255, 100, 0, 0.4);
+        z-index: 140;
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+        transition: none;
+        animation: chain-popup-anim 0.7s ease-out forwards;
+      }
+      @keyframes chain-popup-anim {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+        20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+        50% { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -120%) scale(0.8); }
+      }
+
       #milestone-text {
         position: absolute;
         top: 40%;
@@ -207,7 +271,7 @@
         color: var(--f1-ui-text, #f8fafc);
         font-weight: 700;
       }
-      #retry-btn {
+      .gameover-btn {
         font-family: "Exo 2", sans-serif;
         font-size: 22px;
         font-weight: 700;
@@ -216,7 +280,7 @@
         background: transparent;
         border: 3px solid var(--f1-primary, #e10600);
         border-radius: 8px;
-        padding: 22px 64px;
+        padding: 22px 44px;
         cursor: pointer;
         transition:
           background 0.2s,
@@ -224,10 +288,260 @@
         pointer-events: auto;
         text-transform: uppercase;
       }
-      #retry-btn:hover,
-      #retry-btn:active {
+      .gameover-btn:hover,
+      .gameover-btn:active {
         background: var(--f1-retry-hover, rgba(225, 6, 0, 0.12));
         box-shadow: 0 0 40px var(--f1-retry-glow, rgba(225, 6, 0, 0.35));
+      }
+      #market-btn {
+        border-color: var(--f1-cyan, #00d2be);
+      }
+      #market-btn:hover,
+      #market-btn:active {
+        background: rgba(0, 210, 190, 0.12);
+        box-shadow: 0 0 40px rgba(0, 210, 190, 0.35);
+      }
+      .gameover-btn-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      /* ── Market Overlay ── */
+      #market {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(12, 12, 20, 0.97);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+        padding: 16px 10px 12px;
+        z-index: 25;
+        font-family: "Exo 2", sans-serif;
+        color: var(--f1-ui-text, #f8fafc);
+        overflow: hidden;
+      }
+      #market.visible { display: flex; }
+      #market h2 {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 30px;
+        letter-spacing: 0.3em;
+        color: var(--f1-cyan, #00d2be);
+        margin: 0 0 4px 0;
+        font-weight: 400;
+        flex-shrink: 0;
+      }
+      #market-highscore {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--f1-ui-dim, #9ca3af);
+        margin: 0 0 12px 0;
+        letter-spacing: 0.12em;
+        flex-shrink: 0;
+      }
+      .market-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 12px;
+        width: 100%;
+        max-width: 400px;
+        flex-shrink: 0;
+      }
+      .market-tab {
+        flex: 1;
+        padding: 10px 0;
+        text-align: center;
+        font-family: "Exo 2", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--f1-ui-dim, #9ca3af);
+        background: rgba(255,255,255,0.03);
+        border: 2px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-transform: uppercase;
+      }
+      .market-tab:hover { background: rgba(255,255,255,0.07); }
+      .market-tab.active {
+        color: var(--f1-cyan, #00d2be);
+        border-color: var(--f1-cyan, #00d2be);
+        background: rgba(0, 210, 190, 0.08);
+      }
+
+      #market-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        width: 100%;
+        max-width: 400px;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 2px 2px 10px;
+      }
+
+      .market-card {
+        position: relative;
+        background: rgba(255,255,255,0.035);
+        border: 2px solid rgba(255,255,255,0.09);
+        border-radius: 12px;
+        padding: 14px 8px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+        min-height: 110px;
+      }
+      .market-card:hover:not(.locked) {
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.18);
+        transform: translateY(-1px);
+      }
+      .market-card.selected {
+        border-color: var(--f1-cyan, #00d2be);
+        background: rgba(0, 210, 190, 0.12);
+        box-shadow: 0 0 24px rgba(0, 210, 190, 0.25), inset 0 0 12px rgba(0, 210, 190, 0.06);
+      }
+      .market-card.locked {
+        opacity: 0.4;
+        cursor: default;
+        filter: saturate(0.3);
+      }
+
+      .market-card-preview {
+        width: 100%;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .market-card-preview svg {
+        width: 100px;
+        height: 44px;
+        color: var(--f1-ui-dim, #9ca3af);
+        transition: color 0.15s;
+      }
+      .market-card:not(.locked) .market-card-preview svg {
+        color: var(--f1-cyan, #00d2be);
+      }
+      .market-card.selected .market-card-preview svg {
+        color: var(--f1-ui-text, #f8fafc);
+      }
+
+      .market-swatch {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        border: 2px solid rgba(255,255,255,0.12);
+        transition: transform 0.15s;
+      }
+      .market-card:hover:not(.locked) .market-swatch { transform: scale(1.08); }
+      .market-card.selected .market-swatch {
+        border-color: var(--f1-cyan, #00d2be);
+        box-shadow: 0 0 12px rgba(0, 210, 190, 0.3);
+      }
+      .market-wheel {
+        border-radius: 50%;
+      }
+
+      .market-card-name {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-align: center;
+        color: var(--f1-ui-text, #f8fafc);
+        line-height: 1.2;
+      }
+
+      .market-card-score {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-align: center;
+        padding: 2px 8px;
+        border-radius: 4px;
+        line-height: 1.4;
+      }
+      .market-card-score.locked-score {
+        color: var(--f1-primary, #e10600);
+        background: rgba(225, 6, 0, 0.12);
+      }
+      .market-card-score.unlocked-score {
+        color: var(--f1-ui-dim, #9ca3af);
+      }
+      .market-card-score.equipped-score {
+        color: rgba(0, 210, 190, 0.7);
+        background: rgba(0, 210, 190, 0.08);
+      }
+      .market-card-score.selected-score {
+        color: var(--f1-cyan, #00d2be);
+        background: rgba(0, 210, 190, 0.15);
+        font-size: 11px;
+      }
+
+      .market-lock-icon {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 13px;
+        opacity: 0.5;
+      }
+
+      .market-section-label {
+        grid-column: 1 / -1;
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 17px;
+        letter-spacing: 0.22em;
+        color: var(--f1-primary, #e10600);
+        padding: 12px 0 4px;
+        text-align: center;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        margin-top: 2px;
+      }
+
+      .market-bottom-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        padding-top: 10px;
+        flex-shrink: 0;
+        width: 100%;
+        max-width: 400px;
+      }
+      .market-bottom-row button {
+        flex: 1;
+        font-family: "Exo 2", sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--f1-ui-text, #f8fafc);
+        background: transparent;
+        border-radius: 8px;
+        padding: 14px 12px;
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
+        text-transform: uppercase;
+      }
+      #market-apply-btn {
+        border: 3px solid var(--f1-cyan, #00d2be);
+      }
+      #market-apply-btn:hover {
+        background: rgba(0, 210, 190, 0.12);
+        box-shadow: 0 0 30px rgba(0, 210, 190, 0.3);
+      }
+      #market-close-btn {
+        border: 2px solid rgba(255,255,255,0.15);
+      }
+      #market-close-btn:hover {
+        background: rgba(255,255,255,0.06);
       }
 
       /* Audio controls */
@@ -319,6 +633,10 @@
           <span id="speed-text"></span>
         </div>
       </div>
+      <div id="hud-score-panel">
+        <div id="hud-chain">×1</div>
+        <div id="hud-score">0</div>
+      </div>
       <div id="milestone-text"></div>
       <div id="screen-flash"></div>
 
@@ -367,7 +685,26 @@
           <span>CHAIN <strong id="stat-chain">×0</strong></span>
           <span>DIST <strong id="stat-distance">0m</strong></span>
         </div>
-        <button id="retry-btn">RETRY</button>
+        <div class="gameover-btn-row">
+          <button id="retry-btn" class="gameover-btn">RETRY</button>
+          <button id="market-btn" class="gameover-btn">MARKET</button>
+        </div>
+      </div>
+
+      <!-- Market -->
+      <div id="market">
+        <h2>MARKET</h2>
+        <div id="market-highscore">HIGH SCORE: 0</div>
+        <div class="market-tabs">
+          <div class="market-tab active" id="market-tab-cars">CARS</div>
+          <div class="market-tab" id="market-tab-body">BODY</div>
+          <div class="market-tab" id="market-tab-wheels">WHEELS</div>
+        </div>
+        <div id="market-grid"></div>
+        <div class="market-bottom-row">
+          <button id="market-apply-btn">APPLY &amp; PLAY</button>
+          <button id="market-close-btn">BACK</button>
+        </div>
       </div>
     </div>
 

@@ -6,9 +6,11 @@ import {
   loadPlayerCarGltf,
 } from "./playerCarGlb";
 import { TaxiWorldHud } from "./TaxiWorldHud";
+import { buildProceduralCar, type CarId, type BodyColorId, type WheelStyleId, type WingColorId } from "./ProceduralCars";
+import type { Loadout } from "./UnlockManager";
 
 /**
- * Player car represented by `public/playerCar.glb`.
+ * Player car — either `public/playerCar.glb` (legacy) or a procedural model from the market.
  * Collision / slipstream keep using CONFIG.TAXI_DIMENSIONS AABB.
  */
 export class PlayerTaxi {
@@ -19,6 +21,16 @@ export class PlayerTaxi {
   private readonly draftBarGroup: THREE.Group;
   private readonly draftFill: THREE.Mesh;
   private readonly dims = CONFIG.TAXI_DIMENSIONS;
+  private currentModelRoot: THREE.Object3D | null = null;
+
+  // Turbo exhaust particle system
+  private turboParticles: THREE.Points | null = null;
+  private turboVels: Float32Array | null = null;
+  private turboAges: Float32Array | null = null;
+  private readonly turboN = 120;
+  private turboIntensity = 0;
+  private turboTarget = 0;
+  private milestoneFlashTimer = 0;
 
   private constructor() {
     this.group.name = "PlayerTaxi";
@@ -82,17 +94,23 @@ export class PlayerTaxi {
       draftBarY: barY,
       draftBarZ: barZ,
     });
+    this.worldHud.scoreSprite.visible = false;
+    this.worldHud.chainSprite.visible = false;
 
     this.reset();
   }
 
-  static async create(): Promise<PlayerTaxi> {
+  static async create(loadout?: Loadout): Promise<PlayerTaxi> {
     const taxi = new PlayerTaxi();
-    await taxi.loadModel();
+    if (loadout) {
+      taxi.applyLoadout(loadout);
+    } else {
+      await taxi.loadGlbModel();
+    }
     return taxi;
   }
 
-  private async loadModel(): Promise<void> {
+  private async loadGlbModel(): Promise<void> {
     try {
       const gltf = await loadPlayerCarGltf();
       const model = gltf.scene.clone(true);
@@ -108,10 +126,58 @@ export class PlayerTaxi {
           obj.receiveShadow = false;
         }
       });
-      this.chassisGroup.add(model);
+      this.setModelRoot(model);
     } catch (err) {
       console.warn(`PlayerTaxi: failed to load ${CONFIG.PLAYER_CAR_GLB}`, err);
     }
+  }
+
+  applyLoadout(loadout: Loadout): void {
+    const model = buildProceduralCar(
+      loadout.carId as CarId,
+      loadout.bodyColorId as BodyColorId,
+      loadout.wheelStyleId as WheelStyleId,
+      loadout.wingColorId as WingColorId,
+    );
+    this.setModelRoot(model);
+  }
+
+  private setModelRoot(model: THREE.Object3D): void {
+    if (this.currentModelRoot) {
+      this.chassisGroup.remove(this.currentModelRoot);
+    }
+    this.currentModelRoot = model;
+    this.chassisGroup.add(model);
+    this.initTurbo();
+  }
+
+  private initTurbo(): void {
+    if (this.turboParticles) this.chassisGroup.remove(this.turboParticles);
+
+    const N = this.turboN;
+    const pos = new Float32Array(N * 3);
+    const colors = new Float32Array(N * 3);
+    this.turboVels = new Float32Array(N * 3);
+    this.turboAges = new Float32Array(N).fill(99);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage));
+
+    const mat = new THREE.PointsMaterial({
+      size: 0.1,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      sizeAttenuation: true,
+    });
+
+    this.turboParticles = new THREE.Points(geo, mat);
+    this.turboParticles.frustumCulled = false;
+    this.turboParticles.renderOrder = 80;
+    this.chassisGroup.add(this.turboParticles);
   }
 
   reset(): void {
@@ -132,22 +198,106 @@ export class PlayerTaxi {
     void wheelSteerRad;
   }
 
-  /**
-   * Call when `ChainManager.onSlingshot` returns a milestone (×5, ×10, …).
-   * Drives ×10 pink flash window; ×20 uses `chain` in `tickRoofLight`.
-   */
-  onChainMilestone(milestone: number, nowMs: number): void {
-    void milestone;
-    void nowMs;
+  onChainMilestone(_milestone: number, _nowMs: number): void {
+    this.milestoneFlashTimer = 0.5;
   }
 
-  /**
-   * Roof lamp: ×20 strobe → ×10 flash → draft pulse → vacant green (CLAUDE.md).
-   */
-  tickRoofLight(nowMs: number, isDrafting: boolean, chain: number): void {
-    void nowMs;
-    void isDrafting;
-    void chain;
+  tickRoofLight(_nowMs: number, isDrafting: boolean, chain: number): void {
+    if (!this.turboParticles || !this.turboVels || !this.turboAges) return;
+    const dt = 1 / 60;
+    const N = this.turboN;
+    const L = this.dims.length;
+    const H = this.dims.height;
+
+    // Two exhaust points (left/right near rear)
+    const exL = -0.18;
+    const exR = 0.18;
+    const exY = H * 0.18;
+    const exZ = -L / 2 - 0.05;
+
+    if (chain <= 1 && !isDrafting) {
+      this.turboTarget = 0;
+    } else if (isDrafting && chain <= 1) {
+      this.turboTarget = 0.25;
+    } else {
+      this.turboTarget = Math.min(1, 0.15 + chain * 0.08);
+    }
+    if (this.milestoneFlashTimer > 0) {
+      this.milestoneFlashTimer -= dt;
+      this.turboTarget = 1;
+    }
+    this.turboIntensity += (this.turboTarget - this.turboIntensity) * 0.12;
+
+    const geo = this.turboParticles.geometry;
+    const posA = geo.getAttribute('position') as THREE.BufferAttribute;
+    const colA = geo.getAttribute('color') as THREE.BufferAttribute;
+    const vels = this.turboVels;
+    const ages = this.turboAges;
+
+    const spawnPerFrame = this.turboIntensity * N * 3 * dt;
+    const speed = 6 + chain * 1.5;
+
+    for (let i = 0; i < N; i++) {
+      const life = 0.2 + 0.25 * (1 - this.turboIntensity * 0.5);
+      ages[i] += dt;
+
+      if (ages[i] > life && Math.random() < spawnPerFrame / N) {
+        const side = Math.random() > 0.5;
+        const ox = side ? exL : exR;
+        posA.setXYZ(i,
+          ox + (Math.random() - 0.5) * 0.06,
+          exY + (Math.random() - 0.5) * 0.04,
+          exZ,
+        );
+        // Shoot straight back with slight spread
+        vels[i * 3] = (Math.random() - 0.5) * 0.8;
+        vels[i * 3 + 1] = (Math.random() - 0.3) * 0.5;
+        vels[i * 3 + 2] = -(speed + Math.random() * speed * 0.5);
+        ages[i] = 0;
+      }
+
+      if (ages[i] < life) {
+        const t = ages[i] / life;
+
+        posA.setXYZ(i,
+          posA.getX(i) + vels[i * 3] * dt,
+          posA.getY(i) + vels[i * 3 + 1] * dt,
+          posA.getZ(i) + vels[i * 3 + 2] * dt,
+        );
+
+        // Hot core → orange → red → dark  (flame gradient over lifetime)
+        const fade = (1 - t * t) * this.turboIntensity;
+        let cr: number, cg: number, cb: number;
+        if (t < 0.15) {
+          // White-hot core
+          cr = 1; cg = 0.95; cb = 0.8;
+        } else if (t < 0.4) {
+          // Bright yellow-orange
+          const u = (t - 0.15) / 0.25;
+          cr = 1; cg = 0.95 - u * 0.55; cb = 0.8 - u * 0.8;
+        } else if (t < 0.7) {
+          // Orange to red
+          const u = (t - 0.4) / 0.3;
+          cr = 1; cg = 0.4 - u * 0.3; cb = 0;
+        } else {
+          // Dim red embers
+          const u = (t - 0.7) / 0.3;
+          cr = 1 - u * 0.6; cg = 0.1 * (1 - u); cb = 0;
+        }
+
+        colA.setXYZ(i, cr * fade, cg * fade, cb * fade);
+      } else {
+        colA.setXYZ(i, 0, 0, 0);
+        posA.setXYZ(i, 0, -10, 0);
+      }
+    }
+
+    posA.needsUpdate = true;
+    colA.needsUpdate = true;
+
+    // Scale particle size with intensity
+    (this.turboParticles.material as THREE.PointsMaterial).size =
+      0.06 + this.turboIntensity * 0.08;
   }
 
   setDraftMeter(fill01: number, visible: boolean): void {
@@ -172,7 +322,6 @@ export class PlayerTaxi {
     this.group.localToWorld(out);
   }
 
-  /** World positions for left/right taillights (source points for boost beams). */
   getTailLightsWorldPositions(
     outLeft: THREE.Vector3,
     outRight: THREE.Vector3,

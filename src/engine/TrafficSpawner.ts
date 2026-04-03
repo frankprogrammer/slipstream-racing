@@ -1,14 +1,7 @@
 import * as THREE from 'three';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { CONFIG } from '../config';
 import type { TrafficPhase } from '../config';
-import {
-  applyLiveryColors,
-  cloneMeshMaterialsUnique,
-  fitCarToDimensions,
-  loadPlayerCarGltf,
-  pickRandomLivery,
-} from './playerCarGlb';
+import { buildRandomTrafficCar } from './ProceduralCars';
 
 export type TrafficCollisionBounds = {
   cx: number;
@@ -19,10 +12,8 @@ export type TrafficCollisionBounds = {
 
 type PoolEntry = {
   group: THREE.Group;
-  /** Cloned glTF root (liveries applied here). */
   carRoot: THREE.Object3D;
   active: boolean;
-  /** True after player successfully slingshots from this car. */
   slipstreamConsumed: boolean;
   laneIndex: number;
   speedMul: number;
@@ -33,13 +24,12 @@ type PoolEntry = {
 };
 
 /**
- * Object-pooled traffic: clones of `playerCar.glb` with random named-material liveries.
+ * Object-pooled traffic: procedural F1 cars with random shapes + liveries.
  */
 export class TrafficSpawner {
   readonly group = new THREE.Group();
 
   private readonly pool: PoolEntry[] = [];
-  private gltfTemplate!: GLTF;
   private spawnAccMs = 0;
   private readonly despawnBehindZ = 25;
   private spawnsSinceRail = 0;
@@ -52,9 +42,7 @@ export class TrafficSpawner {
   }
 
   static async create(): Promise<TrafficSpawner> {
-    const gltf = await loadPlayerCarGltf();
     const spawner = new TrafficSpawner();
-    spawner.gltfTemplate = gltf;
     for (let i = 0; i < CONFIG.VEHICLE_POOL_SIZE; i++) {
       spawner.pool.push(spawner.createVehicle());
     }
@@ -63,17 +51,7 @@ export class TrafficSpawner {
 
   private createVehicle(): PoolEntry {
     const g = new THREE.Group();
-    const carRoot = this.gltfTemplate.scene.clone(true);
-    cloneMeshMaterialsUnique(carRoot);
-    fitCarToDimensions(carRoot, CONFIG.TAXI_DIMENSIONS, 0);
-    carRoot.traverse(obj => {
-      if (obj instanceof THREE.Mesh) {
-        obj.castShadow = false;
-        obj.receiveShadow = false;
-      }
-    });
-    const firstLivery = CONFIG.TRAFFIC_LIVERY_VARIANTS[0]!;
-    applyLiveryColors(carRoot, firstLivery);
+    const carRoot = buildRandomTrafficCar();
     g.add(carRoot);
 
     g.visible = false;
@@ -382,7 +360,9 @@ export class TrafficSpawner {
     idle.laneIndex = lane;
     idle.speedMul = Math.max(0.4, variance);
 
-    applyLiveryColors(idle.carRoot, pickRandomLivery());
+    idle.group.remove(idle.carRoot);
+    idle.carRoot = buildRandomTrafficCar();
+    idle.group.add(idle.carRoot);
 
     idle.active = true;
     idle.slipstreamConsumed = false;

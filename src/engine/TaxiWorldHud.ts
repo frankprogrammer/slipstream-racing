@@ -82,14 +82,8 @@ export class TaxiWorldHud {
 
     this.scoreSprite.position.set(0, scoreY, scoreZ);
 
-    const gap = CONFIG.TAXI_WORLD_HUD_CHAIN_BELOW_DRAFT_GAP;
-    const dBar = CONFIG.DRAFT_BAR_DEPTH;
-    const chainY =
-      draftBarY -
-      dBar * 0.5 -
-      gap -
-      this.chainBaseScale.y * 0.5;
-    this.chainSprite.position.set(0, chainY, draftBarZ);
+    const chainY = scoreY + this.scoreBaseScale.y * 0.5 + this.chainBaseScale.y * 0.5 - 0.30;
+    this.chainSprite.position.set(0, chainY, scoreZ);
 
     chassisGroup.add(this.scoreSprite);
     chassisGroup.add(this.chainSprite);

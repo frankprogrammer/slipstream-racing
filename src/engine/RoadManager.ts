@@ -198,7 +198,13 @@ export class RoadManager {
     if (!file) return;
     const tmpl = this.envTemplates.get(file);
     if (!tmpl) return;
-    seg.envHolder.add(tmpl.clone(true));
+    const clone = tmpl.clone(true);
+    clone.traverse(obj => {
+      if ((obj as THREE.Mesh).isMesh) {
+        obj.receiveShadow = true;
+      }
+    });
+    seg.envHolder.add(clone);
   }
 
   private pushSegment(root: THREE.Group, zCenter: number, segmentIndex: number): void {

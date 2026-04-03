@@ -345,28 +345,28 @@ export const CONFIG = {
   TRAFFIC_PHASES: [
     {
       startTime: 0,
-      spawnRate: 2000,
-      lanes: [1],
-      speedVariance: 0,
-      laneChange: true,
-    },
-    {
-      startTime: 20000,
-      spawnRate: 1200,
+      spawnRate: 1400,
       lanes: [0, 1, 2],
-      speedVariance: 0.2,
+      speedVariance: 0.1,
       laneChange: true,
     },
     {
-      startTime: 60000,
-      spawnRate: 800,
+      startTime: 15000,
+      spawnRate: 1000,
+      lanes: [0, 1, 2],
+      speedVariance: 0.25,
+      laneChange: true,
+    },
+    {
+      startTime: 45000,
+      spawnRate: 700,
       lanes: [0, 1, 2],
       speedVariance: 0.4,
       laneChange: true,
     },
     {
-      startTime: 120000,
-      spawnRate: 500,
+      startTime: 90000,
+      spawnRate: 450,
       lanes: [0, 1, 2],
       speedVariance: 0.6,
       laneChange: true,
@@ -455,7 +455,7 @@ export const CONFIG = {
   PLAYER_CAR_GLB: "playerCar.glb",
   /** Vertical offset after fit-to-dimensions (model-specific trim). */
   PLAYER_CAR_Y_OFFSET: 0,
-  TAXI_DIMENSIONS: { width: 1.8, height: 0.8, length: 3.5 },
+  TAXI_DIMENSIONS: { width: 2.1, height: 1.0, length: 4.0 },
   /** glTF material names for traffic liveries (Blender export). */
   TRAFFIC_MATERIAL_RED: "red",
   TRAFFIC_MATERIAL_WHITE: "white",
@@ -472,10 +472,10 @@ export const CONFIG = {
   TAXI_WORLD_HUD_SCORE_BEHIND_Z: 0.55,
   /** Score sprite height as fraction of taxi body height (chassis local Y). */
   TAXI_WORLD_HUD_SCORE_Y_FRAC: 0.52,
-  TAXI_WORLD_HUD_CHAIN_SCALE_X: 2.0,
-  TAXI_WORLD_HUD_CHAIN_SCALE_Y: 0.85,
-  TAXI_WORLD_HUD_SCORE_SCALE_X: 4.0,
-  TAXI_WORLD_HUD_SCORE_SCALE_Y: 1.05,
+  TAXI_WORLD_HUD_CHAIN_SCALE_X: 1.4,
+  TAXI_WORLD_HUD_CHAIN_SCALE_Y: 0.55,
+  TAXI_WORLD_HUD_SCORE_SCALE_X: 2.8,
+  TAXI_WORLD_HUD_SCORE_SCALE_Y: 0.75,
   /**
    * Collision AABB half-length (Z) × this vs full taxi length/2 — only traffic collision uses it;
    * slipstream still uses full bounds. 0.9 ≈ 10% shorter front+back (forgiving).
