@@ -1180,3 +1180,15 @@ The name label is still clipping into the car. Let's let's move it even higher
 ### 2026-04-03 4:30 AM PDT
 
 I want to keep the current touch controls where touching on the left side of the screen moves it to the left and touching on the right screen moves to the right. I additionally want... this to be updated on pointer move, divide the screen into thirds, and wherever Whichever third the player drags their finger into will... move the race car into that into that lane. Remember that in world space, the left is to the positive X axis.
+
+---
+
+### 2026-04-03 6:00 AM PDT
+
+I still feel like the draft meter is not starting from zero yet. when it is displayed. It almost seems like it's starting from 50 or 70%.
+
+---
+
+### 2026-04-03 6:15 AM PDT
+
+The draft meter seems to reach 100%. And then... It becomes empty for a split second. before it completely goes away. Instead, let's lock it Once it reached 100%, let's lock it at 100%. and then make it disappear. Then it can reset back to zero. off screen for the next time it gets presented.

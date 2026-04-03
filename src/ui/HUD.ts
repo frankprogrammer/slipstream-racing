@@ -159,7 +159,7 @@ export class HUD {
     return { wrap, fill };
   }
 
-  /** Snap fill to empty so stale 100% + CSS width transition cannot fight meter on re-entry. */
+  /** Clears hood fill (e.g. full game reset). While hiding the bar we keep the last fill so opacity fade shows full→gone, not empty→gone. */
   private hideDraftBarFill(): void {
     this.draftBarFillEl.style.width = "0%";
   }
@@ -168,6 +168,9 @@ export class HUD {
    * Hood draft meter: width matches projected car width at the hood; position follows anchor.
    * Hides when off-screen or behind the camera.
    */
+  /**
+   * @returns true when the draft bar is actually drawn (in-zone, valid projection, on-screen).
+   */
   updateDraftBarScreen(
     meter01: number,
     visible: boolean,
@@ -175,19 +178,17 @@ export class HUD {
     camera: THREE.PerspectiveCamera,
     container: HTMLElement,
     playerTaxi: PlayerTaxi,
-  ): void {
+  ): boolean {
     if (!visible) {
       this.draftBarWrapEl.style.opacity = "0";
-      this.hideDraftBarFill();
-      return;
+      return false;
     }
 
     playerTaxi.getDraftBarAnchorWorld(this.tmpWorld);
     this.tmpView.copy(this.tmpWorld).applyMatrix4(camera.matrixWorldInverse);
     if (this.tmpView.z >= 0) {
       this.draftBarWrapEl.style.opacity = "0";
-      this.hideDraftBarFill();
-      return;
+      return false;
     }
 
     const rect = container.getBoundingClientRect();
@@ -200,8 +201,7 @@ export class HUD {
       Math.abs(v.y) > 1.08
     ) {
       this.draftBarWrapEl.style.opacity = "0";
-      this.hideDraftBarFill();
-      return;
+      return false;
     }
 
     const x = (v.x * 0.5 + 0.5) * rect.width;
@@ -215,8 +215,7 @@ export class HUD {
     this.tmpProj.copy(this.tmpDraftR).applyMatrix4(camera.matrixWorldInverse);
     if (this.tmpView.z >= 0 || this.tmpProj.z >= 0) {
       this.draftBarWrapEl.style.opacity = "0";
-      this.hideDraftBarFill();
-      return;
+      return false;
     }
 
     this.tmpView.copy(this.tmpDraftL).project(camera);
@@ -226,8 +225,7 @@ export class HUD {
       !Number.isFinite(this.tmpProj.x)
     ) {
       this.draftBarWrapEl.style.opacity = "0";
-      this.hideDraftBarFill();
-      return;
+      return false;
     }
 
     const lx = (this.tmpView.x * 0.5 + 0.5) * rect.width;
@@ -252,6 +250,7 @@ export class HUD {
       ? CONFIG.PALETTE.SLIPSTREAM_WIND
       : CONFIG.PALETTE.RACE_TELEMETRY_RED;
     this.draftBarFillEl.style.background = hexToCss(fillHex);
+    return true;
   }
 
   /** Default pink flash (other milestones / juice). */

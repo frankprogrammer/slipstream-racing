@@ -376,6 +376,12 @@ export const CONFIG = {
   DRAFT_BAR_SCREEN_HEIGHT_FRAC_OF_WIDTH: 0.121,
   DRAFT_BAR_SCREEN_MIN_WIDTH_PX: 44,
   DRAFT_BAR_SCREEN_MAX_WIDTH_PX: 320,
+  /**
+   * While in a slipstream the hood draft bar can stay hidden (anchor off-screen / behind camera)
+   * even though the zone keeps filling. After hidden this long (ms), the next time the bar draws
+   * we reset travel progress so the fill starts near 0 instead of jumping in half-full.
+   */
+  DRAFT_BAR_RESET_TRAVEL_AFTER_HIDDEN_MS: 90,
   /** Tail light color multiplier while player is in that vehicle's slipstream (HDR-friendly). */
   DRAFT_TAIL_BRIGHTNESS_MUL: 4.0,
 

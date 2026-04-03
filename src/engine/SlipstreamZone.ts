@@ -32,6 +32,16 @@ export class SlipstreamZone {
   }
 
   /**
+   * Clears draft travel progress while staying in-zone on the same target slot when possible.
+   * Used when the hood bar was off-screen for a while so the visible fill starts from empty.
+   */
+  resetDraftTravelBaseline(): void {
+    this.draftDepthAccum = 0;
+    this.meter = 0;
+    this.lastDraftVehicleCz = null;
+  }
+
+  /**
    * @returns slingshotFired — true the frame you leave the zone with a full meter (release).
    */
   update(

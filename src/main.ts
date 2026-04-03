@@ -252,6 +252,8 @@ let preRaceStep = 0;
 let preRaceStepAccMs = 0;
 /** Set immediately before `transition("gameover")` — read in `onChange` for UI + audio. */
 let pendingGameOverReason: GameOverReason | null = null;
+/** In slipstream while hood bar is not drawable (projection); used to reset travel when bar reappears. */
+let draftBarProjMissMs = 0;
 
 const PRE_RACE_COUNTDOWN_LABELS = ["3", "2", "1", "GO!"] as const;
 
@@ -283,6 +285,7 @@ function resetGame(): void {
   chainManager.reset();
   slipstreamBonusSpawnWorldX = null;
   prevSlipInZone = false;
+  draftBarProjMissMs = 0;
   hud.reset();
   prevSpeedHudVisible = false;
   const nowMs = performance.now();
@@ -635,6 +638,43 @@ function animate(): void {
 
   hud.updateRaceTimeBonusFloats(telemetrySuper);
 
+  const draftBarVisible =
+    gameState.isPlaying &&
+    runGameplayReady &&
+    !preRaceCountdownActive &&
+    slipInZone;
+
+  let draftDisplayed = hud.updateDraftBarScreen(
+    slipMeter,
+    draftBarVisible,
+    telemetrySuper,
+    camera,
+    container,
+    playerTaxi,
+  );
+
+  if (draftBarVisible && !draftDisplayed) {
+    draftBarProjMissMs += delta * 1000;
+  } else if (!draftBarVisible) {
+    draftBarProjMissMs = 0;
+  } else {
+    if (
+      draftBarProjMissMs >= CONFIG.DRAFT_BAR_RESET_TRAVEL_AFTER_HIDDEN_MS
+    ) {
+      slipstreamZone.resetDraftTravelBaseline();
+      slipMeter = 0;
+      draftDisplayed = hud.updateDraftBarScreen(
+        slipMeter,
+        draftBarVisible,
+        telemetrySuper,
+        camera,
+        container,
+        playerTaxi,
+      );
+    }
+    draftBarProjMissMs = 0;
+  }
+
   if (speedHudEl && speedTextEl) {
     const visible = gameState.isPlaying && runGameplayReady;
     if (!visible) {
@@ -716,20 +756,6 @@ function animate(): void {
   const skyBr = CONFIG.SUPER_SLIPSTREAM_SKY_BLEND_RATE;
   skyFogBlend += (targetSkyFogBlend - skyFogBlend) * Math.min(1, delta * skyBr);
   applySkyFogFromBlend();
-
-  const draftBarVisible =
-    gameState.isPlaying &&
-    runGameplayReady &&
-    !preRaceCountdownActive &&
-    slipInZone;
-  hud.updateDraftBarScreen(
-    slipMeter,
-    draftBarVisible,
-    telemetrySuper,
-    camera,
-    container,
-    playerTaxi,
-  );
 
   renderer.render(scene, camera);
 }
