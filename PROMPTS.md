@@ -928,3 +928,21 @@ when super slipstream is activated. the sky and fog color should turn bright red
 ### 2026-04-02 5:30 PM PDT
 
 when a race starts the game should be paused and we should see a 3, 2, 1, GO! countdown at the middle of the screen. the race starts. The font size should be massive. it should cycle between each number every 500ms
+
+---
+
+### 2026-04-02 6:00 PM PDT
+
+add a decimal place to the timer
+
+---
+
+### 2026-04-02 6:15 PM PDT
+
+the timer text feels like it jiggles horizontally because it is centered and it is counting quickly. make it so it the text is still approximately centered but doesnt feel like its moving side to side as the number tick
+
+---
+
+### 2026-04-02 6:30 PM PDT
+
+make the "+1 sec" and "+2 sec" text 25% smaller

@@ -237,7 +237,7 @@ export class HUD {
       "z-index:125",
       'font-family:"Exo 2",system-ui,sans-serif',
       "font-weight:800",
-      "font-size:49.5px",
+      "font-size:37.125px",
       "letter-spacing:0.16em",
       `color:${cyanHex}`,
       `text-shadow:0 0 12px ${rgbaFromHex(cyan, 0.55)},0 0 22px ${rgbaFromHex(cyan, 0.35)}`,
@@ -245,7 +245,7 @@ export class HUD {
       "will-change:left,top,opacity",
     ].join(";");
     if (seconds === 2) {
-      el.style.fontSize = "54px";
+      el.style.fontSize = "40.5px";
     }
     container.appendChild(el);
 

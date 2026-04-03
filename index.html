@@ -101,13 +101,19 @@
       #speed-text {
         font-size: 40px;
         font-weight: 800;
-        letter-spacing: 0.16em;
+        /* Tabular figures + tighter tracking: avoids horizontal “jiggle” as digits change. */
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+        letter-spacing: 0.06em;
         color: var(--f1-cyan, #00d2be);
         text-shadow: 0 0 12px var(--f1-countdown-glow, rgba(0, 210, 190, 0.55));
         white-space: nowrap;
         display: inline-block;
         transform-origin: center center;
         will-change: transform;
+        /* Reserve width for long runs (e.g. 10:00.0) so the block center stays stable. */
+        min-width: 9.5ch;
+        text-align: center;
       }
 
       /* Screen Flash */

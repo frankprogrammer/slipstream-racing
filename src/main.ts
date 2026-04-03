@@ -213,6 +213,8 @@ let raceRemainMs: number = CONFIG.RACE_COUNTDOWN_START_MS;
 let runGameplayReady = false;
 /** Accumulated real-time (ms) for intro tween — uses `delta`, not wall clock, so the first frame is always t≈0. */
 let introElapsedMs = 0;
+/** Avoid re-fitting scale every frame when only the timer string changes (reduces jitter). */
+let prevSpeedHudVisible = false;
 /** Full-screen 3–2–1–GO! before intro; gameplay frozen while true. */
 let preRaceCountdownActive = false;
 let preRaceStep = 0;
@@ -248,6 +250,7 @@ function resetGame(): void {
   slipstreamZone.reset();
   chainManager.reset();
   hud.reset();
+  prevSpeedHudVisible = false;
   const nowMs = performance.now();
   const x = laneSystem.getLaneX(nowMs);
   const roll = laneSystem.getBodyRollRad(nowMs);
@@ -583,8 +586,11 @@ function animate(): void {
     } else {
       speedTextEl.textContent = formatRaceCountdownMs(raceRemainMs);
       speedHudEl.style.opacity = "1";
-      requestAnimationFrame(() => fitSpeedHudText());
+      if (!prevSpeedHudVisible) {
+        requestAnimationFrame(() => fitSpeedHudText());
+      }
     }
+    prevSpeedHudVisible = visible;
   }
 
   slipstreamWind.update(

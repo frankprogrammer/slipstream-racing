@@ -33,13 +33,15 @@ export function displaySpeedKmhFromScroll(scrollPerFrame: number): number {
   return Math.round(speedMps * 3.6 * 2);
 }
 
-/** Top HUD race countdown — `M:SS` from remaining milliseconds. */
+/** Top HUD race countdown — `M:SS.d` from remaining milliseconds (tenths of the current second). */
 export function formatRaceCountdownMs(ms: number): string {
   const t = Math.max(0, ms);
-  const totalSec = Math.floor(t / 1000);
+  const totalSec = t / 1000;
   const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
+  const s = totalSec - m * 60;
+  const si = Math.floor(s);
+  const tenth = Math.min(9, Math.floor((s - si) * 10));
+  return `${m}:${String(si).padStart(2, "0")}.${tenth}`;
 }
 
 /** Game-over “time played” — whole minutes and seconds. */
@@ -314,7 +316,7 @@ export const CONFIG = {
 
   // ── Speed (scrollPerFrame units; see main.ts `effectiveBaseScroll`) ──
   /** Minimum base scroll (floor when slipstream bonus has decayed to 0). */
-  BASE_SCROLL_SPEED: 0.4,
+  BASE_SCROLL_SPEED: 0.5,
   /** Hard cap on base scroll (slipstream bonus included). */
   MAX_SCROLL_SPEED: 0.75,
   /**
