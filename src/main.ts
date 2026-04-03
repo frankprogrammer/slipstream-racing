@@ -26,6 +26,7 @@ import {
 } from "./ui/GameOverScreen";
 import { HUD } from "./ui/HUD";
 import { GameAudio } from "./engine/GameAudio";
+import { tryEnterFullscreenOnce } from "./mobileFullscreen";
 
 function easeInCubic(t: number): number {
   return t ** 3;
@@ -156,13 +157,16 @@ dirLight.position.set(
 dirLight.castShadow = false;
 scene.add(dirLight);
 
-window.addEventListener("resize", () => {
+function syncRendererToViewport(): void {
   const w = window.innerWidth;
   const h = window.innerHeight;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
-});
+}
+
+window.addEventListener("resize", syncRendererToViewport);
+window.visualViewport?.addEventListener("resize", syncRendererToViewport);
 
 const gameState = new GameState();
 const laneSystem = new LaneSystem(container);
@@ -183,9 +187,14 @@ const gameAudio = new GameAudio();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
 
-container.addEventListener("pointerdown", () => gameAudio.unlock(), {
-  once: true,
-});
+container.addEventListener(
+  "pointerdown",
+  () => {
+    tryEnterFullscreenOnce(container);
+    gameAudio.unlock();
+  },
+  { once: true },
+);
 
 let appFocused = document.visibilityState === "visible";
 let needsDeltaReset = false;
