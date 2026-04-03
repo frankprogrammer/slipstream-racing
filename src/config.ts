@@ -212,7 +212,7 @@ export const CONFIG = {
   CAMERA_FOV_MAX: 65,
   /** Per-frame lerp toward speed-mapped target FOV. */
   CAMERA_FOV_LERP: 0.02,
-  CAMERA_SHAKE_INTENSITY: 0.03,
+  CAMERA_SHAKE_INTENSITY: 0.05,
   CAMERA_SHAKE_DECAY: 0.9,
 
   // ── Lanes ──
@@ -296,6 +296,8 @@ export const CONFIG = {
    * (relative motion along Z vs the lead vehicle while overlapping its slipstream).
    */
   DRAFT_ACTIVATE_DEPTH_FRACTION: 0.25,
+  /** Camera shake duration after a successful slipstream release (slingshot). Uses `CAMERA_SHAKE_INTENSITY`. */
+  SLIPSTREAM_CAMERA_SHAKE_MS: 300,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
   DRAFT_BAR_WIDTH: 1.55,
   DRAFT_BAR_DEPTH: 0.1,

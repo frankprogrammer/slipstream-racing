@@ -760,3 +760,9 @@ Right now, if there is a car in the left lane and a car in the right lane, there
 ### 2026-04-02 8:14 PM PDT
 
 Right now, successfully activating a slipstream is done by staying within the slipstream zone for a certain amount of time. I instead want to convert this so it is activated by having your car travel a certain amount of depth of the slipstream. Let's start that off with being 15% of the slipstream depth.
+
+---
+
+### 2026-04-02 8:16 PM PDT
+
+When successfully activating a slipstream, Give the camera a quick 300 millisecond Shake.

@@ -339,6 +339,7 @@ function animate(): void {
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
         burstRemainMs = CONFIG.SLINGSHOT_BURST_DURATION;
+        cameraController.triggerSlipstreamShake();
         slipstreamActivateBurst.burst();
         gameAudio.playSlingshot();
         const milestone = chainManager.onSlingshot(nowMs);
@@ -362,7 +363,7 @@ function animate(): void {
       playerTaxi.worldHud.setChain(chainManager.chain);
       playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
-      cameraController.update(playerTaxi, scrollPerFrame);
+      cameraController.update(playerTaxi, scrollPerFrame, delta);
 
       if (collisionSystem.check(playerTaxi, trafficSpawner)) {
         gameState.transition("gameover");
@@ -381,7 +382,7 @@ function animate(): void {
     slipstreamActivateBurst.setBurstWindowActive(false);
     slingshotTrail.setBoostActive(false);
     slingshotTrail.update(delta, 0, playerTaxi);
-    cameraController.update(playerTaxi, CONFIG.BASE_SCROLL_SPEED);
+    cameraController.update(playerTaxi, CONFIG.BASE_SCROLL_SPEED, delta);
     playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
     const laneX = laneSystem.getLaneX(nowMs);
     milestoneAnchorWorld.set(laneX, 1.1, CONFIG.TAXI_POSITION_Z + 2.2);
