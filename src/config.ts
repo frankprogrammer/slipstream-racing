@@ -363,14 +363,19 @@ export const CONFIG = {
   SUPER_SLIPSTREAM_CAMERA_SHAKE_INTENSITY_MUL: 1.25,
   /** Lerp speed per second for sky/fog toward `PALETTE.SUPER_SLIPSTREAM_SKY` (1) or `SKY` (0). */
   SUPER_SLIPSTREAM_SKY_BLEND_RATE: 8,
-  /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
-  DRAFT_BAR_WIDTH: 1.55,
-  /** Strip “height” on the hood plane (world units) — was 0.1; ×2 for readability. */
-  DRAFT_BAR_DEPTH: 0.2,
+  /** Screen-space draft bar anchor: offset above chassis top (local Y). */
   DRAFT_BAR_OFFSET_Y: 0.035,
+  /** Screen-space draft bar anchor: inset from front bumper toward −Z (local). */
   DRAFT_BAR_INSET_FROM_FRONT: 0.38,
-  /** Black outline: extra half-width on each side of the bar (world units). */
-  DRAFT_BAR_OUTLINE_THICKNESS: 0.014,
+  /**
+   * Screen-space hood draft bar: width follows projected `TAXI_DIMENSIONS.width`
+   * at the hood anchor (matches on-screen car width; not tied to viewport vmin).
+   */
+  DRAFT_BAR_SCREEN_WIDTH_SCALE: 1,
+  /** Height (px) = clamped width (px) × this — keeps bar thickness vs car. */
+  DRAFT_BAR_SCREEN_HEIGHT_FRAC_OF_WIDTH: 0.121,
+  DRAFT_BAR_SCREEN_MIN_WIDTH_PX: 44,
+  DRAFT_BAR_SCREEN_MAX_WIDTH_PX: 320,
   /** Tail light color multiplier while player is in that vehicle's slipstream (HDR-friendly). */
   DRAFT_TAIL_BRIGHTNESS_MUL: 4.0,
 

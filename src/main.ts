@@ -49,7 +49,7 @@ function applyF1CssVariables(): void {
   const p = CONFIG.PALETTE;
   const r = document.documentElement;
   r.style.setProperty("--f1-primary", hexToCss(p.NEON_PINK));
-  /** Same telemetry cyan as slipstream draft bar (`PlayerTaxi` fill). */
+  /** Same telemetry cyan as screen-space hood draft bar fill (super mode). */
   r.style.setProperty("--f1-cyan", hexToCss(p.SLIPSTREAM_WIND));
   r.style.setProperty(
     "--f1-countdown-glow",
@@ -320,7 +320,6 @@ gameState.onChange((state) => {
       preRaceCountdownEl.setAttribute("aria-hidden", "true");
     }
     laneSystem.enabled = false;
-    playerTaxi.setDraftMeter(0, false);
     const reason = pendingGameOverReason ?? "crash";
     pendingGameOverReason = null;
     if (reason === "crash") {
@@ -593,7 +592,6 @@ function animate(): void {
       playerTaxi.worldHud.setSpeedKmh(
         displaySpeedKmhFromScroll(scrollPerFrame),
       );
-      playerTaxi.setDraftMeter(slip.meterDisplay, slip.inZone);
 
       cameraController.update(
         playerTaxi,
@@ -628,7 +626,6 @@ function animate(): void {
   const telemetrySuper =
     gameState.isPlaying && runGameplayReady && superSlipstreamRemainMs > 0;
   applyRaceTelemetryCss(telemetrySuper);
-  playerTaxi.setDraftTelemetrySuperActive(telemetrySuper);
 
   hud.updateSuperSlipstreamMeter(
     superSlipstreamMeter,
@@ -719,6 +716,20 @@ function animate(): void {
   const skyBr = CONFIG.SUPER_SLIPSTREAM_SKY_BLEND_RATE;
   skyFogBlend += (targetSkyFogBlend - skyFogBlend) * Math.min(1, delta * skyBr);
   applySkyFogFromBlend();
+
+  const draftBarVisible =
+    gameState.isPlaying &&
+    runGameplayReady &&
+    !preRaceCountdownActive &&
+    slipInZone;
+  hud.updateDraftBarScreen(
+    slipMeter,
+    draftBarVisible,
+    telemetrySuper,
+    camera,
+    container,
+    playerTaxi,
+  );
 
   renderer.render(scene, camera);
 }

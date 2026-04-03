@@ -3,7 +3,7 @@ import { CONFIG, hexToCss, rgbaFromHex } from "../config";
 import type { PlayerTaxi } from "../engine/PlayerTaxi";
 
 /**
- * HUD — HTML/CSS overlay: screen flash + touch hints + super meter.
+ * HUD — HTML/CSS overlay: screen flash + touch hints + screen-space draft bar + super meter.
  * Speed and race timer are separate DOM; speed behind car is `TaxiWorldHud`.
  */
 const TOUCH_HINT_BUTTON_PX = 72;
@@ -28,9 +28,14 @@ export class HUD {
   private touchHintRightEl: HTMLElement;
   private superSlipstreamWrapEl: HTMLElement;
   private superSlipstreamFillEl: HTMLElement;
+  private draftBarWrapEl: HTMLElement;
+  private draftBarFillEl: HTMLElement;
   private perfectFlashTimer = 0;
   private readonly tmpProj = new THREE.Vector3();
   private readonly tmpWorld = new THREE.Vector3();
+  private readonly tmpView = new THREE.Vector3();
+  private readonly tmpDraftL = new THREE.Vector3();
+  private readonly tmpDraftR = new THREE.Vector3();
   private readonly raceTimeBonusFloats: RaceTimeBonusFloat[] = [];
 
   constructor() {
@@ -41,9 +46,13 @@ export class HUD {
     const superMeter = this.buildSuperSlipstreamMeter();
     this.superSlipstreamWrapEl = superMeter.wrap;
     this.superSlipstreamFillEl = superMeter.fill;
+    const draftBar = this.buildDraftBarScreen();
+    this.draftBarWrapEl = draftBar.wrap;
+    this.draftBarFillEl = draftBar.fill;
     container.append(
       this.touchHintLeftEl,
       this.touchHintRightEl,
+      this.draftBarWrapEl,
       this.superSlipstreamWrapEl,
     );
   }
@@ -92,7 +101,7 @@ export class HUD {
       "transform:translateX(-50%)",
       "width:75vw",
       "height:36px",
-      "border-radius:9999px",
+      "border-radius:0",
       `border:2px solid ${rgbaFromHex(CONFIG.PALETTE.UI_TEXT, 0.5)}`,
       `background:${rgbaFromHex(CONFIG.PALETTE.UI_BG_APP, 0.62)}`,
       "box-shadow:0 0 0 2px rgba(0,0,0,0.2), inset 0 0 10px rgba(0,0,0,0.3)",
@@ -114,6 +123,135 @@ export class HUD {
     ].join(";");
     wrap.append(fill);
     return { wrap, fill };
+  }
+
+  private buildDraftBarScreen(): {
+    wrap: HTMLElement;
+    fill: HTMLElement;
+  } {
+    const wrap = document.createElement("div");
+    wrap.style.cssText = [
+      "position:absolute",
+      "left:0",
+      "top:0",
+      "pointer-events:none",
+      "z-index:119",
+      "overflow:hidden",
+      "opacity:0",
+      "border-radius:0",
+      "width:120px",
+      "height:14px",
+      `border:2px solid ${hexToCss(CONFIG.PALETTE.UI_OUTLINE)}`,
+      "background:transparent",
+      "box-sizing:border-box",
+      "transition:opacity 90ms linear",
+      "transform:translate(-50%, -50%)",
+      "will-change:left,top,opacity",
+    ].join(";");
+
+    const fill = document.createElement("div");
+    fill.style.cssText = [
+      "width:0%",
+      "height:100%",
+      "box-sizing:border-box",
+    ].join(";");
+    wrap.appendChild(fill);
+    return { wrap, fill };
+  }
+
+  /** Snap fill to empty so stale 100% + CSS width transition cannot fight meter on re-entry. */
+  private hideDraftBarFill(): void {
+    this.draftBarFillEl.style.width = "0%";
+  }
+
+  /**
+   * Hood draft meter: width matches projected car width at the hood; position follows anchor.
+   * Hides when off-screen or behind the camera.
+   */
+  updateDraftBarScreen(
+    meter01: number,
+    visible: boolean,
+    telemetrySuper: boolean,
+    camera: THREE.PerspectiveCamera,
+    container: HTMLElement,
+    playerTaxi: PlayerTaxi,
+  ): void {
+    if (!visible) {
+      this.draftBarWrapEl.style.opacity = "0";
+      this.hideDraftBarFill();
+      return;
+    }
+
+    playerTaxi.getDraftBarAnchorWorld(this.tmpWorld);
+    this.tmpView.copy(this.tmpWorld).applyMatrix4(camera.matrixWorldInverse);
+    if (this.tmpView.z >= 0) {
+      this.draftBarWrapEl.style.opacity = "0";
+      this.hideDraftBarFill();
+      return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const v = this.tmpProj.copy(this.tmpWorld).project(camera);
+    if (
+      !Number.isFinite(v.x) ||
+      !Number.isFinite(v.y) ||
+      !Number.isFinite(v.z) ||
+      Math.abs(v.x) > 1.08 ||
+      Math.abs(v.y) > 1.08
+    ) {
+      this.draftBarWrapEl.style.opacity = "0";
+      this.hideDraftBarFill();
+      return;
+    }
+
+    const x = (v.x * 0.5 + 0.5) * rect.width;
+    const y = (-v.y * 0.5 + 0.5) * rect.height;
+    this.draftBarWrapEl.style.left = `${x.toFixed(2)}px`;
+    this.draftBarWrapEl.style.top = `${y.toFixed(2)}px`;
+    this.draftBarWrapEl.style.opacity = "1";
+
+    playerTaxi.getDraftMeterSpanWorld(this.tmpDraftL, this.tmpDraftR);
+    this.tmpView.copy(this.tmpDraftL).applyMatrix4(camera.matrixWorldInverse);
+    this.tmpProj.copy(this.tmpDraftR).applyMatrix4(camera.matrixWorldInverse);
+    if (this.tmpView.z >= 0 || this.tmpProj.z >= 0) {
+      this.draftBarWrapEl.style.opacity = "0";
+      this.hideDraftBarFill();
+      return;
+    }
+
+    this.tmpView.copy(this.tmpDraftL).project(camera);
+    this.tmpProj.copy(this.tmpDraftR).project(camera);
+    if (
+      !Number.isFinite(this.tmpView.x) ||
+      !Number.isFinite(this.tmpProj.x)
+    ) {
+      this.draftBarWrapEl.style.opacity = "0";
+      this.hideDraftBarFill();
+      return;
+    }
+
+    const lx = (this.tmpView.x * 0.5 + 0.5) * rect.width;
+    const rx = (this.tmpProj.x * 0.5 + 0.5) * rect.width;
+    let barW =
+      Math.abs(rx - lx) * CONFIG.DRAFT_BAR_SCREEN_WIDTH_SCALE;
+    barW = THREE.MathUtils.clamp(
+      barW,
+      CONFIG.DRAFT_BAR_SCREEN_MIN_WIDTH_PX,
+      CONFIG.DRAFT_BAR_SCREEN_MAX_WIDTH_PX,
+    );
+    const barH = Math.max(
+      2,
+      Math.round(barW * CONFIG.DRAFT_BAR_SCREEN_HEIGHT_FRAC_OF_WIDTH),
+    );
+    this.draftBarWrapEl.style.width = `${barW.toFixed(1)}px`;
+    this.draftBarWrapEl.style.height = `${barH}px`;
+
+    const meter = THREE.MathUtils.clamp(meter01, 0, 1);
+    this.draftBarFillEl.style.width = `${(meter * 100).toFixed(2)}%`;
+    const fillHex = telemetrySuper
+      ? CONFIG.PALETTE.SLIPSTREAM_WIND
+      : CONFIG.PALETTE.RACE_TELEMETRY_RED;
+    this.draftBarFillEl.style.background = hexToCss(fillHex);
   }
 
   /** Default pink flash (other milestones / juice). */
@@ -304,5 +442,7 @@ export class HUD {
     this.superSlipstreamWrapEl.style.opacity = "0";
     this.superSlipstreamFillEl.style.width = "0%";
     this.superSlipstreamFillEl.style.filter = "brightness(1)";
+    this.draftBarWrapEl.style.opacity = "0";
+    this.draftBarFillEl.style.width = "0%";
   }
 }

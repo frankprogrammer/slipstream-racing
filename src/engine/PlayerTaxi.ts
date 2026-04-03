@@ -16,8 +16,8 @@ export class PlayerTaxi {
   readonly worldHud: TaxiWorldHud;
 
   private readonly chassisGroup: THREE.Group;
-  private readonly draftBarGroup: THREE.Group;
-  private readonly draftFill: THREE.Mesh;
+  /** World position for screen-space draft bar overlay (same placement as former 3D bar). */
+  private readonly draftBarAnchor = new THREE.Object3D();
   private readonly dims = CONFIG.TAXI_DIMENSIONS;
 
   private constructor() {
@@ -31,65 +31,11 @@ export class PlayerTaxi {
     const zFront = L / 2;
     const zBack = -L / 2;
 
-    const wBar = CONFIG.DRAFT_BAR_WIDTH;
-    const dBar = CONFIG.DRAFT_BAR_DEPTH;
-    const o = CONFIG.DRAFT_BAR_OUTLINE_THICKNESS;
-    this.draftBarGroup = new THREE.Group();
-    this.draftBarGroup.name = "DraftMeterBar";
-    this.draftBarGroup.visible = false;
+    this.draftBarAnchor.name = "DraftBarScreenAnchor";
     const barY = H + CONFIG.DRAFT_BAR_OFFSET_Y;
     const barZ = zFront - CONFIG.DRAFT_BAR_INSET_FROM_FRONT;
-    this.draftBarGroup.position.set(0, barY, barZ);
-
-    const outlineMat = new THREE.MeshBasicMaterial({
-      color: CONFIG.PALETTE.UI_OUTLINE,
-      side: THREE.DoubleSide,
-      depthWrite: true,
-      polygonOffset: true,
-      polygonOffsetFactor: 2,
-      polygonOffsetUnits: 1,
-    });
-    const outline = new THREE.Mesh(
-      new THREE.PlaneGeometry(wBar + o * 2, dBar + o * 2),
-      outlineMat,
-    );
-    outline.rotation.x = -Math.PI / 2;
-    outline.position.y = -0.004;
-    this.draftBarGroup.add(outline);
-
-    const trackMat = new THREE.MeshBasicMaterial({
-      color: CONFIG.PALETTE.DRAFT_BAR_TRACK,
-      transparent: true,
-      opacity: 0.92,
-      side: THREE.DoubleSide,
-      depthWrite: true,
-      polygonOffset: true,
-      polygonOffsetFactor: 1,
-      polygonOffsetUnits: 1,
-    });
-    const track = new THREE.Mesh(new THREE.PlaneGeometry(wBar, dBar), trackMat);
-    track.rotation.x = -Math.PI / 2;
-    this.draftBarGroup.add(track);
-
-    const fillMat = new THREE.MeshBasicMaterial({
-      color: CONFIG.PALETTE.SLIPSTREAM_WIND,
-      side: THREE.DoubleSide,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    });
-    const fillParent = new THREE.Group();
-    fillParent.position.set(-wBar / 2, 0, 0);
-    this.draftBarGroup.add(fillParent);
-    const fillGeo = new THREE.PlaneGeometry(wBar, dBar);
-    fillGeo.translate(wBar / 2, 0, 0);
-    this.draftFill = new THREE.Mesh(fillGeo, fillMat);
-    this.draftFill.rotation.x = -Math.PI / 2;
-    this.draftFill.position.y = 0.004;
-    fillParent.add(this.draftFill);
-
-    this.draftBarGroup.scale.set(-1, 1, 1);
-    this.chassisGroup.add(this.draftBarGroup);
+    this.draftBarAnchor.position.set(0, barY, barZ);
+    this.chassisGroup.add(this.draftBarAnchor);
 
     const scoreZ = zBack - CONFIG.TAXI_WORLD_HUD_SCORE_BEHIND_Z;
     const scoreY = H * CONFIG.TAXI_WORLD_HUD_SCORE_Y_FRAC;
@@ -137,8 +83,6 @@ export class PlayerTaxi {
     );
     this.group.rotation.set(0, 0, 0);
     this.chassisGroup.rotation.set(0, 0, 0);
-    this.setDraftMeter(0, false);
-    this.setDraftTelemetrySuperActive(false);
     this.worldHud.reset();
   }
 
@@ -166,20 +110,25 @@ export class PlayerTaxi {
     void chain;
   }
 
-  setDraftMeter(fill01: number, visible: boolean): void {
-    const t = Math.max(0, Math.min(1, fill01));
-    this.draftBarGroup.visible = visible;
-    this.draftFill.scale.set(t, 1, 1);
+  /** Center of the hood draft bar in world space — project to screen for the HTML overlay. */
+  getDraftBarAnchorWorld(out: THREE.Vector3): void {
+    this.draftBarAnchor.getWorldPosition(out);
   }
 
-  /** Cyan when Super Slipstream is active (`setDraftMeter` fill); otherwise bright red (no glow). */
-  setDraftTelemetrySuperActive(superActive: boolean): void {
-    const m = this.draftFill.material as THREE.MeshBasicMaterial;
-    m.color.setHex(
-      superActive
-        ? CONFIG.PALETTE.SLIPSTREAM_WIND
-        : CONFIG.PALETTE.RACE_TELEMETRY_RED,
-    );
+  /**
+   * Left/right world points at car width (chassis local ±width/2 at hood bar Y/Z).
+   * Project to screen to match draft bar width to on-screen car width.
+   */
+  getDraftMeterSpanWorld(outLeft: THREE.Vector3, outRight: THREE.Vector3): void {
+    const { width, height: H, length: L } = this.dims;
+    const zFront = L / 2;
+    const barY = H + CONFIG.DRAFT_BAR_OFFSET_Y;
+    const barZ = zFront - CONFIG.DRAFT_BAR_INSET_FROM_FRONT;
+    const hx = width * 0.5;
+    outLeft.set(-hx, barY, barZ);
+    outRight.set(hx, barY, barZ);
+    this.chassisGroup.localToWorld(outLeft);
+    this.chassisGroup.localToWorld(outRight);
   }
 
   getCollisionBounds(): { cx: number; cz: number; hx: number; hz: number } {

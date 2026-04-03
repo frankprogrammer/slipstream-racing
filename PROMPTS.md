@@ -1090,3 +1090,51 @@ Is it possible to make the game full screen on mobile?
 ### 2026-04-03 12:45 AM PDT
 
 On mobile, there are times where audio will not play at all. I maybe have to refresh the screen. Any idea what may be causing this? This applies to sound effects and music.
+
+---
+
+### 2026-04-03 1:00 AM PDT
+
+Make the slipstream zone meter twice as tall and give it a black outline.
+
+---
+
+### 2026-04-03 1:15 AM PDT
+
+make the slipstream zone meter 25% taller. make the edges rectangle instead of rounded
+
+---
+
+### 2026-04-03 1:30 AM PDT
+
+Make the draft bar 25% taller. Make sure that it also has rectangle corners
+
+---
+
+### 2026-04-03 1:45 AM PDT
+
+Since the draft bar is in world space, it gets skewed. When the FOV changes, is it possible to render it in the same position and size but in screen space so it isn't affected by FOV changes? And the sizing remains consistent on mobile.
+
+---
+
+### 2026-04-03 2:00 AM PDT
+
+Let's make the draft bar width and height 25% smaller.
+
+---
+
+### 2026-04-03 2:15 AM PDT
+
+The draft bar meter seems to fill up correctly from 0 to 100% the first time you enter a draft zone, but every time you enter a draft zone after that, it... Seems to start at about 75% and then tweens to 100% full.
+
+---
+
+### 2026-04-03 2:30 AM PDT
+
+For the draft bar meter, Instead of having a black... background for the meter. Let's just keep a constant outline black outline around the meter. That fills up. with the current fill.
+
+---
+
+### 2026-04-03 2:45 AM PDT
+
+Right now the draft meter seems to scale based off the width of the screen. I want it to Always be around the width of the player car. and how it appears on screen no matter what the screen width is.
