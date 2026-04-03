@@ -471,7 +471,13 @@ function animate(): void {
       const scrollDz = scrollPerFrame * 60 * delta;
 
       roadManager?.update(scrollDz);
-      trafficSpawner.update(delta, runTimeMs, scrollPerFrame);
+      trafficSpawner.update(
+        delta,
+        runTimeMs,
+        scrollPerFrame,
+        laneSystem.laneIndex,
+        superSlipstreamRemainMs > 0,
+      );
       const laneX = laneSystem.getLaneX(nowMs);
       const roll = laneSystem.getBodyRollRad(nowMs);
       const steer = laneSystem.getWheelSteerRad(nowMs);

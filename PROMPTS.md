@@ -946,3 +946,27 @@ the timer text feels like it jiggles horizontally because it is centered and it 
 ### 2026-04-02 6:30 PM PDT
 
 make the "+1 sec" and "+2 sec" text 25% smaller
+
+---
+
+### 2026-04-02 6:45 PM PDT
+
+If the player is currently in the right lane and there are no cars spawned in the left lane, Then a car should randomly spawn In the left lane, at taxi intro start z offset and move at double the speed of the player, Forward. until it reaches a fixed distance and disappears. The same should happen if the player is in the left lane. and there are no cars spawned in the right lane. then a car should spawn in the right lane and do the same behavior
+
+---
+
+### 2026-04-02 7:00 PM PDT
+
+For the overpass cars, I am seeing them for a split second in the correct lane. in the bottom side of the screen, but then they disappear.
+
+---
+
+### 2026-04-02 7:15 PM PDT
+
+For the overtake cars, I am still seeing the same behavior where they spawn... Or I see them at the bottom... of the screen for a split second in the correct lane and they take off. Remember that I want them to start from behind the player in which is negative Z from the player and move. forward, which is positive z.
+
+---
+
+### 2026-04-02 7:30 PM PDT
+
+The overtake cars should not spawn while the player is in super slipstream mode.

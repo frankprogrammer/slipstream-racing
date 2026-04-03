@@ -1,14 +1,14 @@
-import * as THREE from 'three';
-import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { CONFIG } from '../config';
-import type { TrafficPhase } from '../config';
+import * as THREE from "three";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { CONFIG } from "../config";
+import type { TrafficPhase } from "../config";
 import {
   applyLiveryColors,
   cloneMeshMaterialsUnique,
   fitCarToDimensions,
   loadPlayerCarGltf,
   pickRandomLivery,
-} from './playerCarGlb';
+} from "./playerCarGlb";
 
 export type TrafficCollisionBounds = {
   cx: number;
@@ -26,9 +26,13 @@ type PoolEntry = {
   active: boolean;
   /** True after player successfully slingshots from this car. */
   slipstreamConsumed: boolean;
+  /** Normal traffic vs. outer-lane pass (2× scroll, fixed travel, no lane change). */
+  passKind: "traffic" | "overtake";
+  /** Spawn Z for pass cars — used to measure travel before despawn. */
+  overtakeOriginZ: number;
   laneIndex: number;
   speedMul: number;
-  laneChangeState: 'idle' | 'active' | 'done';
+  laneChangeState: "idle" | "active" | "done";
   laneChangeFromLane: number;
   laneChangeToLane: number;
   laneChangeStartMs: number;
@@ -48,9 +52,11 @@ export class TrafficSpawner {
   private railPatternIndex = 0;
   private railStepIndex = 0;
   private railActive = false;
+  private overtakeTryAccMs = 0;
+  private lastOvertakeSpawnRunMs = -1e12;
 
   private constructor() {
-    this.group.name = 'TrafficGroup';
+    this.group.name = "TrafficGroup";
   }
 
   static async create(): Promise<TrafficSpawner> {
@@ -68,7 +74,7 @@ export class TrafficSpawner {
     const carRoot = this.gltfTemplate.scene.clone(true);
     cloneMeshMaterialsUnique(carRoot);
     fitCarToDimensions(carRoot, CONFIG.TAXI_DIMENSIONS, 0);
-    carRoot.traverse(obj => {
+    carRoot.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
         obj.castShadow = false;
         obj.receiveShadow = false;
@@ -85,9 +91,11 @@ export class TrafficSpawner {
       carRoot,
       active: false,
       slipstreamConsumed: false,
+      passKind: "traffic",
+      overtakeOriginZ: 0,
       laneIndex: 1,
       speedMul: 1,
-      laneChangeState: 'idle',
+      laneChangeState: "idle",
       laneChangeFromLane: 1,
       laneChangeToLane: 1,
       laneChangeStartMs: 0,
@@ -103,12 +111,16 @@ export class TrafficSpawner {
     for (const p of this.pool) {
       p.active = false;
       p.slipstreamConsumed = false;
+      p.passKind = "traffic";
+      p.overtakeOriginZ = 0;
       p.group.visible = false;
-      p.laneChangeState = 'idle';
+      p.laneChangeState = "idle";
       p.laneChangeFromLane = p.laneIndex;
       p.laneChangeToLane = p.laneIndex;
       p.laneChangeStartMs = 0;
     }
+    this.overtakeTryAccMs = 0;
+    this.lastOvertakeSpawnRunMs = -1e12;
   }
 
   private easeInOutCubic(t: number): number {
@@ -123,12 +135,19 @@ export class TrafficSpawner {
     for (const o of this.pool) {
       if (!o.active || o === self) continue;
       const hzOther = this.hzFor();
-      if (!this.longFootprintsOverlap(self.group.position.z, hzSelf, o.group.position.z, hzOther)) {
+      if (
+        !this.longFootprintsOverlap(
+          self.group.position.z,
+          hzSelf,
+          o.group.position.z,
+          hzOther,
+        )
+      ) {
         continue;
       }
       // Another car already merging into this lane — block even before their X reaches it
       // (prevents left + right outer lanes both committing into center at the same Z).
-      if (o.laneChangeState === 'active' && o.laneChangeToLane === targetLane) {
+      if (o.laneChangeState === "active" && o.laneChangeToLane === targetLane) {
         return true;
       }
       // Use live X so cars mid-lane-change still block entry into that lane corridor.
@@ -142,7 +161,7 @@ export class TrafficSpawner {
   private pickAdjacentLaneForChange(
     self: PoolEntry,
     phase: TrafficPhase,
-    fromLane: number
+    fromLane: number,
   ): number | null {
     const candidates: number[] = [];
     const left = fromLane - 1;
@@ -167,39 +186,44 @@ export class TrafficSpawner {
     return candidates[Math.floor(Math.random() * candidates.length)]!;
   }
 
-  private maybeStartLaneChange(p: PoolEntry, phase: TrafficPhase, elapsedMs: number): void {
-    if (p.laneChangeState !== 'idle') return;
+  private maybeStartLaneChange(
+    p: PoolEntry,
+    phase: TrafficPhase,
+    elapsedMs: number,
+  ): void {
+    if (p.laneChangeState !== "idle") return;
     if (!phase.laneChange) return;
     if (phase.lanes.length < 2) {
-      p.laneChangeState = 'done';
+      p.laneChangeState = "done";
       return;
     }
-    const triggerZ = CONFIG.TAXI_POSITION_Z + CONFIG.VEHICLE_LANE_CHANGE_TRIGGER_AHEAD_Z;
+    const triggerZ =
+      CONFIG.TAXI_POSITION_Z + CONFIG.VEHICLE_LANE_CHANGE_TRIGGER_AHEAD_Z;
     if (p.group.position.z > triggerZ) return;
 
     if (Math.random() > CONFIG.VEHICLE_LANE_CHANGE_CHANCE) {
-      p.laneChangeState = 'done';
+      p.laneChangeState = "done";
       return;
     }
     const targetLane = this.pickAdjacentLaneForChange(p, phase, p.laneIndex);
     if (targetLane === null) {
-      p.laneChangeState = 'done';
+      p.laneChangeState = "done";
       return;
     }
 
-    p.laneChangeState = 'active';
+    p.laneChangeState = "active";
     p.laneChangeFromLane = p.laneIndex;
     p.laneChangeToLane = targetLane;
     p.laneChangeStartMs = elapsedMs;
   }
 
   private updateLaneChange(p: PoolEntry, elapsedMs: number): void {
-    if (p.laneChangeState !== 'active') return;
+    if (p.laneChangeState !== "active") return;
     const total = Math.max(1, CONFIG.VEHICLE_LANE_CHANGE_TOTAL_MS);
     const signalPortion = THREE.MathUtils.clamp(
       CONFIG.VEHICLE_LANE_CHANGE_SIGNAL_PORTION,
       0.05,
-      0.95
+      0.95,
     );
     const tRaw = (elapsedMs - p.laneChangeStartMs) / total;
     const t = THREE.MathUtils.clamp(tRaw, 0, 1);
@@ -212,7 +236,7 @@ export class TrafficSpawner {
     if (t >= 1) {
       p.group.position.x = toX;
       p.laneIndex = p.laneChangeToLane;
-      p.laneChangeState = 'done';
+      p.laneChangeState = "done";
       return;
     }
 
@@ -250,7 +274,10 @@ export class TrafficSpawner {
     return all[this.railPatternIndex % all.length] ?? [];
   }
 
-  private resolveRailLaneToPhase(phase: TrafficPhase, desiredLane: number): number {
+  private resolveRailLaneToPhase(
+    phase: TrafficPhase,
+    desiredLane: number,
+  ): number {
     if (phase.lanes.includes(desiredLane)) return desiredLane;
     let best = phase.lanes[0]!;
     let bestDist = Math.abs(best - desiredLane);
@@ -301,7 +328,7 @@ export class TrafficSpawner {
     czA: number,
     hzA: number,
     czB: number,
-    hzB: number
+    hzB: number,
   ): boolean {
     const buf = CONFIG.TRAFFIC_SPAWN_MIN_Z_BUFFER;
     const a = this.zFootprint(czA, hzA);
@@ -351,11 +378,12 @@ export class TrafficSpawner {
     const zd = CONFIG.SLIPSTREAM_ZONE_DEPTH;
     for (let pass = 0; pass < 12; pass++) {
       let changed = false;
-      const act = this.pool.filter(p => p.active);
+      const act = this.pool.filter((p) => p.active);
       for (let i = 0; i < act.length; i++) {
         for (let j = i + 1; j < act.length; j++) {
           const a = act[i]!;
           const b = act[j]!;
+          if (a.passKind === "overtake" || b.passKind === "overtake") continue;
           if (Math.abs(a.laneIndex - b.laneIndex) > 1) continue;
           const hzA = this.hzFor();
           const hzB = this.hzFor();
@@ -375,12 +403,15 @@ export class TrafficSpawner {
   }
 
   private trySpawn(elapsedMs: number): void {
-    const idle = this.pool.find(p => !p.active);
+    const idle = this.pool.find((p) => !p.active);
     if (!idle) return;
     const phase = this.getPhase(elapsedMs);
     const lane = this.pickLane(phase, elapsedMs);
-    const varianceScale = this.railActive ? CONFIG.FLOW_RAILS_SPEED_VARIANCE_SCALE : 1;
-    const variance = 1 + (Math.random() * 2 - 1) * phase.speedVariance * varianceScale;
+    const varianceScale = this.railActive
+      ? CONFIG.FLOW_RAILS_SPEED_VARIANCE_SCALE
+      : 1;
+    const variance =
+      1 + (Math.random() * 2 - 1) * phase.speedVariance * varianceScale;
     idle.laneIndex = lane;
     idle.speedMul = Math.max(0.4, variance);
 
@@ -389,10 +420,11 @@ export class TrafficSpawner {
     idle.active = true;
     idle.slipstreamConsumed = false;
     idle.group.visible = true;
-    idle.laneChangeState = 'idle';
+    idle.laneChangeState = "idle";
     idle.laneChangeFromLane = lane;
     idle.laneChangeToLane = lane;
     idle.laneChangeStartMs = 0;
+    idle.passKind = "traffic";
 
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
     let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
@@ -406,7 +438,8 @@ export class TrafficSpawner {
         this.railActive = false;
         this.railStepIndex = 0;
         this.railPatternIndex =
-          (this.railPatternIndex + 1) % Math.max(1, CONFIG.FLOW_RAILS_PATTERNS.length);
+          (this.railPatternIndex + 1) %
+          Math.max(1, CONFIG.FLOW_RAILS_PATTERNS.length);
         this.spawnsSinceRail = 0;
       }
     } else {
@@ -414,7 +447,106 @@ export class TrafficSpawner {
     }
   }
 
-  update(deltaSec: number, elapsedMs: number, scrollPerFrame: number): void {
+  /** Any active car whose X sits in this lane corridor (includes lane-change). */
+  private laneHasAnyActiveVehicle(lane: number): boolean {
+    const targetX = this.laneIndexToX(lane);
+    const half = CONFIG.LANE_WIDTH * 0.55;
+    for (const o of this.pool) {
+      if (!o.active) continue;
+      if (Math.abs(o.group.position.x - targetX) <= half) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private trySpawnOvertakeVehicle(targetLane: number): boolean {
+    const idle = this.pool.find((p) => !p.active);
+    if (!idle) return false;
+    idle.laneIndex = targetLane;
+    idle.speedMul = 1;
+    idle.passKind = "overtake";
+    idle.overtakeOriginZ =
+      CONFIG.TAXI_POSITION_Z + CONFIG.TAXI_INTRO_START_Z_OFFSET;
+    idle.slipstreamConsumed = false;
+    idle.laneChangeState = "idle";
+    idle.laneChangeFromLane = targetLane;
+    idle.laneChangeToLane = targetLane;
+    idle.laneChangeStartMs = 0;
+    applyLiveryColors(idle.carRoot, pickRandomLivery());
+    idle.active = true;
+    idle.group.visible = true;
+    idle.group.position.set(
+      this.laneIndexToX(targetLane),
+      0,
+      idle.overtakeOriginZ,
+    );
+    return true;
+  }
+
+  /**
+   * Player on an outer lane + opposite lane visually empty → random pass car at intro Z,
+   * net motion uses 2× scroll (same forward term as normal traffic).
+   */
+  private maybeSpawnOvertakePass(
+    elapsedMs: number,
+    playerLaneIndex: number,
+    deltaSec: number,
+    superSlipstreamActive: boolean,
+  ): void {
+    if (!CONFIG.OVERTAKE_PASS_ENABLED) return;
+    if (superSlipstreamActive) return;
+    if (playerLaneIndex !== 0 && playerLaneIndex !== 2) return;
+
+    let targetLane: number | null = null;
+    if (playerLaneIndex === 2 && !this.laneHasAnyActiveVehicle(0)) {
+      targetLane = 0;
+    } else if (playerLaneIndex === 0 && !this.laneHasAnyActiveVehicle(2)) {
+      targetLane = 2;
+    }
+    if (targetLane === null) return;
+
+    this.overtakeTryAccMs += deltaSec * 1000;
+    while (this.overtakeTryAccMs >= CONFIG.OVERTAKE_PASS_TRY_INTERVAL_MS) {
+      this.overtakeTryAccMs -= CONFIG.OVERTAKE_PASS_TRY_INTERVAL_MS;
+      if (Math.random() > CONFIG.OVERTAKE_PASS_TRY_CHANCE) continue;
+      if (
+        elapsedMs - this.lastOvertakeSpawnRunMs <
+        CONFIG.OVERTAKE_PASS_COOLDOWN_MS
+      ) {
+        break;
+      }
+      if (this.trySpawnOvertakeVehicle(targetLane)) {
+        this.lastOvertakeSpawnRunMs = elapsedMs;
+      }
+      break;
+    }
+  }
+
+  private releaseVehicle(p: PoolEntry): void {
+    p.active = false;
+    p.group.visible = false;
+    p.laneChangeState = "idle";
+    p.passKind = "traffic";
+    p.overtakeOriginZ = 0;
+  }
+
+  update(
+    deltaSec: number,
+    elapsedMs: number,
+    scrollPerFrame: number,
+    playerLaneIndex: number | null,
+    superSlipstreamActive: boolean,
+  ): void {
+    if (playerLaneIndex !== null) {
+      this.maybeSpawnOvertakePass(
+        elapsedMs,
+        playerLaneIndex,
+        deltaSec,
+        superSlipstreamActive,
+      );
+    }
+
     const phase = this.getPhase(elapsedMs);
     const spawnInterval = this.railActive
       ? phase.spawnRate * CONFIG.FLOW_RAILS_SPAWN_RATE_SCALE
@@ -425,20 +557,40 @@ export class TrafficSpawner {
       this.trySpawn(elapsedMs);
     }
 
-    const scroll = scrollPerFrame * 60 * deltaSec;
+    const dt = Math.min(deltaSec, CONFIG.TRAFFIC_MAX_PHYSICS_DELTA_SEC);
+    const scroll = scrollPerFrame * 60 * dt;
 
     for (const p of this.pool) {
       if (!p.active) continue;
       const forward =
-        CONFIG.VEHICLE_TRAFFIC_FORWARD_SPEED * 60 * deltaSec * p.speedMul;
+        CONFIG.VEHICLE_TRAFFIC_FORWARD_SPEED * 60 * dt * p.speedMul;
+
+      if (p.passKind === "overtake") {
+        /**
+         * Spawn behind the taxi (negative Z). Move **forward** along the road = **+Δz**
+         * (opposite sign from normal traffic, which scrolls toward −Z). ~2× player scroll
+         * minus the usual traffic forward term. Despawn after fixed +Z travel only.
+         */
+        const forwardZ = Math.max(
+          CONFIG.VEHICLE_TRAFFIC_MIN_APPROACH,
+          2 * scroll - forward,
+        );
+        p.group.position.z += forwardZ;
+        if (
+          p.group.position.z - p.overtakeOriginZ >=
+          CONFIG.OVERTAKE_PASS_TRAVEL_Z
+        ) {
+          this.releaseVehicle(p);
+        }
+        continue;
+      }
+
       const net = scroll - forward;
       p.group.position.z -= Math.max(CONFIG.VEHICLE_TRAFFIC_MIN_APPROACH, net);
       this.maybeStartLaneChange(p, phase, elapsedMs);
       this.updateLaneChange(p, elapsedMs);
       if (p.group.position.z < CONFIG.TAXI_POSITION_Z - this.despawnBehindZ) {
-        p.active = false;
-        p.group.visible = false;
-        p.laneChangeState = 'idle';
+        this.releaseVehicle(p);
       }
     }
 
@@ -453,8 +605,8 @@ export class TrafficSpawner {
       cx: number,
       cy: number,
       cz: number,
-      speedMul: number
-    ) => void
+      speedMul: number,
+    ) => void,
   ): void {
     for (let i = 0; i < this.pool.length; i++) {
       const p = this.pool[i]!;
@@ -462,7 +614,14 @@ export class TrafficSpawner {
         cb(i, false, 0, 0, 0, 0);
         continue;
       }
-      cb(i, true, p.group.position.x, p.group.position.y, p.group.position.z, p.speedMul);
+      cb(
+        i,
+        true,
+        p.group.position.x,
+        p.group.position.y,
+        p.group.position.z,
+        p.speedMul,
+      );
     }
   }
 
@@ -473,8 +632,8 @@ export class TrafficSpawner {
       slipstreamAvailable: boolean,
       cx: number,
       cz: number,
-      hz: number
-    ) => void
+      hz: number,
+    ) => void,
   ): void {
     const hz = CONFIG.TAXI_DIMENSIONS.length / 2;
     for (let i = 0; i < this.pool.length; i++) {
@@ -483,7 +642,14 @@ export class TrafficSpawner {
         cb(i, false, false, 0, 0, 0);
         continue;
       }
-      cb(i, true, !p.slipstreamConsumed, p.group.position.x, p.group.position.z, hz);
+      cb(
+        i,
+        true,
+        !p.slipstreamConsumed,
+        p.group.position.x,
+        p.group.position.z,
+        hz,
+      );
     }
   }
 

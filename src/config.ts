@@ -456,6 +456,8 @@ export const CONFIG = {
   VEHICLE_TRAFFIC_FORWARD_SPEED: 0.15,
   /** Floor for net −Δz so traffic never drifts the wrong way if variance is high. */
   VEHICLE_TRAFFIC_MIN_APPROACH: 0.02,
+  /** Cap per-frame integration (s) so tab-switch / hitch spikes don’t teleport traffic / pass cars. */
+  TRAFFIC_MAX_PHYSICS_DELTA_SEC: 0.0625,
   VEHICLE_POOL_SIZE: 20,
   /**
    * World +Z ahead of player for new spawns. Higher = farther up the road / nearer screen top (horizon).
@@ -482,6 +484,20 @@ export const CONFIG = {
   TRAFFIC_HEADLIGHT_BEAM_SOFT_OPACITY: 0.088,
   /** Max XZ distance to match slipstream snapshot → pool car (cars move between frames). */
   TRAFFIC_HEADLIGHT_MATCH_MAX_DIST: 12,
+  /**
+   * When the player hugs an outer lane and the opposite lane is empty, randomly spawn a pass car
+   * behind the taxi (intro Z, −Z). It drives **forward** (+Z) at ~2× player scroll, then despawns
+   * after `OVERTAKE_PASS_TRAVEL_Z` traveled along +Z.
+   */
+  OVERTAKE_PASS_ENABLED: true,
+  /** World −Δz traveled from spawn before the pass car despawns. */
+  OVERTAKE_PASS_TRAVEL_Z: 110,
+  /** How often to roll for a pass spawn while eligible (ms). */
+  OVERTAKE_PASS_TRY_INTERVAL_MS: 320,
+  /** Per-interval probability (0..1) to attempt spawn when eligible. */
+  OVERTAKE_PASS_TRY_CHANCE: 0.42,
+  /** Min time between pass spawns (run time ms). */
+  OVERTAKE_PASS_COOLDOWN_MS: 5500,
   /**
    * Flow rails: deterministic lane rhythm bursts for "learnable flow-state" moments.
    * Rails override random lane picks for a short sequence, then return to normal traffic.
