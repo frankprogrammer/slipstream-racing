@@ -148,27 +148,39 @@
         box-sizing: border-box;
         padding: min(36px, 4.5vw);
         z-index: 20;
-        font-family: "Exo 2", sans-serif;
+        /* Same stack as race timer (`#speed-hud` / `#speed-text`) */
+        font-family: "Exo 2", system-ui, sans-serif;
         color: var(--f1-ui-text, #f8fafc);
       }
       #gameover.visible {
         display: flex;
       }
       #gameover h2 {
-        font-family: "Bebas Neue", sans-serif;
+        font-family: "Exo 2", system-ui, sans-serif;
         font-size: 34px;
-        letter-spacing: 0.28em;
+        letter-spacing: 0.2em;
         color: var(--f1-primary, #e10600);
         margin: 0 0 30px 0;
-        font-weight: 400;
+        font-weight: 800;
+      }
+      .score-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 12px 0;
+        text-align: center;
       }
       #final-score {
-        font-family: "Bebas Neue", sans-serif;
+        font-family: "Exo 2", system-ui, sans-serif;
         font-size: 76px;
-        font-weight: 400;
+        font-weight: 800;
         line-height: 1.05;
-        margin: 0 0 12px 0;
+        margin: 0;
         letter-spacing: 0.06em;
+        color: var(--f1-ui-text, #f8fafc);
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
       }
       #new-best {
         font-size: 20px;
@@ -182,19 +194,37 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 48px;
+        gap: min(44px, 9vw);
         margin: 0 0 48px 0;
-        font-size: 18px;
-        font-weight: 500;
-        color: var(--f1-ui-dim, #9ca3af);
-        letter-spacing: 0.12em;
+        font-family: "Exo 2", system-ui, sans-serif;
       }
-      .stat-row span strong {
+      .stat-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        min-width: min(140px, 28vw);
+        text-align: center;
+      }
+      .stat-label {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        color: var(--f1-ui-dim, #9ca3af);
+        text-transform: uppercase;
+      }
+      .stat-value {
+        font-family: "Exo 2", system-ui, sans-serif;
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
         color: var(--f1-ui-text, #f8fafc);
-        font-weight: 700;
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
+        line-height: 1.1;
       }
       #retry-btn {
-        font-family: "Exo 2", sans-serif;
+        font-family: "Exo 2", system-ui, sans-serif;
         font-size: 22px;
         font-weight: 700;
         letter-spacing: 0.2em;
@@ -233,12 +263,24 @@
       <!-- Game Over -->
       <div id="gameover">
         <h2 id="gameover-title">GAME OVER</h2>
-        <div id="final-score">0</div>
+        <div class="score-block">
+          <span class="stat-label">SCORE</span>
+          <div id="final-score">0</div>
+        </div>
         <div id="new-best">⚡ NEW BEST</div>
         <div class="stat-row">
-          <span>DIST <strong id="stat-distance">0 km</strong></span>
-          <span>TIME <strong id="stat-time">0:00</strong></span>
-          <span>SLIPSTREAMS <strong id="stat-slipstreams">0</strong></span>
+          <div class="stat-col">
+            <span class="stat-label">DIST</span>
+            <strong id="stat-distance" class="stat-value">0 km</strong>
+          </div>
+          <div class="stat-col">
+            <span class="stat-label">TIME</span>
+            <strong id="stat-time" class="stat-value">0:00</strong>
+          </div>
+          <div class="stat-col">
+            <span class="stat-label">SLIPSTREAMS</span>
+            <strong id="stat-slipstreams" class="stat-value">0</strong>
+          </div>
         </div>
         <button id="retry-btn">RETRY</button>
       </div>
