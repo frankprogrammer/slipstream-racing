@@ -362,7 +362,6 @@ export class HUD {
     camera: THREE.PerspectiveCamera,
     container: HTMLElement,
     timerHudEl: HTMLElement | null,
-    telemetrySuperActive: boolean,
     playerTaxi: PlayerTaxi,
     spawnWorldX: number,
   ): void {
@@ -406,7 +405,7 @@ export class HUD {
       "transform:translate(-50%,-50%)",
       "will-change:left,top,opacity",
     ].join(";");
-    this.applyTelemetryFloatStyle(el, telemetrySuperActive);
+    this.applyRaceTimeBonusFloatStyle(el);
     if (seconds === 2) {
       el.style.fontSize = `${CONFIG.RACE_TIME_BONUS_FLOAT_FONT_SIZE_SUPER_PX}px`;
     }
@@ -423,14 +422,11 @@ export class HUD {
     });
   }
 
-  private applyTelemetryFloatStyle(el: HTMLElement, telemetrySuperActive: boolean): void {
-    const c = telemetrySuperActive
-      ? CONFIG.PALETTE.SLIPSTREAM_WIND
-      : CONFIG.PALETTE.RACE_TELEMETRY_RED;
-    el.style.color = hexToCss(c);
+  private applyRaceTimeBonusFloatStyle(el: HTMLElement): void {
+    el.style.color = hexToCss(CONFIG.PALETTE.UI_TEXT);
   }
 
-  updateRaceTimeBonusFloats(telemetrySuperActive: boolean): void {
+  updateRaceTimeBonusFloats(): void {
     const now = performance.now();
     for (let i = this.raceTimeBonusFloats.length - 1; i >= 0; i--) {
       const f = this.raceTimeBonusFloats[i]!;
@@ -445,7 +441,7 @@ export class HUD {
       const y = f.y0 + (f.y1 - f.y0) * e;
       f.el.style.left = `${x.toFixed(2)}px`;
       f.el.style.top = `${y.toFixed(2)}px`;
-      this.applyTelemetryFloatStyle(f.el, telemetrySuperActive);
+      this.applyRaceTimeBonusFloatStyle(f.el);
       const fadeStart = CONFIG.RACE_TIME_BONUS_FLOAT_FADE_START;
       f.el.style.opacity =
         t < fadeStart ? "1" : `${Math.max(0, 1 - (t - fadeStart) / (1 - fadeStart))}`;

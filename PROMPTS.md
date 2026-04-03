@@ -1240,3 +1240,9 @@ Make the countdown timer text 50% larger Adjust the background height if needed.
 ### 2026-04-03 8:15 AM PDT
 
 Make the plus one sec. text 100% larger.
+
+---
+
+### 2026-04-03 8:30 AM PDT
+
+Make the plus one sec and... Time or text, always be white.

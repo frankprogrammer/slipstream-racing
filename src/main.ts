@@ -42,13 +42,6 @@ function easeOutCubic(t: number): number {
  * Phase 2+: slipstream, chain, score, HUD, game over. Direct render (no bloom) — daytime F1 look.
  */
 
-function applyRaceTelemetryCss(superActive: boolean): void {
-  const p = CONFIG.PALETTE;
-  const r = document.documentElement;
-  const c = superActive ? p.SLIPSTREAM_WIND : p.RACE_TELEMETRY_RED;
-  r.style.setProperty("--f1-race-timer-color", hexToCss(c));
-}
-
 function applyF1CssVariables(): void {
   const p = CONFIG.PALETTE;
   const r = document.documentElement;
@@ -90,7 +83,7 @@ function applyF1CssVariables(): void {
     "--f1-perfect-inset",
     rgbaFromHex(p.SLIPSTREAM_WIND, 0.1),
   );
-  applyRaceTelemetryCss(false);
+  r.style.setProperty("--f1-race-timer-color", hexToCss(p.UI_TEXT));
 }
 applyF1CssVariables();
 
@@ -745,7 +738,6 @@ function animate(): void {
           camera,
           container,
           speedHudEl,
-          superSlipstreamRemainMs > 0,
           playerTaxi,
           bonusSpawnX,
         );
@@ -792,7 +784,6 @@ function animate(): void {
 
   const telemetrySuper =
     gameState.isPlaying && runGameplayReady && superSlipstreamRemainMs > 0;
-  applyRaceTelemetryCss(telemetrySuper);
 
   hud.updateSuperSlipstreamMeter(
     superSlipstreamMeter,
@@ -800,7 +791,7 @@ function animate(): void {
     gameState.isPlaying && runGameplayReady,
   );
 
-  hud.updateRaceTimeBonusFloats(telemetrySuper);
+  hud.updateRaceTimeBonusFloats();
 
   const draftBarVisible =
     gameState.isPlaying &&
@@ -846,11 +837,7 @@ function animate(): void {
     } else {
       speedTextEl.textContent = formatRaceCountdownMs(raceRemainMs);
       speedHudEl.style.opacity = "1";
-      speedTextEl.style.color = hexToCss(
-        telemetrySuper
-          ? CONFIG.PALETTE.SLIPSTREAM_WIND
-          : CONFIG.PALETTE.RACE_TELEMETRY_RED,
-      );
+      speedTextEl.style.color = hexToCss(CONFIG.PALETTE.UI_TEXT);
       if (!prevSpeedHudVisible) {
         requestAnimationFrame(() => fitSpeedHudText());
       }
