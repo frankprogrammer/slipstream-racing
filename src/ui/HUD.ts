@@ -240,14 +240,14 @@ export class HUD {
       "z-index:125",
       'font-family:"Exo 2",system-ui,sans-serif',
       "font-weight:800",
-      "font-size:37.125px",
+      `font-size:${CONFIG.RACE_TIME_BONUS_FLOAT_FONT_SIZE_PX}px`,
       "letter-spacing:0.12em",
       "transform:translate(-50%,-50%)",
       "will-change:left,top,opacity",
     ].join(";");
     this.applyTelemetryFloatStyle(el, telemetrySuperActive);
     if (seconds === 2) {
-      el.style.fontSize = "40.5px";
+      el.style.fontSize = `${CONFIG.RACE_TIME_BONUS_FLOAT_FONT_SIZE_SUPER_PX}px`;
     }
     container.appendChild(el);
 

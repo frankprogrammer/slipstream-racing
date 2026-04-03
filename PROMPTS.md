@@ -1072,3 +1072,9 @@ you It seems that the exposition is based off the lane that the car... transitio
 ### 2026-04-03 12:00 AM PDT
 
 And then let's spawn the plus one text 35% from the top of the screen
+
+---
+
+### 2026-04-03 12:15 AM PDT
+
+Let's make the +1 Sec text label 25% smaller.
