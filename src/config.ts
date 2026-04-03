@@ -349,6 +349,27 @@ export const CONFIG = {
   DRAFT_ACTIVATE_DEPTH_FRACTION: 0.25,
   /** Camera shake duration after a successful slipstream release (slingshot). Uses `CAMERA_SHAKE_INTENSITY`. */
   SLIPSTREAM_CAMERA_SHAKE_MS: 300,
+  /** Crash tumble window before Game Over overlay appears (ms). */
+  CRASH_TUMBLE_DURATION_MS: 900,
+  /** Initial tumble linear speeds (world units/sec). */
+  CRASH_TUMBLE_LATERAL_SPEED: 6.5,
+  CRASH_TUMBLE_UP_SPEED: 4.2,
+  CRASH_TUMBLE_FORWARD_SPEED: 7.0,
+  /** Downward acceleration during tumble (world units/sec^2). */
+  CRASH_TUMBLE_GRAVITY: 16,
+  /** Per-60fps retention for linear and angular velocity (0..1). */
+  CRASH_TUMBLE_LINEAR_DRAG_PER_60FPS: 0.978,
+  CRASH_TUMBLE_ANGULAR_DRAG_PER_60FPS: 0.986,
+  /** Ground bounce multiplier when the car hits y=0. */
+  CRASH_TUMBLE_GROUND_BOUNCE: 0.28,
+  /** Keep tumbling car centers above this Y so rotating bodies don't clip through asphalt. */
+  CRASH_TUMBLE_MIN_CENTER_Y: 0.55,
+  /** Extra Y clearance above computed rotated half-height (prevents wheel/body clipping). */
+  CRASH_TUMBLE_GROUND_CLEARANCE_Y: 0.08,
+  /** Initial spin rates (radians/sec) around XYZ. */
+  CRASH_TUMBLE_SPIN_X: 7,
+  CRASH_TUMBLE_SPIN_Y: 4,
+  CRASH_TUMBLE_SPIN_Z: 9,
   /**
    * Super Slipstream gain per successful slingshot (20%):
    * - while inactive: adds meter charge

@@ -10,7 +10,7 @@ import { GameState } from "./engine/GameState";
 import { LaneSystem } from "./engine/LaneSystem";
 import { RoadManager } from "./engine/RoadManager";
 import { PlayerTaxi } from "./engine/PlayerTaxi";
-import { TrafficSpawner } from "./engine/TrafficSpawner";
+import { TrafficSpawner, type TrafficCollisionBounds } from "./engine/TrafficSpawner";
 import { CollisionSystem } from "./engine/CollisionSystem";
 import { CameraController } from "./engine/CameraController";
 import { SlipstreamWindSystem } from "./engine/SlipstreamWindSystem";
@@ -30,6 +30,10 @@ import { tryEnterFullscreenOnce } from "./mobileFullscreen";
 
 function easeInCubic(t: number): number {
   return t ** 3;
+}
+
+function easeOutCubic(t: number): number {
+  return 1 - (1 - t) ** 3;
 }
 
 /**
@@ -254,6 +258,25 @@ let preRaceStepAccMs = 0;
 let pendingGameOverReason: GameOverReason | null = null;
 /** In slipstream while hood bar is not drawable (projection); used to reset travel when bar reappears. */
 let draftBarProjMissMs = 0;
+/** True while crash tumble animation is playing before game over. */
+let crashAnimActive = false;
+let crashAnimElapsedMs = 0;
+let crashAnimStartScrollPerFrame: number = CONFIG.BASE_SCROLL_SPEED;
+const crashLinearVel = new THREE.Vector3();
+const crashAngularVel = new THREE.Vector3();
+let crashTargetGroup: THREE.Group | null = null;
+const crashTargetLinearVel = new THREE.Vector3();
+const crashTargetAngularVel = new THREE.Vector3();
+const crashCameraPos = new THREE.Vector3();
+const crashCameraQuat = new THREE.Quaternion();
+const crashHalfExtents = new THREE.Vector3(
+  CONFIG.TAXI_DIMENSIONS.width * 0.5,
+  CONFIG.TAXI_DIMENSIONS.height * 0.5,
+  CONFIG.TAXI_DIMENSIONS.length * 0.5,
+);
+const crashAxisX = new THREE.Vector3();
+const crashAxisY = new THREE.Vector3();
+const crashAxisZ = new THREE.Vector3();
 
 const PRE_RACE_COUNTDOWN_LABELS = ["3", "2", "1", "GO!"] as const;
 
@@ -286,6 +309,16 @@ function resetGame(): void {
   slipstreamBonusSpawnWorldX = null;
   prevSlipInZone = false;
   draftBarProjMissMs = 0;
+  crashAnimActive = false;
+  crashAnimElapsedMs = 0;
+  crashAnimStartScrollPerFrame = CONFIG.BASE_SCROLL_SPEED;
+  crashLinearVel.set(0, 0, 0);
+  crashAngularVel.set(0, 0, 0);
+  crashTargetGroup = null;
+  crashTargetLinearVel.set(0, 0, 0);
+  crashTargetAngularVel.set(0, 0, 0);
+  crashCameraPos.set(0, 0, 0);
+  crashCameraQuat.identity();
   hud.reset();
   prevSpeedHudVisible = false;
   const nowMs = performance.now();
@@ -308,6 +341,123 @@ function resetGame(): void {
     preRaceCountdownEl.classList.add("visible");
     preRaceCountdownEl.setAttribute("aria-hidden", "false");
   }
+}
+
+function beginCrashAnimation(
+  initialScrollPerFrame: number,
+  hit: TrafficCollisionBounds | null,
+): void {
+  if (crashAnimActive) return;
+  crashAnimActive = true;
+  crashAnimElapsedMs = 0;
+  crashAnimStartScrollPerFrame = initialScrollPerFrame;
+  laneSystem.enabled = false;
+  crashCameraPos.copy(camera.position);
+  crashCameraQuat.copy(camera.quaternion);
+
+  // Push away from the center and tumble end-over-end.
+  const side = playerTaxi.group.position.x >= 0 ? -1 : 1;
+  crashLinearVel.set(
+    side * CONFIG.CRASH_TUMBLE_LATERAL_SPEED,
+    CONFIG.CRASH_TUMBLE_UP_SPEED,
+    -CONFIG.CRASH_TUMBLE_FORWARD_SPEED,
+  );
+  const spinFlip = Math.random() < 0.5 ? -1 : 1;
+  crashAngularVel.set(
+    CONFIG.CRASH_TUMBLE_SPIN_X * spinFlip,
+    CONFIG.CRASH_TUMBLE_SPIN_Y * side,
+    CONFIG.CRASH_TUMBLE_SPIN_Z * side,
+  );
+
+  crashTargetGroup = hit
+    ? trafficSpawner.getPoolCarGroup(hit.slotIndex)
+    : null;
+  if (crashTargetGroup) {
+    const away =
+      Math.sign(crashTargetGroup.position.x - playerTaxi.group.position.x) ||
+      (Math.random() < 0.5 ? -1 : 1);
+    crashTargetLinearVel.set(
+      away * CONFIG.CRASH_TUMBLE_LATERAL_SPEED * 0.7,
+      CONFIG.CRASH_TUMBLE_UP_SPEED * 0.75,
+      -CONFIG.CRASH_TUMBLE_FORWARD_SPEED * 0.6,
+    );
+    crashTargetAngularVel.set(
+      -CONFIG.CRASH_TUMBLE_SPIN_X * 0.75,
+      CONFIG.CRASH_TUMBLE_SPIN_Y * away * 1.15,
+      -CONFIG.CRASH_TUMBLE_SPIN_Z * away * 0.9,
+    );
+  }
+}
+
+function updateCrashBody(
+  group: THREE.Group,
+  linearVel: THREE.Vector3,
+  angularVel: THREE.Vector3,
+  delta: number,
+): void {
+  group.position.addScaledVector(linearVel, delta);
+  linearVel.y -= CONFIG.CRASH_TUMBLE_GRAVITY * delta;
+  const linDrag = Math.pow(CONFIG.CRASH_TUMBLE_LINEAR_DRAG_PER_60FPS, delta * 60);
+  linearVel.multiplyScalar(linDrag);
+
+  const angDrag = Math.pow(CONFIG.CRASH_TUMBLE_ANGULAR_DRAG_PER_60FPS, delta * 60);
+  angularVel.multiplyScalar(angDrag);
+  group.rotation.x += angularVel.x * delta;
+  group.rotation.y += angularVel.y * delta;
+  group.rotation.z += angularVel.z * delta;
+
+  crashAxisX.set(1, 0, 0).applyQuaternion(group.quaternion);
+  crashAxisY.set(0, 1, 0).applyQuaternion(group.quaternion);
+  crashAxisZ.set(0, 0, 1).applyQuaternion(group.quaternion);
+  const rotatedHalfHeight =
+    Math.abs(crashAxisX.y) * crashHalfExtents.x +
+    Math.abs(crashAxisY.y) * crashHalfExtents.y +
+    Math.abs(crashAxisZ.y) * crashHalfExtents.z;
+  const minCenterY = Math.max(
+    CONFIG.CRASH_TUMBLE_MIN_CENTER_Y,
+    rotatedHalfHeight + CONFIG.CRASH_TUMBLE_GROUND_CLEARANCE_Y,
+  );
+  if (group.position.y < minCenterY) {
+    group.position.y = minCenterY;
+    if (linearVel.y < 0) {
+      linearVel.y = -linearVel.y * CONFIG.CRASH_TUMBLE_GROUND_BOUNCE;
+    }
+  }
+}
+
+function updateCrashAnimation(delta: number, nowMs: number): boolean {
+  crashAnimElapsedMs += delta * 1000;
+  const t = THREE.MathUtils.clamp(
+    crashAnimElapsedMs / CONFIG.CRASH_TUMBLE_DURATION_MS,
+    0,
+    1,
+  );
+  const scrollPerFrame =
+    crashAnimStartScrollPerFrame * (1 - easeOutCubic(t));
+  const scrollDz = scrollPerFrame * 60 * delta;
+
+  roadManager?.update(scrollDz);
+
+  updateCrashBody(playerTaxi.group, crashLinearVel, crashAngularVel, delta);
+  if (crashTargetGroup) {
+    updateCrashBody(
+      crashTargetGroup,
+      crashTargetLinearVel,
+      crashTargetAngularVel,
+      delta,
+    );
+  }
+
+  slipstreamActivateBurst.setBurstWindowActive(false);
+  slingshotTrail.setBoostActive(false);
+  slingshotTrail.update(delta, scrollDz, playerTaxi);
+  camera.position.copy(crashCameraPos);
+  camera.quaternion.copy(crashCameraQuat);
+  camera.updateMatrixWorld(true);
+  playerTaxi.tickRoofLight(nowMs, false, chainManager.chain);
+  playerTaxi.worldHud.setSpeedKmh(displaySpeedKmhFromScroll(scrollPerFrame));
+
+  return crashAnimElapsedMs >= CONFIG.CRASH_TUMBLE_DURATION_MS;
 }
 
 gameOverScreen.onRetry(() => {
@@ -469,6 +619,19 @@ function animate(): void {
         displaySpeedKmhFromScroll(CONFIG.BASE_SCROLL_SPEED),
       );
     } else {
+      if (crashAnimActive) {
+        const done = updateCrashAnimation(delta, nowMs);
+        scrollForAudio = CONFIG.BASE_SCROLL_SPEED;
+        slipInZone = false;
+        slipMeter = 0;
+        audioBurst = false;
+        prevSlipInZone = false;
+        if (done) {
+          crashAnimActive = false;
+          pendingGameOverReason = "crash";
+          gameState.transition("gameover");
+        }
+      } else {
       runTimeMs += delta * 1000;
       burstRemainMs = Math.max(0, burstRemainMs - delta * 1000);
       if (superSlipstreamRemainMs > 0) {
@@ -602,9 +765,9 @@ function animate(): void {
         superSlipstreamRemainMs > 0,
       );
 
-      if (collisionSystem.check(playerTaxi, trafficSpawner)) {
-        pendingGameOverReason = "crash";
-        gameState.transition("gameover");
+      const hit = collisionSystem.checkHit(playerTaxi, trafficSpawner);
+      if (hit) {
+        beginCrashAnimation(scrollPerFrame, hit);
       }
 
       slipstreamActivateBurst.setBurstWindowActive(burstRemainMs > 0);
@@ -616,6 +779,7 @@ function animate(): void {
       slipMeter = slip.meterDisplay;
       audioBurst = burstRemainMs > 0;
       prevSlipInZone = slip.inZone;
+      }
       }
     }
   } else {

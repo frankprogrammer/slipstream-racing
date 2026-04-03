@@ -1204,3 +1204,27 @@ Right now the tutorial arrows on mobile appear as emoji arrows. I want them to l
 ### 2026-04-03 6:45 AM PDT
 
 Add a Tiny padding. to the edges of the tutorial arrows. That way they're not touching the edge of the screen.
+
+---
+
+### 2026-04-03 7:00 AM PDT
+
+Right now when the player's car crashes into another car, everything just stops. Is it possible to have a crash animation where the car Tumbles out of control.
+
+---
+
+### 2026-04-03 7:15 AM PDT
+
+When the cars crash, the camera should stop moving with the player. The car should probably just rotate along its y-axis And Maybe tumble. And maybe the car should roll as well. Can we also make the car that it crashed into have a similar animation?
+
+---
+
+### 2026-04-03 7:30 AM PDT
+
+The animation seems fine, but right now it clips into the ground. Let's make sure that the car... stays above The Also, it seems that the enemy car that was crashed into doesn't reset properly when the next race starts.
+
+---
+
+### 2026-04-03 7:45 AM PDT
+
+Let's have the animation rotate less. and it is also still rotating into the ground.

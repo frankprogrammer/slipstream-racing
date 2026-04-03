@@ -129,6 +129,8 @@ export class TrafficSpawner {
       p.passKind = "traffic";
       p.overtakeOriginZ = 0;
       p.group.visible = false;
+      p.group.position.set(0, 0, 0);
+      p.group.rotation.set(0, 0, 0);
       p.laneChangeState = "idle";
       p.laneChangeFromLane = p.laneIndex;
       p.laneChangeToLane = p.laneIndex;
@@ -442,6 +444,7 @@ export class TrafficSpawner {
     idle.laneChangeStartMs = 0;
     idle.passKind = "traffic";
     idle.nameSprite.visible = false;
+    idle.group.rotation.set(0, 0, 0);
 
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
     let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
@@ -496,6 +499,7 @@ export class TrafficSpawner {
     idle.nameSprite.visible = true;
     idle.active = true;
     idle.group.visible = true;
+    idle.group.rotation.set(0, 0, 0);
     idle.group.position.set(
       this.laneIndexToX(targetLane),
       0,
@@ -546,6 +550,8 @@ export class TrafficSpawner {
   private releaseVehicle(p: PoolEntry): void {
     p.active = false;
     p.group.visible = false;
+    p.group.position.set(0, 0, 0);
+    p.group.rotation.set(0, 0, 0);
     p.laneChangeState = "idle";
     p.passKind = "traffic";
     p.overtakeOriginZ = 0;
@@ -669,6 +675,12 @@ export class TrafficSpawner {
         p.speedMul,
       );
     }
+  }
+
+  getPoolCarGroup(slotIndex: number): THREE.Group | null {
+    const p = this.pool[slotIndex];
+    if (!p || !p.active) return null;
+    return p.group;
   }
 
   forEachPoolWindSlot(
