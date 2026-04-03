@@ -8,10 +8,9 @@ function easeOutBack(t: number): number {
 
 /**
  * LaneSystem — 3-lane grid + touch + keyboard.
- * Lane centers: -LANE_WIDTH, 0, +LANE_WIDTH for indices 0,1,2.
- * Touch: each pointerdown is a tap — left of screen center steps one lane toward screen-left,
- * right of center toward screen-right (matches ArrowLeft / ArrowRight). Center dead zone ignores taps.
- * Multiple simultaneous contacts are independent (no single-pointer capture).
+ * Lane centers: -LANE_WIDTH, 0, +LANE_WIDTH for indices 0,1,2 (world +X on screen-left).
+ * Touch: pointerdown — left/right half-screen steps one lane (same as ArrowLeft / ArrowRight); center dead zone ignores.
+ * Pointer capture + pointermove — absolute lane from horizontal third (left/center/right).
  */
 export class LaneSystem {
   private readonly target: HTMLElement;
@@ -183,11 +182,46 @@ export class LaneSystem {
     }
   }
 
+  /** Horizontal third → lane index (`CONFIG.TOUCH_THIRD_SCREEN_TO_LANE`). */
+  private laneFromScreenThird(clientX: number): number {
+    const rect = this.target.getBoundingClientRect();
+    const w = rect.width;
+    if (w <= 0) return 1;
+    const u = (clientX - rect.left) / w;
+    const third = Math.min(
+      CONFIG.LANE_COUNT - 1,
+      Math.max(0, Math.floor(u * CONFIG.LANE_COUNT)),
+    );
+    return CONFIG.TOUCH_THIRD_SCREEN_TO_LANE[third]!;
+  }
+
+  private onPointerMoveThirds(e: PointerEvent): void {
+    if (!this._enabled || e.button === 2) return;
+    if (!this.target.hasPointerCapture(e.pointerId)) return;
+    this.switchToLane(this.laneFromScreenThird(e.clientX));
+  }
+
   private bindPointer(): void {
-    this.target.addEventListener("pointerdown", (e: PointerEvent) => {
+    const onDown = (e: PointerEvent) => {
       if (!this._enabled || e.button === 2) return;
+      try {
+        this.target.setPointerCapture(e.pointerId);
+      } catch {
+        /* already captured or unsupported */
+      }
       this.onHalfScreenTap(e.clientX);
-    });
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (this.target.hasPointerCapture(e.pointerId)) {
+        this.target.releasePointerCapture(e.pointerId);
+      }
+    };
+
+    this.target.addEventListener("pointerdown", onDown);
+    this.target.addEventListener("pointermove", this.onPointerMoveThirds.bind(this));
+    this.target.addEventListener("pointerup", onUp);
+    this.target.addEventListener("pointercancel", onUp);
   }
 
   private bindKeyboard(): void {

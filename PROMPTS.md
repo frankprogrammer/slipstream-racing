@@ -1174,3 +1174,9 @@ Make the racer name overtake label 25% larger and move it up a little bit higher
 ### 2026-04-03 4:15 AM PDT
 
 The name label is still clipping into the car. Let's let's move it even higher
+
+---
+
+### 2026-04-03 4:30 AM PDT
+
+I want to keep the current touch controls where touching on the left side of the screen moves it to the left and touching on the right screen moves to the right. I additionally want... this to be updated on pointer move, divide the screen into thirds, and wherever Whichever third the player drags their finger into will... move the race car into that into that lane. Remember that in world space, the left is to the positive X axis.

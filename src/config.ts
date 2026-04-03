@@ -748,6 +748,11 @@ export const CONFIG = {
   // ── Touch / pointer (lane input) ──
   /** Half-screen tap ignores touches within this many px of horizontal center. */
   TOUCH_CENTER_DEAD_ZONE_PX: 19,
+  /**
+   * While dragging, screen is split into 3 vertical bands (left → right).
+   * Each entry is the lane index for that band. World X: lane 0 = −, lane 2 = + (screen-left = +X).
+   */
+  TOUCH_THIRD_SCREEN_TO_LANE: [2, 1, 0] as const,
 
   // ── Swipe Input (legacy; lane uses touch zones — kept for reference) ──
   SWIPE_THRESHOLD: 30,
