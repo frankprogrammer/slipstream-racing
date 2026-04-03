@@ -474,6 +474,11 @@ export const CONFIG = {
   /** Cap per-frame integration (s) so tab-switch / hitch spikes don’t teleport traffic / pass cars. */
   TRAFFIC_MAX_PHYSICS_DELTA_SEC: 0.0625,
   VEHICLE_POOL_SIZE: 20,
+  /** World Y above car origin for traffic name tag (roof clearance). */
+  TRAFFIC_RACER_NAME_OFFSET_Y: 1.02,
+  /** World-space `THREE.Sprite` size for overtake name billboards (fogged with scene). */
+  TRAFFIC_RACER_NAME_SPRITE_WORLD_WIDTH: 4.875,
+  TRAFFIC_RACER_NAME_SPRITE_WORLD_HEIGHT: 0.975,
   /**
    * World +Z ahead of player for new spawns. Higher = farther up the road / nearer screen top (horizon).
    */

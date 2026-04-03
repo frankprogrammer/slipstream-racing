@@ -9,6 +9,11 @@ import {
   loadPlayerCarGltf,
   pickRandomLivery,
 } from "./playerCarGlb";
+import { generateRacerName } from "./racerNameGenerator";
+import {
+  createTrafficRacerNameSprite,
+  updateTrafficRacerNameSprite,
+} from "./trafficRacerNameSprite";
 
 export type TrafficCollisionBounds = {
   cx: number;
@@ -36,6 +41,9 @@ type PoolEntry = {
   laneChangeFromLane: number;
   laneChangeToLane: number;
   laneChangeStartMs: number;
+  /** Overtake-only; drawn on `nameSprite`. */
+  racerName: string;
+  nameSprite: THREE.Sprite;
 };
 
 /**
@@ -84,6 +92,11 @@ export class TrafficSpawner {
     applyLiveryColors(carRoot, firstLivery);
     g.add(carRoot);
 
+    const nameSprite = createTrafficRacerNameSprite();
+    const { height } = CONFIG.TAXI_DIMENSIONS;
+    nameSprite.position.set(0, height + CONFIG.TRAFFIC_RACER_NAME_OFFSET_Y, 0);
+    g.add(nameSprite);
+
     g.visible = false;
     this.group.add(g);
     return {
@@ -99,6 +112,8 @@ export class TrafficSpawner {
       laneChangeFromLane: 1,
       laneChangeToLane: 1,
       laneChangeStartMs: 0,
+      racerName: "",
+      nameSprite,
     };
   }
 
@@ -118,6 +133,7 @@ export class TrafficSpawner {
       p.laneChangeFromLane = p.laneIndex;
       p.laneChangeToLane = p.laneIndex;
       p.laneChangeStartMs = 0;
+      p.nameSprite.visible = false;
     }
     this.overtakeTryAccMs = 0;
     this.lastOvertakeSpawnRunMs = -1e12;
@@ -425,6 +441,7 @@ export class TrafficSpawner {
     idle.laneChangeToLane = lane;
     idle.laneChangeStartMs = 0;
     idle.passKind = "traffic";
+    idle.nameSprite.visible = false;
 
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
     let z = CONFIG.TAXI_POSITION_Z + CONFIG.TRAFFIC_SPAWN_AHEAD_Z + jitter;
@@ -474,6 +491,9 @@ export class TrafficSpawner {
     idle.laneChangeToLane = targetLane;
     idle.laneChangeStartMs = 0;
     applyLiveryColors(idle.carRoot, pickRandomLivery());
+    idle.racerName = generateRacerName();
+    updateTrafficRacerNameSprite(idle.nameSprite, idle.racerName);
+    idle.nameSprite.visible = true;
     idle.active = true;
     idle.group.visible = true;
     idle.group.position.set(
@@ -529,6 +549,7 @@ export class TrafficSpawner {
     p.laneChangeState = "idle";
     p.passKind = "traffic";
     p.overtakeOriginZ = 0;
+    p.nameSprite.visible = false;
   }
 
   update(

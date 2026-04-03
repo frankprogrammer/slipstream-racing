@@ -1138,3 +1138,39 @@ For the draft bar meter, Instead of having a black... background for the meter. 
 ### 2026-04-03 2:45 AM PDT
 
 Right now the draft meter seems to scale based off the width of the screen. I want it to Always be around the width of the player car. and how it appears on screen no matter what the screen width is.
+
+---
+
+### 2026-04-03 3:00 AM PDT
+
+Let's make it so that the racer cars that pass by have a name label above them. Let's generate some fake random gamer racing names that have A word... and Maybe a number. Maybe like a two-digit number.
+
+---
+
+### 2026-04-03 3:15 AM PDT
+
+Only apply the name labels to the overtake cars. that move forward.
+
+---
+
+### 2026-04-03 3:30 AM PDT
+
+Can we do the... overtake car name labels in world space. That way they are affected by fog and fade off into the distance.
+
+---
+
+### 2026-04-03 3:45 AM PDT
+
+Make the overtake racer name label 50% larger.
+
+---
+
+### 2026-04-03 4:00 AM PDT
+
+Make the racer name overtake label 25% larger and move it up a little bit higher. above the race car.
+
+---
+
+### 2026-04-03 4:15 AM PDT
+
+The name label is still clipping into the car. Let's let's move it even higher
