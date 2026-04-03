@@ -705,21 +705,21 @@ export const CONFIG = {
   /** Rear bumper anchor — matches `PlayerTaxi.getRearWorldPosition` Y fraction. */
   SLIPSTREAM_ACTIVATE_BURST_EMIT_Y_FRAC: 0.35,
   SLIPSTREAM_ACTIVATE_BURST_EMIT_Z_INSET: 0.02,
-  SLIPSTREAM_ACTIVATE_BURST_SPREAD_X: 0.32,
+  SLIPSTREAM_ACTIVATE_BURST_SPREAD_X: 0.5,
   SLIPSTREAM_ACTIVATE_BURST_SPREAD_Y: 0.14,
   /** Initial speed along −Z (world units / second). Higher = particles travel farther before expiry. */
-  SLIPSTREAM_ACTIVATE_BURST_SPEED_MIN: 48,
-  SLIPSTREAM_ACTIVATE_BURST_SPEED_MAX: 84,
+  SLIPSTREAM_ACTIVATE_BURST_SPEED_MIN: 68,
+  SLIPSTREAM_ACTIVATE_BURST_SPEED_MAX: 118,
   /** Lateral velocity as fraction of |vz|. */
   SLIPSTREAM_ACTIVATE_BURST_LATERAL_SCALE: 0.32,
   /** Extra −Y per unit speed (screen-down pull in chase view). */
-  SLIPSTREAM_ACTIVATE_BURST_SCREEN_DOWN_Y: -0.2,
+  SLIPSTREAM_ACTIVATE_BURST_SCREEN_DOWN_Y: -0.1,
   SLIPSTREAM_ACTIVATE_BURST_Y_JITTER: 1.5,
-  SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN: 0.26,
-  SLIPSTREAM_ACTIVATE_BURST_LIFE_MAX: 0.52,
-  /** Per-second velocity retention (exponential; 0.92 ≈ visible stream ~0.4–0.6s). */
-  SLIPSTREAM_ACTIVATE_BURST_DRAG: 0.9,
-  SLIPSTREAM_ACTIVATE_BURST_GRAVITY: 2.2,
+  SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN: 0.38,
+  SLIPSTREAM_ACTIVATE_BURST_LIFE_MAX: 0.72,
+  /** Per-second velocity retention (exponential; higher = streaks carry farther). */
+  SLIPSTREAM_ACTIVATE_BURST_DRAG: 0.93,
+  SLIPSTREAM_ACTIVATE_BURST_GRAVITY: 1.85,
 
   /** Alias for `GAME_PALETTE` — use in engine + UI. */
   PALETTE: GAME_PALETTE,

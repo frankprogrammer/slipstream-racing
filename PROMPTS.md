@@ -994,3 +994,15 @@ Add the word score above the score in the game over screen.
 ### 2026-04-02 8:45 PM PDT
 
 Overtake cars should play the same slipstream activate burst particle system that the player has the entire time that they are active.
+
+---
+
+### 2026-04-02 9:00 PM PDT
+
+I want the slipstream activate burst particle system to shoot out further
+
+---
+
+### 2026-04-02 9:15 PM PDT
+
+The particles do not seem to be going out further. They still seem to cut off at the same time. Distance from where they spawned.

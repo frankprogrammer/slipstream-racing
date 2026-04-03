@@ -132,13 +132,27 @@ export class SlipstreamActivateBurst {
           CONFIG.SLIPSTREAM_ACTIVATE_BURST_LIFE_MIN);
   }
 
-  /** Prefer recycling expired particles; otherwise replace a random slot so the stream stays dense. */
+  /**
+   * Prefer expired slots; if the pool is saturated, recycle the particle closest to its natural
+   * end-of-life (highest age/lifetime). Random replacement was cutting young particles short, so
+   * longer `SLIPSTREAM_ACTIVATE_BURST_LIFE_*` values had almost no visible effect on trail length.
+   */
   private pickSpawnIndex(): number {
     const n = this.count;
     for (let i = 0; i < n; i++) {
       if (this.ages[i] >= this.lifetimes[i]) return i;
     }
-    return Math.floor(Math.random() * n);
+    let best = 0;
+    let bestRatio = -1;
+    for (let i = 0; i < n; i++) {
+      const life = this.lifetimes[i];
+      const ratio = life > 0 ? this.ages[i] / life : 1;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        best = i;
+      }
+    }
+    return best;
   }
 
   update(delta: number): void {
