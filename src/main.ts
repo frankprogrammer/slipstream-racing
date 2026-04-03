@@ -94,8 +94,25 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(CONFIG.PALETTE.SKY);
-scene.fog = new THREE.Fog(CONFIG.PALETTE.SKY, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
+const skyFogColorBase = new THREE.Color(CONFIG.PALETTE.SKY);
+const skyFogColorSuper = new THREE.Color(CONFIG.PALETTE.SUPER_SLIPSTREAM_SKY);
+const sceneSkyColor = skyFogColorBase.clone();
+scene.background = sceneSkyColor;
+scene.fog = new THREE.Fog(
+  sceneSkyColor.getHex(),
+  CONFIG.FOG_NEAR,
+  CONFIG.FOG_FAR,
+);
+/** 0 = base sky/fog, 1 = super-slipstream red. */
+let skyFogBlend = 0;
+
+function applySkyFogFromBlend(): void {
+  sceneSkyColor.lerpColors(skyFogColorBase, skyFogColorSuper, skyFogBlend);
+  const fog = scene.fog;
+  if (fog instanceof THREE.Fog) {
+    fog.color.copy(sceneSkyColor);
+  }
+}
 
 const camera = new THREE.PerspectiveCamera(
   CONFIG.CAMERA_FOV_BASE,
@@ -213,6 +230,8 @@ function resetGame(): void {
   slingshotBaseBonus = 0;
   superSlipstreamMeter = 0;
   superSlipstreamRemainMs = 0;
+  skyFogBlend = 0;
+  applySkyFogFromBlend();
   raceRemainMs = CONFIG.RACE_COUNTDOWN_START_MS;
   roadManager?.reset();
   trafficSpawner.reset();
@@ -560,6 +579,15 @@ function animate(): void {
       fpsFrames = 0;
     }
   }
+
+  const superSkyFogActive =
+    gameState.isPlaying &&
+    runGameplayReady &&
+    superSlipstreamRemainMs > 0;
+  const targetSkyFogBlend = superSkyFogActive ? 1 : 0;
+  const skyBr = CONFIG.SUPER_SLIPSTREAM_SKY_BLEND_RATE;
+  skyFogBlend += (targetSkyFogBlend - skyFogBlend) * Math.min(1, delta * skyBr);
+  applySkyFogFromBlend();
 
   renderer.render(scene, camera);
 }

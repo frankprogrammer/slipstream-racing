@@ -916,3 +916,9 @@ the +1 sec and +2 sec and countdown timer should use the same cyan color as the 
 ### 2026-04-02 4:30 PM PDT
 
 the slipstream activated particles should shoot out twice as far
+
+---
+
+### 2026-04-02 5:00 PM PDT
+
+when super slipstream is activated. the sky and fog color should turn bright red. it should return to the current color otherwise

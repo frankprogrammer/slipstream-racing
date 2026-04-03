@@ -69,6 +69,8 @@ export const GAME_PALETTE = {
   TRAFFIC_BODY_TRUCK: 0x1c1c24,
   TRAFFIC_BODY_RACING_BLUE: 0x3671c6,
   SKY: 0x7ec8ff,
+  /** Sky + fog while Super Slipstream active — lerped from `SKY`. */
+  SUPER_SLIPSTREAM_SKY: 0xff2222,
   TAXI_BODY: 0xeeeff2,
   TAXI_ROOF_LIGHT: 0x00d2be,
   TAIL_LIGHT: 0xc40000,
@@ -345,6 +347,8 @@ export const CONFIG = {
   SUPER_SLIPSTREAM_DURATION_MS: 3000,
   /** Camera shake intensity multiplier when Super Slipstream activates (vs normal slingshot shake). */
   SUPER_SLIPSTREAM_CAMERA_SHAKE_INTENSITY_MUL: 1.25,
+  /** Lerp speed per second for sky/fog toward `PALETTE.SUPER_SLIPSTREAM_SKY` (1) or `SKY` (0). */
+  SUPER_SLIPSTREAM_SKY_BLEND_RATE: 8,
   /** Horizontal draft fill bar on taxi hood (local +X width, inset from front bumper toward −Z). */
   DRAFT_BAR_WIDTH: 1.55,
   /** Strip “height” on the hood plane (world units) — was 0.1; ×2 for readability. */
