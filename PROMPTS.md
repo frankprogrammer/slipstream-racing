@@ -1192,3 +1192,15 @@ I still feel like the draft meter is not starting from zero yet. when it is disp
 ### 2026-04-03 6:15 AM PDT
 
 The draft meter seems to reach 100%. And then... It becomes empty for a split second. before it completely goes away. Instead, let's lock it Once it reached 100%, let's lock it at 100%. and then make it disappear. Then it can reset back to zero. off screen for the next time it gets presented.
+
+---
+
+### 2026-04-03 6:30 AM PDT
+
+Right now the tutorial arrows on mobile appear as emoji arrows. I want them to look the same on PC versus mobile They should just look like arrows.
+
+---
+
+### 2026-04-03 6:45 AM PDT
+
+Add a Tiny padding. to the edges of the tutorial arrows. That way they're not touching the edge of the screen.

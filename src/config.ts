@@ -754,6 +754,8 @@ export const CONFIG = {
   // ── Touch / pointer (lane input) ──
   /** Half-screen tap ignores touches within this many px of horizontal center. */
   TOUCH_CENTER_DEAD_ZONE_PX: 19,
+  /** Tutorial lane-hint circles: inset from screen edges so they don’t sit flush on the bezel. */
+  TOUCH_HINT_EDGE_INSET_PX: 10,
   /**
    * While dragging, screen is split into 3 vertical bands (left → right).
    * Each entry is the lane index for that band. World X: lane 0 = −, lane 2 = + (screen-left = +X).

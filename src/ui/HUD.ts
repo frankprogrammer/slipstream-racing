@@ -59,8 +59,32 @@ export class HUD {
 
   private buildTouchHint(direction: "left" | "right"): HTMLElement {
     const el = document.createElement("div");
-    const arrow = direction === "left" ? "\u2b05" : "\u27a1";
-    el.textContent = arrow;
+    const stroke = hexToCss(CONFIG.PALETTE.UI_TEXT);
+    const glow = hexToCss(CONFIG.PALETTE.NEON_BLUE);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "32");
+    svg.setAttribute("height", "32");
+    svg.setAttribute("aria-hidden", "true");
+    svg.style.cssText = [
+      "display:block",
+      "flex-shrink:0",
+      `filter:drop-shadow(0 0 3px ${glow})drop-shadow(0 0 8px ${rgbaFromHex(CONFIG.PALETTE.NEON_BLUE, 0.45)})`,
+    ].join(";");
+
+    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    poly.setAttribute(
+      "points",
+      direction === "left" ? "15,5 7,12 15,19" : "9,5 17,12 9,19",
+    );
+    poly.setAttribute("fill", "none");
+    poly.setAttribute("stroke", stroke);
+    poly.setAttribute("stroke-width", "2.75");
+    poly.setAttribute("stroke-linecap", "round");
+    poly.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(poly);
+    el.appendChild(svg);
+
     el.style.cssText = [
       "position:absolute",
       "left:0",
@@ -71,15 +95,9 @@ export class HUD {
       "display:flex",
       "align-items:center",
       "justify-content:center",
-      "font-family:Orbitron, system-ui, sans-serif",
-      "font-size:34px",
-      "font-weight:900",
-      "line-height:1",
-      `color:#${CONFIG.PALETTE.UI_TEXT.toString(16).padStart(6, "0")}`,
       `border:4px solid #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, "0")}`,
       `background:rgba(${(CONFIG.PALETTE.ROAD_DARK >> 16) & 255},${(CONFIG.PALETTE.ROAD_DARK >> 8) & 255},${CONFIG.PALETTE.ROAD_DARK & 255},0.82)`,
       `box-shadow:0 0 0 2px ${rgbaFromHex(CONFIG.PALETTE.UI_TEXT, 0.18)},0 0 18px #${CONFIG.PALETTE.NEON_ORANGE.toString(16).padStart(6, "0")},0 0 34px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, "0")}`,
-      `text-shadow:0 0 6px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, "0")},0 0 14px #${CONFIG.PALETTE.NEON_BLUE.toString(16).padStart(6, "0")}`,
       "pointer-events:none",
       "opacity:0",
       "z-index:120",
@@ -297,14 +315,20 @@ export class HUD {
 
     const rect = container.getBoundingClientRect();
     const half = TOUCH_HINT_BUTTON_PX * 0.5;
-    const leftPx = half;
-    const rightPx = rect.width - half;
+    const inset = CONFIG.TOUCH_HINT_EDGE_INSET_PX;
+    const leftPx = half + inset;
+    const rightPx = rect.width - half - inset;
 
     const left = this.tmpProj.copy(leftWorldPoint).project(camera);
     const leftPy = (-left.y * 0.5 + 0.5) * rect.height;
     const right = this.tmpProj.copy(rightWorldPoint).project(camera);
     const rightPy = (-right.y * 0.5 + 0.5) * rect.height;
-    const midPy = (leftPy + rightPy) * 0.5;
+    let midPy = (leftPy + rightPy) * 0.5;
+    midPy = THREE.MathUtils.clamp(
+      midPy,
+      half + inset,
+      rect.height - half - inset,
+    );
 
     this.touchHintLeftEl.style.left = `${leftPx.toFixed(1)}px`;
     this.touchHintLeftEl.style.top = `${midPy.toFixed(1)}px`;
