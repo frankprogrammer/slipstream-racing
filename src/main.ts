@@ -187,14 +187,14 @@ const gameAudio = new GameAudio();
 const touchHintLeftWorld = new THREE.Vector3();
 const touchHintRightWorld = new THREE.Vector3();
 
-container.addEventListener(
-  "pointerdown",
-  () => {
-    tryEnterFullscreenOnce(container);
-    gameAudio.unlock();
-  },
-  { once: true },
-);
+function onUserGestureAudio(): void {
+  tryEnterFullscreenOnce(container);
+  gameAudio.unlock();
+}
+
+container.addEventListener("pointerdown", onUserGestureAudio);
+/** iOS Safari: `touchstart` is the most reliable gesture for Web Audio + media unlock. */
+container.addEventListener("touchstart", onUserGestureAudio, { passive: true });
 
 let appFocused = document.visibilityState === "visible";
 let needsDeltaReset = false;
@@ -208,12 +208,21 @@ function refreshAppFocus(): void {
   if (appFocused) {
     // Drop stale elapsed time on next frame so gameplay doesn't jump on resume.
     needsDeltaReset = true;
+    /** Tab / app resume: context often stays suspended until next tap — try resume anyway. */
+    gameAudio.resumeAudioGraph();
   }
 }
 
 document.addEventListener("visibilitychange", refreshAppFocus);
 window.addEventListener("focus", refreshAppFocus);
 window.addEventListener("blur", refreshAppFocus);
+/** bfcache restore — same suspended-audio issue as tab switch. */
+window.addEventListener("pageshow", (ev) => {
+  if (ev.persisted) {
+    gameAudio.setAppFocused(document.visibilityState === "visible");
+    gameAudio.resumeAudioGraph();
+  }
+});
 
 let runTimeMs = 0;
 let distanceUnits = 0;

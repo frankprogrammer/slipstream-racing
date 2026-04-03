@@ -1084,3 +1084,9 @@ Let's make the +1 Sec text label 25% smaller.
 ### 2026-04-03 12:30 AM PDT
 
 Is it possible to make the game full screen on mobile?
+
+---
+
+### 2026-04-03 12:45 AM PDT
+
+On mobile, there are times where audio will not play at all. I maybe have to refresh the screen. Any idea what may be causing this? This applies to sound effects and music.

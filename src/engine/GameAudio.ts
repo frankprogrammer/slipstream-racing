@@ -71,7 +71,10 @@ export class GameAudio {
   private racecarTraffic: RacecarTrafficSlot[] = [];
   private racecarLoaded = false;
 
-  /** Call once from a user gesture so AudioContext can start (autoplay unlock). */
+  /**
+   * Build graph from a user gesture (autoplay policy). Safe to call on every tap — mobile
+   * browsers often need repeated `resume()` / `HTMLAudioElement.play()` after suspend or failed first unlock.
+   */
   unlock(): void {
     if (!CONFIG.AUDIO_ENABLED && !CONFIG.AUDIO_BG_MUSIC_ENABLED) return;
 
@@ -125,6 +128,19 @@ export class GameAudio {
     }
 
     this.applyFocusState();
+    this.resumeAudioGraph();
+  }
+
+  /**
+   * Must run inside or immediately after a user gesture. Idempotent; call on every pointer/touch
+   * so strict mobile Safari recovers after suspend or a missed first unlock.
+   */
+  resumeAudioGraph(): void {
+    if (!this.ctx) return;
+    void this.ctx.resume().catch(() => {});
+    if (this.appFocused && this.bgMusicEl && CONFIG.AUDIO_BG_MUSIC_ENABLED) {
+      void this.bgMusicEl.play().catch(() => {});
+    }
   }
 
   private async loadRacecarBuffer(): Promise<void> {
@@ -254,9 +270,9 @@ export class GameAudio {
   private applyFocusState(): void {
     if (this.ctx) {
       if (this.appFocused) {
-        void this.ctx.resume();
+        void this.ctx.resume().catch(() => {});
       } else {
-        void this.ctx.suspend();
+        void this.ctx.suspend().catch(() => {});
       }
     }
     if (this.bgMusicEl) {
