@@ -970,3 +970,21 @@ For the overtake cars, I am still seeing the same behavior where they spawn... O
 ### 2026-04-02 7:30 PM PDT
 
 The overtake cars should not spawn while the player is in super slipstream mode.
+
+---
+
+### 2026-04-02 7:45 PM PDT
+
+Let's use the font that is used for the timer. Everywhere in the game over screen.
+
+---
+
+### 2026-04-02 8:00 PM PDT
+
+Let's also update the font in the game over screen for the distance, time and slipstream count. I want these to appear larger also.
+
+---
+
+### 2026-04-02 8:15 PM PDT
+
+Add the word score above the score in the game over screen.
