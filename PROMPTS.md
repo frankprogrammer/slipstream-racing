@@ -856,3 +856,9 @@ Let's play the Players race car audio in 2D space. and keep the Enemy. Race car 
 ### 2026-04-02 11:45 PM PDT
 
 During normal gameplay, the FOV should... be equal to fov base which is currently 55. When the super slipstream is active, we should set the FOV to... 70 And it should lerp between those values when the super stream, super sub stream is activated and deactivated.
+
+---
+
+### 2026-04-03 12:00 AM PDT
+
+the two red bars that appear at the back of the car during slipstream uh Activation. should now only be shown while the super slipstream is active.

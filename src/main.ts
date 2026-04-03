@@ -419,7 +419,7 @@ function animate(): void {
       }
 
       slipstreamActivateBurst.setBurstWindowActive(burstRemainMs > 0);
-      slingshotTrail.setBoostActive(burstRemainMs > 0);
+      slingshotTrail.setBoostActive(superSlipstreamRemainMs > 0);
       slingshotTrail.update(delta, scrollDz, playerTaxi);
 
       scrollForAudio = scrollPerFrame;

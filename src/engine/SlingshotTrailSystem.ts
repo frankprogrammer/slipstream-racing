@@ -3,8 +3,8 @@ import { CONFIG } from "../config";
 import type { PlayerTaxi } from "./PlayerTaxi";
 
 /**
- * Continuous boost beams from player taillights.
- * While boost is active, two long neon lines stay visible from each taillight toward screen bottom (−Z).
+ * Two red taillight beams toward screen bottom (−Z).
+ * Shown only while Super Slipstream is active (`setBoostActive` from main).
  */
 export class SlingshotTrailSystem {
   readonly group = new THREE.Group();
