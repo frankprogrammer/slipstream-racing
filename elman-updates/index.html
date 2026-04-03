@@ -79,6 +79,68 @@
         transform-origin: center center;
         will-change: transform;
       }
+      /* ── Score & Chain HUD (top-right) ── */
+      #hud-score-panel {
+        position: absolute;
+        top: 16px;
+        right: 18px;
+        z-index: 150;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      #hud-chain {
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(22px, 5vw, 34px);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: rgba(0, 162, 255, 0.7);
+        text-shadow: 0 0 8px rgba(0, 162, 255, 0.4);
+        line-height: 1;
+        transition: transform 0.12s ease-out, color 0.2s ease;
+      }
+      #hud-chain.pop {
+        transform: scale(1.6);
+      }
+      #hud-chain.big-pop {
+        transform: scale(2.2);
+      }
+      #hud-score {
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(36px, 9vw, 62px);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        color: #f8fafc;
+        text-shadow:
+          0 0 10px rgba(225, 6, 0, 0.35),
+          0 2px 6px rgba(0, 0, 0, 0.5);
+        line-height: 1;
+      }
+      /* ── Floating chain popup between cars ── */
+      .chain-popup {
+        position: absolute;
+        pointer-events: none;
+        font-family: "Bebas Neue", "Orbitron", sans-serif;
+        font-size: clamp(20px, 5vw, 32px);
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: #ffe066;
+        text-shadow: 0 0 12px rgba(255, 200, 0, 0.7), 0 0 24px rgba(255, 100, 0, 0.4);
+        z-index: 140;
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+        transition: none;
+        animation: chain-popup-anim 0.7s ease-out forwards;
+      }
+      @keyframes chain-popup-anim {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+        20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+        50% { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -120%) scale(0.8); }
+      }
       #milestone-text {
         position: absolute;
         top: 40%;
@@ -203,7 +265,7 @@
         color: var(--f1-ui-text, #f8fafc);
         font-weight: 700;
       }
-      #retry-btn {
+      .gameover-btn {
         font-family: "Exo 2", sans-serif;
         font-size: 22px;
         font-weight: 700;
@@ -212,7 +274,7 @@
         background: transparent;
         border: 3px solid var(--f1-primary, #e10600);
         border-radius: 8px;
-        padding: 22px 64px;
+        padding: 22px 44px;
         cursor: pointer;
         transition:
           background 0.2s,
@@ -220,13 +282,330 @@
         pointer-events: auto;
         text-transform: uppercase;
       }
-      #retry-btn:hover,
-      #retry-btn:active {
+      .gameover-btn:hover,
+      .gameover-btn:active {
         background: var(--f1-retry-hover, rgba(225, 6, 0, 0.12));
         box-shadow: 0 0 40px var(--f1-retry-glow, rgba(225, 6, 0, 0.35));
       }
+      #market-btn {
+        border-color: var(--f1-cyan, #00d2be);
+      }
+      #market-btn:hover,
+      #market-btn:active {
+        background: rgba(0, 210, 190, 0.12);
+        box-shadow: 0 0 40px rgba(0, 210, 190, 0.35);
+      }
+      .gameover-btn-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      /* ── Market Overlay ── */
+      #market {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(12, 12, 20, 0.97);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+        padding: 16px 10px 12px;
+        z-index: 25;
+        font-family: "Exo 2", sans-serif;
+        color: var(--f1-ui-text, #f8fafc);
+        overflow: hidden;
+      }
+      #market.visible { display: flex; }
+      #market h2 {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 30px;
+        letter-spacing: 0.3em;
+        color: var(--f1-cyan, #00d2be);
+        margin: 0 0 4px 0;
+        font-weight: 400;
+        flex-shrink: 0;
+      }
+      #market-highscore {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--f1-ui-dim, #9ca3af);
+        margin: 0 0 12px 0;
+        letter-spacing: 0.12em;
+        flex-shrink: 0;
+      }
+      .market-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 12px;
+        width: 100%;
+        max-width: 400px;
+        flex-shrink: 0;
+      }
+      .market-tab {
+        flex: 1;
+        padding: 10px 0;
+        text-align: center;
+        font-family: "Exo 2", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--f1-ui-dim, #9ca3af);
+        background: rgba(255,255,255,0.03);
+        border: 2px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-transform: uppercase;
+      }
+      .market-tab:hover { background: rgba(255,255,255,0.07); }
+      .market-tab.active {
+        color: var(--f1-cyan, #00d2be);
+        border-color: var(--f1-cyan, #00d2be);
+        background: rgba(0, 210, 190, 0.08);
+      }
+      #market-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        width: 100%;
+        max-width: 400px;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 2px 2px 10px;
+      }
+      .market-card {
+        position: relative;
+        background: rgba(255,255,255,0.035);
+        border: 2px solid rgba(255,255,255,0.09);
+        border-radius: 12px;
+        padding: 14px 8px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+        min-height: 110px;
+      }
+      .market-card:hover:not(.locked) {
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.18);
+        transform: translateY(-1px);
+      }
+      .market-card.selected {
+        border-color: var(--f1-cyan, #00d2be);
+        background: rgba(0, 210, 190, 0.12);
+        box-shadow: 0 0 24px rgba(0, 210, 190, 0.25), inset 0 0 12px rgba(0, 210, 190, 0.06);
+      }
+      .market-card.locked {
+        opacity: 0.4;
+        cursor: default;
+        filter: saturate(0.3);
+      }
+      .market-card-preview {
+        width: 100%;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .market-card-preview svg {
+        width: 100px;
+        height: 44px;
+        color: var(--f1-ui-dim, #9ca3af);
+        transition: color 0.15s;
+      }
+      .market-card:not(.locked) .market-card-preview svg {
+        color: var(--f1-cyan, #00d2be);
+      }
+      .market-card.selected .market-card-preview svg {
+        color: var(--f1-ui-text, #f8fafc);
+      }
+      .market-swatch {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        border: 2px solid rgba(255,255,255,0.12);
+        transition: transform 0.15s;
+      }
+      .market-card:hover:not(.locked) .market-swatch { transform: scale(1.08); }
+      .market-card.selected .market-swatch {
+        border-color: var(--f1-cyan, #00d2be);
+        box-shadow: 0 0 12px rgba(0, 210, 190, 0.3);
+      }
+      .market-wheel {
+        border-radius: 50%;
+      }
+      .market-card-name {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-align: center;
+        color: var(--f1-ui-text, #f8fafc);
+        line-height: 1.2;
+      }
+      .market-card-score {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-align: center;
+        padding: 2px 8px;
+        border-radius: 4px;
+        line-height: 1.4;
+      }
+      .market-card-score.locked-score {
+        color: var(--f1-primary, #e10600);
+        background: rgba(225, 6, 0, 0.12);
+      }
+      .market-card-score.unlocked-score {
+        color: var(--f1-ui-dim, #9ca3af);
+      }
+      .market-card-score.equipped-score {
+        color: rgba(0, 210, 190, 0.7);
+        background: rgba(0, 210, 190, 0.08);
+      }
+      .market-card-score.selected-score {
+        color: var(--f1-cyan, #00d2be);
+        background: rgba(0, 210, 190, 0.15);
+        font-size: 11px;
+      }
+      .market-lock-icon {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 13px;
+        opacity: 0.5;
+      }
+      .market-section-label {
+        grid-column: 1 / -1;
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 17px;
+        letter-spacing: 0.22em;
+        color: var(--f1-primary, #e10600);
+        padding: 12px 0 4px;
+        text-align: center;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        margin-top: 2px;
+      }
+      .market-bottom-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        padding-top: 10px;
+        flex-shrink: 0;
+        width: 100%;
+        max-width: 400px;
+      }
+      .market-bottom-row button {
+        flex: 1;
+        font-family: "Exo 2", sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--f1-ui-text, #f8fafc);
+        background: transparent;
+        border-radius: 8px;
+        padding: 14px 12px;
+        cursor: pointer;
+        transition: background 0.2s, box-shadow 0.2s;
+        text-transform: uppercase;
+      }
+      #market-apply-btn {
+        border: 3px solid var(--f1-cyan, #00d2be);
+      }
+      #market-apply-btn:hover {
+        background: rgba(0, 210, 190, 0.12);
+        box-shadow: 0 0 30px rgba(0, 210, 190, 0.3);
+      }
+      #market-close-btn {
+        border: 2px solid rgba(255,255,255,0.15);
+      }
+      #market-close-btn:hover {
+        background: rgba(255,255,255,0.06);
+      }
+      /* Audio controls */
+      #audio-controls {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        z-index: 30;
+        display: flex;
+        gap: 8px;
+      }
+      .audio-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
+      .audio-btn:hover {
+        background: rgba(0, 0, 0, 0.55);
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+      .audio-btn svg {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.8);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .audio-btn.muted {
+        border-color: rgba(225, 6, 0, 0.5);
+      }
+      .audio-btn.muted svg {
+        stroke: rgba(255, 255, 255, 0.4);
+      }
+      /* F1 Starting Lights */
+      #start-lights {
+        position: absolute;
+        top: 30%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 15;
+        display: none;
+        gap: 18px;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      #start-lights.visible {
+        display: flex;
+      }
+      .start-light {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: rgba(60, 60, 60, 0.7);
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        transition: background 0.12s, box-shadow 0.12s, border-color 0.12s;
+      }
+      .start-light.red {
+        background: #e10600;
+        border-color: rgba(225, 6, 0, 0.6);
+        box-shadow: 0 0 24px rgba(225, 6, 0, 0.7), 0 0 48px rgba(225, 6, 0, 0.3);
+      }
+      .start-light.green {
+        background: #00d2be;
+        border-color: rgba(0, 210, 190, 0.6);
+        box-shadow: 0 0 24px rgba(0, 210, 190, 0.7), 0 0 48px rgba(0, 210, 190, 0.3);
+      }
     </style>
-    <script type="module" crossorigin src="/slipstream-racing/elman-updates/assets/index-BSounOdt.js"></script>
+    <script type="module" crossorigin src="/slipstream-racing/elman-updates/assets/index-DzPHQV90.js"></script>
   </head>
   <body>
     <div id="game-container">
@@ -237,8 +616,48 @@
           <span id="speed-text"></span>
         </div>
       </div>
+      <div id="hud-score-panel">
+        <div id="hud-chain">×1</div>
+        <div id="hud-score">0</div>
+      </div>
       <div id="milestone-text"></div>
       <div id="screen-flash"></div>
+
+      <div id="start-lights">
+        <div class="start-light" id="light-0"></div>
+        <div class="start-light" id="light-1"></div>
+        <div class="start-light" id="light-2"></div>
+      </div>
+
+      <div id="audio-controls">
+        <!-- Music toggle -->
+        <button id="music-toggle" class="audio-btn" aria-label="Toggle music">
+          <svg id="music-icon-on" viewBox="0 0 24 24">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+          <svg id="music-icon-off" viewBox="0 0 24 24" style="display:none">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+            <line x1="1" y1="1" x2="23" y2="23" stroke-width="2.5"/>
+          </svg>
+        </button>
+        <!-- All sound toggle -->
+        <button id="sound-toggle" class="audio-btn" aria-label="Toggle all sound">
+          <svg id="sound-icon-on" viewBox="0 0 24 24">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="sound-icon-off" viewBox="0 0 24 24" style="display:none">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+      </div>
 
       <!-- Game Over -->
       <div id="gameover">
@@ -249,7 +668,26 @@
           <span>CHAIN <strong id="stat-chain">×0</strong></span>
           <span>DIST <strong id="stat-distance">0m</strong></span>
         </div>
-        <button id="retry-btn">RETRY</button>
+        <div class="gameover-btn-row">
+          <button id="retry-btn" class="gameover-btn">RETRY</button>
+          <button id="market-btn" class="gameover-btn">MARKET</button>
+        </div>
+      </div>
+
+      <!-- Market -->
+      <div id="market">
+        <h2>MARKET</h2>
+        <div id="market-highscore">HIGH SCORE: 0</div>
+        <div class="market-tabs">
+          <div class="market-tab active" id="market-tab-cars">CARS</div>
+          <div class="market-tab" id="market-tab-body">BODY</div>
+          <div class="market-tab" id="market-tab-wheels">WHEELS</div>
+        </div>
+        <div id="market-grid"></div>
+        <div class="market-bottom-row">
+          <button id="market-apply-btn">APPLY &amp; PLAY</button>
+          <button id="market-close-btn">BACK</button>
+        </div>
       </div>
     </div>
 
