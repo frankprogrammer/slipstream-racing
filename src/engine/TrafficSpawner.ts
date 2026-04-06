@@ -14,6 +14,11 @@ import {
   createTrafficRacerNameSprite,
   updateTrafficRacerNameSprite,
 } from "./trafficRacerNameSprite";
+import {
+  createSlipstreamTimeBonusSprite,
+  updateSlipstreamTimeBonusSprite,
+  type SlipstreamTimeBonusLabel,
+} from "./slipstreamTimeBonusSprite";
 
 export type TrafficCollisionBounds = {
   cx: number;
@@ -44,6 +49,7 @@ type PoolEntry = {
   /** Overtake-only; drawn on `nameSprite`. */
   racerName: string;
   nameSprite: THREE.Sprite;
+  slipstreamTimeBonusSprite: THREE.Sprite;
 };
 
 /**
@@ -62,6 +68,7 @@ export class TrafficSpawner {
   private railActive = false;
   private overtakeTryAccMs = 0;
   private lastOvertakeSpawnRunMs = -1e12;
+  private slipstreamTimeBonusLabel: SlipstreamTimeBonusLabel = "normal";
 
   private constructor() {
     this.group.name = "TrafficGroup";
@@ -97,6 +104,14 @@ export class TrafficSpawner {
     nameSprite.position.set(0, height + CONFIG.TRAFFIC_RACER_NAME_OFFSET_Y, 0);
     g.add(nameSprite);
 
+    const slipstreamTimeBonusSprite = createSlipstreamTimeBonusSprite();
+    // Place label inside each car's slipstream zone: 15% from trailing edge toward the car.
+    const rearZ = -CONFIG.TAXI_DIMENSIONS.length / 2;
+    const zoneBackZ = rearZ - CONFIG.SLIPSTREAM_ZONE_DEPTH;
+    const labelZ = zoneBackZ + CONFIG.SLIPSTREAM_ZONE_DEPTH * 0.15;
+    slipstreamTimeBonusSprite.position.set(0, height * 0.72, labelZ);
+    g.add(slipstreamTimeBonusSprite);
+
     g.visible = false;
     this.group.add(g);
     return {
@@ -114,6 +129,7 @@ export class TrafficSpawner {
       laneChangeStartMs: 0,
       racerName: "",
       nameSprite,
+      slipstreamTimeBonusSprite,
     };
   }
 
@@ -123,6 +139,7 @@ export class TrafficSpawner {
     this.railPatternIndex = 0;
     this.railStepIndex = 0;
     this.railActive = false;
+    this.slipstreamTimeBonusLabel = "normal";
     for (const p of this.pool) {
       p.active = false;
       p.slipstreamConsumed = false;
@@ -136,6 +153,8 @@ export class TrafficSpawner {
       p.laneChangeToLane = p.laneIndex;
       p.laneChangeStartMs = 0;
       p.nameSprite.visible = false;
+      p.slipstreamTimeBonusSprite.visible = false;
+      updateSlipstreamTimeBonusSprite(p.slipstreamTimeBonusSprite, "normal");
     }
     this.overtakeTryAccMs = 0;
     this.lastOvertakeSpawnRunMs = -1e12;
@@ -444,6 +463,11 @@ export class TrafficSpawner {
     idle.laneChangeStartMs = 0;
     idle.passKind = "traffic";
     idle.nameSprite.visible = false;
+    idle.slipstreamTimeBonusSprite.visible = true;
+    updateSlipstreamTimeBonusSprite(
+      idle.slipstreamTimeBonusSprite,
+      this.slipstreamTimeBonusLabel,
+    );
     idle.group.rotation.set(0, 0, 0);
 
     const jitter = Math.random() * CONFIG.TRAFFIC_SPAWN_AHEAD_Z_JITTER;
@@ -497,6 +521,11 @@ export class TrafficSpawner {
     idle.racerName = generateRacerName();
     updateTrafficRacerNameSprite(idle.nameSprite, idle.racerName);
     idle.nameSprite.visible = true;
+    idle.slipstreamTimeBonusSprite.visible = true;
+    updateSlipstreamTimeBonusSprite(
+      idle.slipstreamTimeBonusSprite,
+      this.slipstreamTimeBonusLabel,
+    );
     idle.active = true;
     idle.group.visible = true;
     idle.group.rotation.set(0, 0, 0);
@@ -556,6 +585,18 @@ export class TrafficSpawner {
     p.passKind = "traffic";
     p.overtakeOriginZ = 0;
     p.nameSprite.visible = false;
+    p.slipstreamTimeBonusSprite.visible = false;
+  }
+
+  private updateSlipstreamTimeBonusLabels(superSlipstreamActive: boolean): void {
+    const nextLabel: SlipstreamTimeBonusLabel = superSlipstreamActive
+      ? "super"
+      : "normal";
+    if (this.slipstreamTimeBonusLabel === nextLabel) return;
+    this.slipstreamTimeBonusLabel = nextLabel;
+    for (const p of this.pool) {
+      updateSlipstreamTimeBonusSprite(p.slipstreamTimeBonusSprite, nextLabel);
+    }
   }
 
   update(
@@ -565,6 +606,8 @@ export class TrafficSpawner {
     playerLaneIndex: number | null,
     superSlipstreamActive: boolean,
   ): void {
+    this.updateSlipstreamTimeBonusLabels(superSlipstreamActive);
+
     if (playerLaneIndex !== null) {
       this.maybeSpawnOvertakePass(
         elapsedMs,
@@ -683,6 +726,17 @@ export class TrafficSpawner {
     return p.group;
   }
 
+  /** World position of the slipstream “+N sec” label (before consume hides it). */
+  getSlipstreamTimeBonusWorldPosition(
+    slotIndex: number,
+    out: THREE.Vector3,
+  ): boolean {
+    const p = this.pool[slotIndex];
+    if (!p || !p.active) return false;
+    p.slipstreamTimeBonusSprite.getWorldPosition(out);
+    return true;
+  }
+
   forEachPoolWindSlot(
     cb: (
       slotIndex: number,
@@ -714,7 +768,10 @@ export class TrafficSpawner {
   markSlipstreamConsumed(target: TrafficCollisionBounds | null): void {
     if (!target) return;
     const p = this.findClosestActiveVehicleXZ(target.cx, target.cz);
-    if (p) p.slipstreamConsumed = true;
+    if (p) {
+      p.slipstreamConsumed = true;
+      p.slipstreamTimeBonusSprite.visible = false;
+    }
   }
 
   private findClosestActiveVehicleXZ(cx: number, cz: number): PoolEntry | null {

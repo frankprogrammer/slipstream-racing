@@ -1246,3 +1246,27 @@ Make the plus one sec. text 100% larger.
 ### 2026-04-03 8:30 AM PDT
 
 Make the plus one sec and... Time or text, always be white.
+
+---
+
+### 2026-04-06 3:30 PM PDT
+
+in the slipstream zone behind every car i want to have a floating text that says "+1sec" normally and changes to "+2sec" when super slipstream mode is active. it should disappear whenever the slipstream for that car is successfully activated. It should be positioned about 15% deep into the slipstream zone from the bottom of the zone. it should be in world space
+
+---
+
+### 2026-04-06 3:40 PM PDT
+
+make this text 25% larger and put a space before "sec" in both cases
+
+---
+
+### 2026-04-06 3:50 PM PDT
+
+make the current +1 sec text that animates towards the timer spawn right over the new +1 sec slipstream zone label on successful activation. it should float up a much smaller distance. also make the animated +1 sec font 25% smaller
+
+---
+
+### 2026-04-06 4:00 PM PDT
+
+make the text float up 100% further up than it currently does

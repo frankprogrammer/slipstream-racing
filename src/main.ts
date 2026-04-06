@@ -227,6 +227,8 @@ let distanceUnits = 0;
 let slipstreamsActivated = 0;
 /** Player world X when the current draft started (entered slipstream) — “+N sec” float spawn X. */
 let slipstreamBonusSpawnWorldX: number | null = null;
+/** Reused for slipstream zone label world position when spawning the “+N sec” screen float. */
+const slipstreamBonusLabelWorld = new THREE.Vector3();
 let prevSlipInZone = false;
 let burstRemainMs = 0;
 /** Extra base scroll from successful slipstreams this run (before burst). */
@@ -695,7 +697,6 @@ function animate(): void {
           ? CONFIG.RACE_SLIPSTREAM_TIME_BONUS_MS_SUPER
           : CONFIG.RACE_SLIPSTREAM_TIME_BONUS_MS_NORMAL;
         slipstreamsActivated += 1;
-        trafficSpawner.markSlipstreamConsumed(slip.slingshotTarget);
         slingshotBaseBonus += CONFIG.SLINGSHOT_BASE_SPEED_INCREMENT;
         slingshotBaseBonus = Math.min(slingshotBaseBonus, headroom);
         const superDuration = CONFIG.SUPER_SLIPSTREAM_DURATION_MS;
@@ -730,6 +731,18 @@ function animate(): void {
           hud.flashScreenPerfect();
         }
 
+        const slipTarget = slip.slingshotTarget;
+        let bonusLabelWorld: THREE.Vector3 | null = null;
+        if (
+          slipTarget &&
+          trafficSpawner.getSlipstreamTimeBonusWorldPosition(
+            slipTarget.slotIndex,
+            slipstreamBonusLabelWorld,
+          )
+        ) {
+          bonusLabelWorld = slipstreamBonusLabelWorld;
+        }
+
         const bonusSpawnX =
           slipstreamBonusSpawnWorldX ?? playerTaxi.group.position.x;
         slipstreamBonusSpawnWorldX = null;
@@ -740,7 +753,9 @@ function animate(): void {
           speedHudEl,
           playerTaxi,
           bonusSpawnX,
+          bonusLabelWorld,
         );
+        trafficSpawner.markSlipstreamConsumed(slipTarget);
       }
 
       playerTaxi.tickRoofLight(nowMs, slip.inZone, chainManager.chain);

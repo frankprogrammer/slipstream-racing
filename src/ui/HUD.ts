@@ -354,8 +354,9 @@ export class HUD {
   }
 
   /**
-   * Spawns “+1 sec” / “+2 sec” at the on-screen X from `spawnWorldX` (player world X when draft
-   * started), with Y at `RACE_TIME_BONUS_FLOAT_START_Y_FRAC` from the top; tweens toward the timer.
+   * Spawns “+1 sec” / “+2 sec” in screen space: from `spawnWorldPos` when set (slipstream zone
+   * label), else from `spawnWorldX` on the front-bonus anchor with
+   * `RACE_TIME_BONUS_FLOAT_START_Y_FRAC`. Tweens a short distance upward.
    */
   spawnRaceTimeBonusFloat(
     seconds: 1 | 2,
@@ -364,29 +365,33 @@ export class HUD {
     timerHudEl: HTMLElement | null,
     playerTaxi: PlayerTaxi,
     spawnWorldX: number,
+    spawnWorldPos: THREE.Vector3 | null,
   ): void {
+    void timerHudEl;
     const rect = container.getBoundingClientRect();
-    playerTaxi.getFrontBonusWorldPosition(this.tmpWorld);
-    this.tmpWorld.x = spawnWorldX;
-    const ndc = this.tmpProj.copy(this.tmpWorld).project(camera);
     let x0 = rect.width * 0.5;
+    let y0 = rect.height * CONFIG.RACE_TIME_BONUS_FLOAT_START_Y_FRAC;
+
+    if (spawnWorldPos) {
+      this.tmpWorld.copy(spawnWorldPos);
+    } else {
+      playerTaxi.getFrontBonusWorldPosition(this.tmpWorld);
+      this.tmpWorld.x = spawnWorldX;
+    }
+    const ndc = this.tmpProj.copy(this.tmpWorld).project(camera);
     if (
       Number.isFinite(ndc.x) &&
       Number.isFinite(ndc.y) &&
-      Number.isFinite(ndc.z)
+      Number.isFinite(ndc.z) &&
+      ndc.z < 1
     ) {
       x0 = (ndc.x * 0.5 + 0.5) * rect.width;
+      y0 = (-ndc.y * 0.5 + 0.5) * rect.height;
     }
-    const y0 = rect.height * CONFIG.RACE_TIME_BONUS_FLOAT_START_Y_FRAC;
 
-    let x1 = rect.width * 0.5;
-    let y1 = 36;
-    if (timerHudEl) {
-      const cr = container.getBoundingClientRect();
-      const hr = timerHudEl.getBoundingClientRect();
-      x1 = hr.left + hr.width * 0.5 - cr.left;
-      y1 = hr.top + hr.height * 0.5 - cr.top;
-    }
+    const travel = CONFIG.RACE_TIME_BONUS_FLOAT_SCREEN_TRAVEL_PX;
+    const x1 = x0;
+    const y1 = y0 - travel;
 
     const el = document.createElement("div");
     el.textContent = seconds === 2 ? "+2 sec" : "+1 sec";

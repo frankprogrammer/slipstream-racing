@@ -236,10 +236,12 @@ export const CONFIG = {
   RACE_TIME_BONUS_FLOAT_FADE_START: 0.88,
   /** “+N sec” float starts at this fraction of container height from the top (0 = top edge). */
   RACE_TIME_BONUS_FLOAT_START_Y_FRAC: 0.3,
+  /** Screen-space vertical travel for the “+N sec” float (px upward from spawn). */
+  RACE_TIME_BONUS_FLOAT_SCREEN_TRAVEL_PX: 88,
   /** “+1 sec” float label font size (px). */
-  RACE_TIME_BONUS_FLOAT_FONT_SIZE_PX: 55.6875,
+  RACE_TIME_BONUS_FLOAT_FONT_SIZE_PX: 41.765625,
   /** “+2 sec” (super bonus) — slightly larger than `RACE_TIME_BONUS_FLOAT_FONT_SIZE_PX`. */
-  RACE_TIME_BONUS_FLOAT_FONT_SIZE_SUPER_PX: 60.75,
+  RACE_TIME_BONUS_FLOAT_FONT_SIZE_SUPER_PX: 45.5625,
   /** Full-screen 3–2–1–GO! before intro + gameplay; each step duration (ms). */
   PRE_RACE_COUNTDOWN_STEP_MS: 250,
 
