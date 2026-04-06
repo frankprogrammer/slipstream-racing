@@ -1270,3 +1270,15 @@ make the current +1 sec text that animates towards the timer spawn right over th
 ### 2026-04-06 4:00 PM PDT
 
 make the text float up 100% further up than it currently does
+
+---
+
+### 2026-04-06 4:05 PM PDT
+
+let's update the mobile touch controls. I still want to keep the touch down event to move the player left and right but I know want it to activate on the left and right 30% edges of the screen.
+
+---
+
+### 2026-04-06 4:15 PM PDT
+
+update the touch move functionality. when the player first puts their finger down, we register this as the zero point. add a small deadzone around this point. if the move outside of the dead zone to the right, then move the player right, if they move out of the deadzone to the left, move the player left. the point at which the lane change was activated now becomes the new zero point. the dead zone size should be small enough that it is not accidently activated while holding their finger down, but large enough that they do have to move a distance to swap mulitple lanes

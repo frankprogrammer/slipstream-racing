@@ -9,11 +9,13 @@ function easeOutBack(t: number): number {
 /**
  * LaneSystem — 3-lane grid + touch + keyboard.
  * Lane centers: -LANE_WIDTH, 0, +LANE_WIDTH for indices 0,1,2 (world +X on screen-left).
- * Touch: pointerdown — left/right half-screen steps one lane (same as ArrowLeft / ArrowRight); center dead zone ignores.
- * Pointer capture + pointermove — absolute lane from horizontal third (left/center/right).
+ * Touch: pointerdown — only outer left/right edge zones step one lane (same as ArrowLeft / ArrowRight).
+ * Pointer capture + pointermove — deadzone stepping from the last activation point.
  */
 export class LaneSystem {
   private readonly target: HTMLElement;
+  /** Per-pointer X anchor for deadzone lane stepping during drag. */
+  private readonly pointerMoveAnchorX = new Map<number, number>();
   private _laneIndex = 1;
   private _fromLane = 1;
   private _fromX = 0;
@@ -48,6 +50,7 @@ export class LaneSystem {
     this._toLane = 1;
     this._switching = false;
     this._rollSpringing = false;
+    this.pointerMoveAnchorX.clear();
   }
 
   laneIndexToX(index: number): number {
@@ -161,44 +164,56 @@ export class LaneSystem {
     this._rollSpringing = false;
   }
 
+  private laneNow(): number {
+    return this.laneIndexFromRoadX(this.getLaneX(performance.now()));
+  }
+
   /**
-   * Tap left of horizontal center → same as ArrowLeft; right of center → ArrowRight.
-   * Ignored in the center strip (`TOUCH_CENTER_DEAD_ZONE_PX`). Each pointer is handled on pointerdown only.
+   * Pointer-down lane step from edge zones only:
+   * - left 30% of screen: move left lane
+   * - right 30% of screen: move right lane
+   * - middle 40%: ignore
    */
-  private onHalfScreenTap(clientX: number): void {
+  private onEdgeTap(clientX: number): void {
     if (!this._enabled) return;
     const rect = this.target.getBoundingClientRect();
-    const cx = rect.left + rect.width * 0.5;
-    const d = clientX - cx;
-    if (Math.abs(d) <= CONFIG.TOUCH_CENTER_DEAD_ZONE_PX) return;
+    const w = rect.width;
+    if (w <= 0) return;
 
-    const now = performance.now();
-    const laneNow = this.laneIndexFromRoadX(this.getLaneX(now));
-
-    if (d < 0) {
-      this.switchToLane(laneNow + 1);
-    } else {
-      this.switchToLane(laneNow - 1);
+    const u = (clientX - rect.left) / w;
+    const edgeFrac = CONFIG.TOUCH_EDGE_TAP_FRACTION;
+    if (u < edgeFrac) {
+      this.switchToLane(this.laneNow() + 1);
+      return;
+    }
+    if (u > 1 - edgeFrac) {
+      this.switchToLane(this.laneNow() - 1);
     }
   }
 
-  /** Horizontal third → lane index (`CONFIG.TOUCH_THIRD_SCREEN_TO_LANE`). */
-  private laneFromScreenThird(clientX: number): number {
-    const rect = this.target.getBoundingClientRect();
-    const w = rect.width;
-    if (w <= 0) return 1;
-    const u = (clientX - rect.left) / w;
-    const third = Math.min(
-      CONFIG.LANE_COUNT - 1,
-      Math.max(0, Math.floor(u * CONFIG.LANE_COUNT)),
-    );
-    return CONFIG.TOUCH_THIRD_SCREEN_TO_LANE[third]!;
-  }
-
-  private onPointerMoveThirds(e: PointerEvent): void {
+  /**
+   * Drag controls:
+   * - pointer-down X is the anchor (zero point)
+   * - moving beyond deadzone to either side triggers a 1-lane step
+   * - trigger X becomes the new anchor (supports multi-lane swipe stepping)
+   */
+  private onPointerMoveDeadzone(e: PointerEvent): void {
     if (!this._enabled || e.button === 2) return;
     if (!this.target.hasPointerCapture(e.pointerId)) return;
-    this.switchToLane(this.laneFromScreenThird(e.clientX));
+    const anchor = this.pointerMoveAnchorX.get(e.pointerId);
+    if (anchor === undefined) {
+      this.pointerMoveAnchorX.set(e.pointerId, e.clientX);
+      return;
+    }
+    const dx = e.clientX - anchor;
+    const dead = CONFIG.TOUCH_MOVE_DEAD_ZONE_PX;
+    if (dx >= dead) {
+      this.switchToLane(this.laneNow() - 1);
+      this.pointerMoveAnchorX.set(e.pointerId, e.clientX);
+    } else if (dx <= -dead) {
+      this.switchToLane(this.laneNow() + 1);
+      this.pointerMoveAnchorX.set(e.pointerId, e.clientX);
+    }
   }
 
   private bindPointer(): void {
@@ -209,17 +224,19 @@ export class LaneSystem {
       } catch {
         /* already captured or unsupported */
       }
-      this.onHalfScreenTap(e.clientX);
+      this.pointerMoveAnchorX.set(e.pointerId, e.clientX);
+      this.onEdgeTap(e.clientX);
     };
 
     const onUp = (e: PointerEvent) => {
+      this.pointerMoveAnchorX.delete(e.pointerId);
       if (this.target.hasPointerCapture(e.pointerId)) {
         this.target.releasePointerCapture(e.pointerId);
       }
     };
 
     this.target.addEventListener("pointerdown", onDown);
-    this.target.addEventListener("pointermove", this.onPointerMoveThirds.bind(this));
+    this.target.addEventListener("pointermove", this.onPointerMoveDeadzone.bind(this));
     this.target.addEventListener("pointerup", onUp);
     this.target.addEventListener("pointercancel", onUp);
   }

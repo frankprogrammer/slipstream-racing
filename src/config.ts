@@ -775,15 +775,15 @@ export const CONFIG = {
   PALETTE: GAME_PALETTE,
 
   // ── Touch / pointer (lane input) ──
-  /** Half-screen tap ignores touches within this many px of horizontal center. */
-  TOUCH_CENTER_DEAD_ZONE_PX: 19,
+  /** Pointer-down edge tap width fraction per side (0.3 = left/right 30%). */
+  TOUCH_EDGE_TAP_FRACTION: 0.3,
+  /**
+   * Drag deadzone around the latest pointer anchor (px). Exiting this threshold triggers
+   * one lane step and resets the anchor to the trigger point.
+   */
+  TOUCH_MOVE_DEAD_ZONE_PX: 50,
   /** Tutorial lane-hint circles: inset from screen edges so they don’t sit flush on the bezel. */
   TOUCH_HINT_EDGE_INSET_PX: 10,
-  /**
-   * While dragging, screen is split into 3 vertical bands (left → right).
-   * Each entry is the lane index for that band. World X: lane 0 = −, lane 2 = + (screen-left = +X).
-   */
-  TOUCH_THIRD_SCREEN_TO_LANE: [2, 1, 0] as const,
 
   // ── Swipe Input (legacy; lane uses touch zones — kept for reference) ──
   SWIPE_THRESHOLD: 30,
